@@ -99,7 +99,10 @@ main(int argc, char** argv) {
         return EXIT_FAILURE;
     }
 
+    u64 first_input = 3;
     if (argc > 2) {
-        parse_flags(argc, argv);
+        first_input = parse_flags(argc, argv);
     }
+
+    printf("%llu\n", first_input);
 }
