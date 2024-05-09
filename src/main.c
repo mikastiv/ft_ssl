@@ -10,13 +10,44 @@
 static const char* progname;
 static Options options;
 
-static int
+const char* cmd_names[] = {
+    [CMD_NONE] = "none",
+    [CMD_MD5] = "md5",
+    [CMD_SHA256] = "sha256",
+};
+
+static void
+usage(void) {
+    dprintf(STDERR_FILENO, "usage: %s command [flags] [file/string]\n", progname);
+}
+
+static void
+print_flag(char f, const char* desc) {
+    dprintf(STDERR_FILENO, "    -%c: %s\n", f, desc);
+}
+
+static void
+print_help(void) {
+    usage();
+    dprintf(STDERR_FILENO, "\nCommands:\n");
+    for (u64 i = CMD_NONE + 1; i < array_len(cmd_names); i++) {
+        dprintf(STDERR_FILENO, "    %s\n", cmd_names[i]);
+    }
+
+    dprintf(STDERR_FILENO, "\nFlags:\n");
+    print_flag('p', "echo STDIN to STDOUT and append the checksum to STDOUT");
+    print_flag('q', "quiet mode");
+    print_flag('r', "reverse the format of the output");
+    print_flag('s', "print the sum of the given string");
+}
+
+static u64
 parse_flags(int argc, char** argv) {
-    for (int i = 1; i < argc; i++) {
+    for (int i = 2; i < argc; i++) {
         if (argv[i][0] != '-') return i;
 
         const u64 len = ft_strlen(argv[i]);
-        for (int j = 1; j < len; j++) {
+        for (u64 j = 1; j < len; j++) {
             switch (argv[i][j]) {
                 case 'h': {
                     options.print_help = true;
@@ -33,17 +64,42 @@ parse_flags(int argc, char** argv) {
                 case 'q': {
                     options.quiet = true;
                 } break;
+                default: {
+                    dprintf(STDERR_FILENO, "%s: unknown flag: '-%c'\n", progname, argv[i][j]);
+                    print_help();
+                    exit(EXIT_FAILURE);
+                }
             }
         }
     }
     return argc;
 }
 
+static Command
+parse_command(const char* str) {
+    for (u64 i = 0; i < array_len(cmd_names); i++) {
+        if (ft_strcmp(cmd_names[i], str) == 0) return (Command)i;
+    }
+
+    return CMD_NONE;
+}
+
 int
 main(int argc, char** argv) {
     if (argc > 0) progname = argv[0];
     if (argc < 2) {
-        dprintf(STDERR_FILENO, "usage: %s command [flags] [file/string]\n", progname);
+        usage();
         return EXIT_FAILURE;
+    }
+
+    const Command cmd = parse_command(argv[1]);
+    if (cmd == CMD_NONE) {
+        dprintf(STDERR_FILENO, "%s: unknown command: '%s'\n", progname, argv[1]);
+        print_help();
+        return EXIT_FAILURE;
+    }
+
+    if (argc > 2) {
+        parse_flags(argc, argv);
     }
 }

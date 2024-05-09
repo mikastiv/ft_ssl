@@ -1,7 +1,7 @@
 #include "hash.h"
 
 Md5
-md5_init() {
+md5_init(void) {
     Md5 md5 = {
         .state = { 0x67452301, 0xEFCDAB89, 0x98BADCFE, 0x10325476 },
         .total_len = 0,
@@ -12,8 +12,12 @@ md5_init() {
 
 void
 md5_update(Md5* md5, Buffer buffer) {
+    (void)md5;
+    (void)buffer;
 }
 
 void
 md5_end(Md5* md5, Buffer out) {
+    (void)md5;
+    (void)out;
 }

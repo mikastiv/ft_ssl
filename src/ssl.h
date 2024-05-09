@@ -11,6 +11,8 @@ typedef struct {
 } Options;
 
 typedef enum {
-    MD5,
-    SHA256,
+    CMD_NONE,
+    CMD_MD5,
+    CMD_SHA256,
 } Command;
+

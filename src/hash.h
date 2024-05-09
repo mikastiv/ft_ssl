@@ -8,7 +8,7 @@ typedef struct {
 } Md5;
 
 Md5
-md5_init();
+md5_init(void);
 
 void
 md5_update(Md5* md5, Buffer buffer);
