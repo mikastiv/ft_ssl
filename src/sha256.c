@@ -23,11 +23,13 @@ sha256_buffer(Sha256* sha) {
 static void
 sha256_round(Sha256* sha) {
     u32 w[64];
-    Buffer dst = buffer_init((u8*)w, SHA256_CHUNK_SIZE);
-    ft_memcpy(dst, sha256_buffer(sha));
+    for (u32 i = 0; i < SHA256_CHUNK_SIZE; i += 4) {
+        u8* bytes = &sha->buffer[i];
+        w[i / 4] = (bytes[0] << 24) | (bytes[1] << 16) | (bytes[2] << 8) | bytes[3];
+    }
 
     for (u32 i = 16; i < 64; i++) {
-        u32 s0 = rotate_right(w[i - 15], 7) ^ rotate_right(w[i - 15], 18) ^ (w[i - 16] >> 3);
+        u32 s0 = rotate_right(w[i - 15], 7) ^ rotate_right(w[i - 15], 18) ^ (w[i - 15] >> 3);
         u32 s1 = rotate_right(w[i - 2], 17) ^ rotate_right(w[i - 2], 19) ^ (w[i - 2] >> 10);
         w[i] = w[i - 16] + s0 + w[i - 7] + s1;
     }
@@ -42,10 +44,12 @@ sha256_round(Sha256* sha) {
     u32 h = sha->state[7];
 
     for (u32 i = 0; i < 64; i++) {
-        u32 s1 = rotate_right(e, 6) % rotate_right(e, 11) ^ rotate_right(e, 25);
-        u32 t0 = h + s1 + ((e & f) ^ ((~e) & g)) + k[i] + w[i];
+        u32 s1 = rotate_right(e, 6) ^ rotate_right(e, 11) ^ rotate_right(e, 25);
+        u32 ch = (e & f) ^ ((~e) & g);
+        u32 t0 = h + s1 + ch + k[i] + w[i];
         u32 s0 = rotate_right(a, 2) ^ rotate_right(a, 13) ^ rotate_right(a, 22);
-        u32 t1 = s0 + ((a & b) ^ (a & c) ^ (b & c));
+        u32 maj = (a & b) ^ (a & c) ^ (b & c);
+        u32 t1 = s0 + maj;
 
         h = g;
         g = f;
@@ -82,6 +86,7 @@ sha256_init(void) {
         },
         .total_len = 0,
         .buffer_len = 0,
+        .buffer = {0},
     };
 }
 
@@ -92,7 +97,7 @@ void
 sha256_final(Sha256* sha, Buffer out) {
     assert(out.len == SHA256_DIGEST_SIZE);
 
-    Buffer rest = buffer_init(sha->buffer + sha->buffer_len, SHA256_CHUNK_SIZE - sha->buffer_len);
+    Buffer rest = buffer_create(sha->buffer + sha->buffer_len, SHA256_CHUNK_SIZE - sha->buffer_len);
     ft_memset(rest, 0);
 
     sha->buffer[sha->buffer_len++] = 0x80;
@@ -104,11 +109,18 @@ sha256_final(Sha256* sha, Buffer out) {
     u64 i = 0;
     u64 len = sha->total_len * 8;
     while (i < 8) {
-        sha->buffer[SHA256_CHUNK_SIZE - 8 + i] = (len >> ((7 - i) * 8)) & 0xFF;
+        sha->buffer[SHA256_CHUNK_SIZE - 1 - i] = (u8)len;
+        len >>= 8;
         i++;
     }
 
     sha256_round(sha);
 
-    ft_memcpy(out, buffer_init((u8*)sha->state, SHA256_DIGEST_SIZE));
+    for (i = 0; i < SHA256_DIGEST_SIZE; i += 4) {
+        u8* bytes = (u8*)&sha->state[i / 4];
+        out.ptr[i] = bytes[3];
+        out.ptr[i + 1] = bytes[2];
+        out.ptr[i + 2] = bytes[1];
+        out.ptr[i + 3] = bytes[0];
+    }
 }

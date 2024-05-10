@@ -26,4 +26,4 @@ Buffer
 str(const char* s);
 
 Buffer
-buffer_init(u8* ptr, u64 len);
+buffer_create(u8* ptr, u64 len);

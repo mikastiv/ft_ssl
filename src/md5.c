@@ -30,7 +30,7 @@ static void
 md5_round(Md5* md5) {
     u32 s[16];
 
-    Buffer dst = buffer_init((u8*)s, MD5_CHUNK_SIZE);
+    Buffer dst = buffer_create((u8*)s, MD5_CHUNK_SIZE);
     ft_memcpy(dst, md5_buffer(md5));
 
     u32 a = md5->state[0];
@@ -78,6 +78,7 @@ md5_init(void) {
         },
         .total_len = 0,
         .buffer_len = 0,
+        .buffer = {0},
     };
 }
 
@@ -88,8 +89,8 @@ md5_update(Md5* md5, Buffer buffer) {
         u32 remaining = MD5_CHUNK_SIZE - md5->buffer_len;
         u32 len = (buffer.len > remaining) ? remaining : buffer.len;
 
-        Buffer dst = buffer_init(md5->buffer + md5->buffer_len, len);
-        Buffer src = buffer_init(buffer.ptr, len);
+        Buffer dst = buffer_create(md5->buffer + md5->buffer_len, len);
+        Buffer src = buffer_create(buffer.ptr, len);
         ft_memcpy(dst, src);
 
         md5->buffer_len += len;
@@ -103,7 +104,7 @@ md5_update(Md5* md5, Buffer buffer) {
     }
 
     while (buffer.len - index >= MD5_CHUNK_SIZE) {
-        Buffer src = buffer_init(buffer.ptr + index, MD5_CHUNK_SIZE);
+        Buffer src = buffer_create(buffer.ptr + index, MD5_CHUNK_SIZE);
         ft_memcpy(md5_buffer(md5), src);
         md5_round(md5);
         index += 64;
@@ -112,8 +113,8 @@ md5_update(Md5* md5, Buffer buffer) {
 
     if (index < buffer.len) {
         u32 len = buffer.len - index;
-        Buffer dst = buffer_init(md5->buffer, len);
-        Buffer src = buffer_init(buffer.ptr + index, len);
+        Buffer dst = buffer_create(md5->buffer, len);
+        Buffer src = buffer_create(buffer.ptr + index, len);
         ft_memcpy(dst, src);
         md5->buffer_len = len;
         md5->total_len += len;
@@ -124,7 +125,7 @@ void
 md5_final(Md5* md5, Buffer out) {
     assert(out.len == MD5_DIGEST_SIZE);
 
-    Buffer rest = buffer_init(md5->buffer + md5->buffer_len, MD5_CHUNK_SIZE - md5->buffer_len);
+    Buffer rest = buffer_create(md5->buffer + md5->buffer_len, MD5_CHUNK_SIZE - md5->buffer_len);
     ft_memset(rest, 0);
 
     md5->buffer[md5->buffer_len++] = 0x80;
@@ -143,5 +144,5 @@ md5_final(Md5* md5, Buffer out) {
 
     md5_round(md5);
 
-    ft_memcpy(out, buffer_init((u8*)md5->state, MD5_DIGEST_SIZE));
+    ft_memcpy(out, buffer_create((u8*)md5->state, MD5_DIGEST_SIZE));
 }
