@@ -27,3 +27,6 @@ str(const char* s);
 
 Buffer
 buffer_create(u8* ptr, u64 len);
+
+void
+print_hash(Buffer hash);

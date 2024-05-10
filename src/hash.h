@@ -2,6 +2,11 @@
 
 #include "types.h"
 
+#include <stdbool.h>
+
+typedef bool (*hash_fd_func)(int, Buffer);
+typedef void (*hash_str_func)(Buffer, Buffer);
+
 #define MD5_CHUNK_SIZE 64
 #define MD5_DIGEST_SIZE 16
 
@@ -21,6 +26,12 @@ md5_update(Md5* md5, Buffer buffer);
 void
 md5_final(Md5* md5, Buffer out);
 
+bool
+md5_hash_fd(int fd, Buffer out);
+
+void
+md5_hash_str(Buffer in, Buffer out);
+
 #define SHA256_CHUNK_SIZE 64
 #define SHA256_DIGEST_SIZE 32
 
@@ -39,3 +50,9 @@ sha256_update(Sha256* sha, Buffer buffer);
 
 void
 sha256_final(Sha256* sha, Buffer out);
+
+bool
+sha256_hash_fd(int fd, Buffer out);
+
+void
+sha256_hash_str(Buffer in, Buffer out);

@@ -3,6 +3,7 @@
 #include "utils.h"
 
 #include <assert.h>
+#include <unistd.h>
 
 static const u32 k[] = {
     0xD76AA478, 0xE8C7B756, 0x242070DB, 0xC1BDCEEE, 0xF57C0FAF, 0x4787C62A, 0xA8304613, 0xFD469501,
@@ -145,4 +146,28 @@ md5_final(Md5* md5, Buffer out) {
     md5_round(md5);
 
     ft_memcpy(out, buffer_create((u8*)md5->state, MD5_DIGEST_SIZE));
+}
+
+bool
+md5_hash_fd(int fd, Buffer out) {
+    Md5 md5 = md5_init();
+
+    u8 buffer[2046];
+    i64 bytes = sizeof(buffer);
+    while (bytes == sizeof(buffer)) {
+        bytes = read(fd, buffer, sizeof(buffer));
+        if (bytes < 0) return false;
+        md5_update(&md5, (Buffer){ .ptr = buffer, .len = (u64)bytes });
+    }
+
+    md5_final(&md5, out);
+
+    return true;
+}
+
+void
+md5_hash_str(Buffer in, Buffer out) {
+    Md5 md5 = md5_init();
+    md5_update(&md5, in);
+    md5_final(&md5, out);
 }

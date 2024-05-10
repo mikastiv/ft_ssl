@@ -3,8 +3,11 @@
 #include "types.h"
 #include "utils.h"
 
+#include <errno.h>
+#include <fcntl.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include <unistd.h>
 
 static const char* progname;
@@ -59,7 +62,7 @@ parse_flags(int argc, char** argv) {
                     options.reverse_fmt = true;
                 } break;
                 case 's': {
-                    options.print_sum = true;
+                    options.first_is_string = true;
                 } break;
                 case 'q': {
                     options.quiet = true;
@@ -103,20 +106,58 @@ main(int argc, char** argv) {
     if (argc > 2) {
         first_input = parse_flags(argc, argv);
     }
-    (void)first_input;
 
-    u8 buffer[32];
-    Buffer out = { .ptr = buffer, .len = sizeof(buffer) };
-    Sha256 sha256 = sha256_init();
-    sha256_update(
-        &sha256,
-        str("abcdefghbcdefghicdefghijdefghijkefghijklfghijklmghijklmnhijklmnoijklmnopjklmnopqklmnop"
-            "qrlmnopqrsmnopqrstnopqrstu")
-    );
-    sha256_final(&sha256, out);
-
-    for (u32 i = 0; i < sizeof(buffer); i++) {
-        printf("%02x", buffer[i]);
+    u64 digest_size;
+    hash_fd_func hasher_fd;
+    hash_str_func hasher_str;
+    switch (cmd) {
+        case CMD_MD5: {
+            digest_size = MD5_DIGEST_SIZE;
+            hasher_fd = &md5_hash_fd;
+            hasher_str = &md5_hash_str;
+        } break;
+        case CMD_SHA256: {
+            digest_size = SHA256_DIGEST_SIZE;
+            hasher_fd = &sha256_hash_fd;
+            hasher_str = &sha256_hash_str;
+        } break;
+        case CMD_NONE: {
+            return EXIT_FAILURE;
+        } break;
     }
-    printf("\n");
+
+    u8 buffer[64];
+    Buffer out = { .ptr = buffer, .len = digest_size };
+
+    if (options.first_is_string) {
+        Buffer input = {
+            .ptr = (u8*)argv[first_input],
+            .len = ft_strlen(argv[first_input]),
+        };
+        hasher_str(input, out);
+
+        print_hash(out);
+        printf("\n");
+
+        first_input++;
+    }
+
+    for (u64 i = first_input; i < (u64)argc; i++) {
+        int fd = open(argv[i], O_RDONLY);
+        if (fd < 0) {
+            dprintf(STDERR_FILENO, "%s: %s: %s: %s\n", progname, argv[1], argv[i], strerror(errno));
+            continue;
+        }
+
+        bool success = hasher_fd(fd, out);
+        if (!success) {
+            dprintf(STDERR_FILENO, "%s: %s: %s: %s\n", progname, argv[1], argv[i], strerror(errno));
+            close(fd);
+            continue;
+        }
+
+        print_hash(out);
+        printf("\n");
+        close(fd);
+    }
 }
