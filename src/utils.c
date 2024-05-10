@@ -64,10 +64,3 @@ Buffer
 buffer_create(u8* ptr, u64 len) {
     return (Buffer){ .ptr = ptr, .len = len };
 }
-
-void
-print_hash(Buffer hash) {
-    for (u64 i = 0; i < hash.len; i++) {
-        printf("%02x", hash.ptr[i]);
-    }
-}

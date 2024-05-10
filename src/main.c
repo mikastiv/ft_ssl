@@ -87,6 +87,43 @@ parse_command(const char* str) {
     return CMD_NONE;
 }
 
+static void
+print_hash(Buffer hash, Command cmd, bool is_str, const char* input) {
+    const char* name;
+    switch (cmd) {
+        case CMD_MD5: {
+            name = "MD5";
+        } break;
+        case CMD_SHA256: {
+            name = "SHA256";
+        } break;
+        case CMD_NONE: {
+            name = "Unknown";
+        } break;
+    }
+
+    if (!options.quiet && !options.reverse_fmt) {
+        printf("%s (", name);
+        if (is_str) printf("\"");
+        printf("%s", input);
+        if (is_str) printf("\"");
+        printf(") = ");
+    }
+
+    for (u64 i = 0; i < hash.len; i++) {
+        printf("%02x", hash.ptr[i]);
+    }
+
+    if (!options.quiet && options.reverse_fmt) {
+        printf(" ");
+        if (is_str) printf("\"");
+        printf("%s", input);
+        if (is_str) printf("\"");
+    }
+
+    printf("\n");
+}
+
 int
 main(int argc, char** argv) {
     if (argc > 0) progname = argv[0];
@@ -136,8 +173,7 @@ main(int argc, char** argv) {
         };
         hasher_str(input, out);
 
-        print_hash(out);
-        printf("\n");
+        print_hash(out, cmd, true, argv[first_input]);
 
         first_input++;
     }
@@ -156,8 +192,7 @@ main(int argc, char** argv) {
             continue;
         }
 
-        print_hash(out);
-        printf("\n");
+        print_hash(out, cmd, false, argv[i]);
         close(fd);
     }
 }
