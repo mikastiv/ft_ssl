@@ -186,13 +186,13 @@ main(int argc, char** argv) {
         }
 
         bool success = hasher_fd(fd, out);
+        close(fd);
+
         if (!success) {
             dprintf(STDERR_FILENO, "%s: %s: %s: %s\n", progname, argv[1], argv[i], strerror(errno));
-            close(fd);
             continue;
         }
 
         print_hash(out, cmd, false, argv[i]);
-        close(fd);
     }
 }
