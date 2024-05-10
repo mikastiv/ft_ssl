@@ -108,7 +108,11 @@ main(int argc, char** argv) {
     u8 buffer[32];
     Buffer out = { .ptr = buffer, .len = sizeof(buffer) };
     Sha256 sha256 = sha256_init();
-    // sha256_update(&sha256, str("message digest"));
+    sha256_update(
+        &sha256,
+        str("abcdefghbcdefghicdefghijdefghijkefghijklfghijklmghijklmnhijklmnoijklmnopjklmnopqklmnop"
+            "qrlmnopqrsmnopqrstnopqrstu")
+    );
     sha256_final(&sha256, out);
 
     for (u32 i = 0; i < sizeof(buffer); i++) {

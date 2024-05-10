@@ -44,21 +44,21 @@ sha256_round(Sha256* sha) {
     u32 h = sha->state[7];
 
     for (u32 i = 0; i < 64; i++) {
-        u32 s1 = rotate_right(e, 6) ^ rotate_right(e, 11) ^ rotate_right(e, 25);
+        u32 ep1 = rotate_right(e, 6) ^ rotate_right(e, 11) ^ rotate_right(e, 25);
         u32 ch = (e & f) ^ ((~e) & g);
-        u32 t0 = h + s1 + ch + k[i] + w[i];
-        u32 s0 = rotate_right(a, 2) ^ rotate_right(a, 13) ^ rotate_right(a, 22);
+        u32 t1 = h + ep1 + ch + k[i] + w[i];
+        u32 ep0 = rotate_right(a, 2) ^ rotate_right(a, 13) ^ rotate_right(a, 22);
         u32 maj = (a & b) ^ (a & c) ^ (b & c);
-        u32 t1 = s0 + maj;
+        u32 t2 = ep0 + maj;
 
         h = g;
         g = f;
         f = e;
-        e = d + t0;
+        e = d + t1;
         d = c;
         c = b;
         b = a;
-        a = t0 + t1;
+        a = t1 + t2;
     }
 
     sha->state[0] += a;
@@ -91,7 +91,43 @@ sha256_init(void) {
 }
 
 void
-sha256_update(Sha256* sha, Buffer buffer);
+sha256_update(Sha256* sha, Buffer buffer) {
+    u32 index = 0;
+    if (sha->buffer_len != 0) {
+        u32 remaining = SHA256_CHUNK_SIZE - sha->buffer_len;
+        u32 len = (buffer.len > remaining) ? remaining : buffer.len;
+
+        Buffer dst = buffer_create(sha->buffer + sha->buffer_len, len);
+        Buffer src = buffer_create(buffer.ptr, len);
+        ft_memcpy(dst, src);
+
+        sha->buffer_len += len;
+        sha->total_len += len;
+        index = len;
+
+        if (sha->buffer_len == SHA256_CHUNK_SIZE) {
+            sha256_round(sha);
+            sha->buffer_len = 0;
+        }
+    }
+
+    while (buffer.len - index >= SHA256_CHUNK_SIZE) {
+        Buffer src = buffer_create(buffer.ptr + index, SHA256_CHUNK_SIZE);
+        ft_memcpy(sha256_buffer(sha), src);
+        sha256_round(sha);
+        index += 64;
+        sha->total_len += 64;
+    }
+
+    if (index < buffer.len) {
+        u32 len = buffer.len - index;
+        Buffer dst = buffer_create(sha->buffer, len);
+        Buffer src = buffer_create(buffer.ptr + index, len);
+        ft_memcpy(dst, src);
+        sha->buffer_len = len;
+        sha->total_len += len;
+    }
+}
 
 void
 sha256_final(Sha256* sha, Buffer out) {
