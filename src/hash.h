@@ -16,4 +16,4 @@ void
 md5_update(Md5* md5, Buffer buffer);
 
 void
-md5_end(Md5* md5, Buffer out);
+md5_final(Md5* md5, Buffer out);

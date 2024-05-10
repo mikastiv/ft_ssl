@@ -47,3 +47,8 @@ rotate_left(u32 value, u32 shift) {
     assert(shift < 32);
     return (value << shift) | (value >> (32 - shift));
 }
+
+Buffer
+str(const char* s) {
+    return (Buffer){ .ptr = (u8*)s, .len = ft_strlen(s) };
+}

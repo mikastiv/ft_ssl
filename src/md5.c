@@ -21,7 +21,7 @@ static const u32 shift[] = {
     4,  11, 16, 23, 6,  10, 15, 21, 6,  10, 15, 21, 6,  10, 15, 21, 6,  10, 15, 21,
 };
 
-void
+static void
 md5_round(Md5* md5, Buffer buffer) {
     assert(buffer.len == 64);
 
@@ -75,12 +75,46 @@ md5_init(void) {
 
 void
 md5_update(Md5* md5, Buffer buffer) {
-    (void)md5;
-    (void)buffer;
+    Buffer buf = { .ptr = md5->buffer, .len = sizeof(md5->buffer) };
+
+    u32 index = 0;
+    if (md5->buffer_len != 0) {
+        u32 remaining = array_len(md5->buffer) - md5->buffer_len;
+        u32 len = (buffer.len > remaining) ? remaining : buffer.len;
+        ft_memcpy(
+            (Buffer){ .ptr = md5->buffer + md5->buffer_len, .len = len },
+            (Buffer){ .ptr = buffer.ptr, .len = len }
+        );
+        md5->buffer_len += len;
+        md5->total_len += len;
+        index = len;
+
+        if (md5->buffer_len == array_len(md5->buffer)) {
+            md5_round(md5, buf);
+            md5->buffer_len = 0;
+        }
+    }
+
+    while (buffer.len - index >= array_len(md5->buffer)) {
+        ft_memcpy(buf, (Buffer){ .ptr = buffer.ptr + index, .len = buf.len });
+        md5_round(md5, buf);
+        index += 64;
+        md5->total_len += 64;
+    }
+
+    if (index < buffer.len) {
+        u32 len = buffer.len - index;
+        ft_memcpy(
+            (Buffer){ .ptr = md5->buffer, .len = len },
+            (Buffer){ .ptr = buffer.ptr + index, .len = len }
+        );
+        md5->buffer_len = len;
+        md5->total_len += len;
+    }
 }
 
 void
-md5_end(Md5* md5, Buffer out) {
+md5_final(Md5* md5, Buffer out) {
     assert(out.len == 16);
 
     Buffer buf = { .ptr = md5->buffer, .len = sizeof(md5->buffer) };
@@ -91,7 +125,7 @@ md5_end(Md5* md5, Buffer out) {
     ft_memset(rest, 0);
 
     md5->buffer[md5->buffer_len++] = 0x80;
-    if (md5->buffer_len > 64 - 8) {
+    if (md5->buffer_len > array_len(md5->buffer) - 8) {
         md5_round(md5, buf);
         ft_memset(buf, 0);
     }

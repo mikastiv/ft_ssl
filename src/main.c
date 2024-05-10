@@ -108,7 +108,8 @@ main(int argc, char** argv) {
     u8 buffer[16];
     Buffer out = { .ptr = buffer, .len = 16 };
     Md5 md5 = md5_init();
-    md5_end(&md5, out);
+    md5_update(&md5, str("ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789"));
+    md5_final(&md5, out);
 
     for (u32 i = 0; i < 16; i++) {
         printf("%02x", buffer[i]);

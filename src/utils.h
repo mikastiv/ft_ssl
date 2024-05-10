@@ -18,3 +18,6 @@ ft_memset(Buffer dst, u8 value);
 
 u32
 rotate_left(u32 value, u32 shift);
+
+Buffer
+str(const char* s);
