@@ -46,7 +46,7 @@ parse_flags(int argc, char** argv) {
     for (int i = 2; i < argc; i++) {
         if (argv[i][0] != '-') return i;
 
-        const u64 len = ft_strlen(argv[i]);
+        u64 len = ft_strlen(argv[i]);
         for (u64 j = 1; j < len; j++) {
             switch (argv[i][j]) {
                 case 'h': {
@@ -92,7 +92,7 @@ main(int argc, char** argv) {
         return EXIT_FAILURE;
     }
 
-    const Command cmd = parse_command(argv[1]);
+    Command cmd = parse_command(argv[1]);
     if (cmd == CMD_NONE) {
         dprintf(STDERR_FILENO, "%s: unknown command: '%s'\n", progname, argv[1]);
         print_help();
@@ -104,5 +104,5 @@ main(int argc, char** argv) {
         first_input = parse_flags(argc, argv);
     }
 
-    printf("%llu\n", first_input);
+    printf("%lu\n", first_input);
 }

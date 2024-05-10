@@ -1,5 +1,7 @@
 #include "utils.h"
 
+#include <assert.h>
+
 u64
 ft_strlen(const char* str) {
     u64 len = 0;
@@ -15,4 +17,17 @@ ft_strcmp(const char* s1, const char* s2) {
         ++s2;
     }
     return (*s1 - *s2);
+}
+
+void
+ft_memcpy(Buffer dst, Buffer src) {
+    assert(dst.len == src.len);
+
+    u64 len = dst.len;
+    while (len) {
+        *dst.ptr = *src.ptr;
+        dst.ptr++;
+        src.ptr++;
+        len--;
+    }
 }
