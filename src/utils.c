@@ -52,3 +52,8 @@ Buffer
 str(const char* s) {
     return (Buffer){ .ptr = (u8*)s, .len = ft_strlen(s) };
 }
+
+Buffer
+buffer_init(u8* ptr, u64 len) {
+    return (Buffer){ .ptr = ptr, .len = len };
+}

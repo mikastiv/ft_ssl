@@ -108,7 +108,19 @@ main(int argc, char** argv) {
     u8 buffer[16];
     Buffer out = { .ptr = buffer, .len = 16 };
     Md5 md5 = md5_init();
-    md5_update(&md5, str("ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789"));
+    md5_update(
+        &md5,
+        str("An MD5 hash is created by taking a string of an any length and encoding it into a "
+            "128-bit fingerprint. Encoding the same string using the MD5 algorithm will always "
+            "result in the same 128-bit hash output.")
+    );
+    md5_update(
+        &md5,
+        str(" MD5 hashes are commonly used with smaller "
+            "strings when storing passwords, credit card numbers or other sensitive data in "
+            "databases such as the popular MySQL. This tool provides a quick and easy way to "
+            "encode an MD5 hash from a simple string of up to 256 characters in length.")
+    );
     md5_final(&md5, out);
 
     for (u32 i = 0; i < 16; i++) {

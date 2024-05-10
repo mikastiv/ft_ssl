@@ -21,3 +21,6 @@ rotate_left(u32 value, u32 shift);
 
 Buffer
 str(const char* s);
+
+Buffer
+buffer_init(u8* ptr, u64 len);

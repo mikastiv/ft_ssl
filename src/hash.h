@@ -2,10 +2,13 @@
 
 #include "types.h"
 
+#define MD5_CHUNK_SIZE 64
+#define MD5_DIGEST_SIZE 16
+
 typedef struct {
     u32 state[4];
     u64 total_len;
-    u8 buffer[64];
+    u8 buffer[MD5_CHUNK_SIZE];
     u64 buffer_len;
 } Md5;
 
