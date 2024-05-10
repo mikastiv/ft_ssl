@@ -1,7 +1,6 @@
 #include "utils.h"
 
 #include <assert.h>
-#include <stdio.h>
 
 u64
 ft_strlen(const char* str) {
