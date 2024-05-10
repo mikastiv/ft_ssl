@@ -31,3 +31,19 @@ ft_memcpy(Buffer dst, Buffer src) {
         len--;
     }
 }
+
+void
+ft_memset(Buffer dst, u8 value) {
+    u64 len = dst.len;
+    while (len) {
+        *dst.ptr = value;
+        dst.ptr++;
+        len--;
+    }
+}
+
+u32
+rotate_left(u32 value, u32 shift) {
+    assert(shift < 32);
+    return (value << shift) | (value >> (32 - shift));
+}

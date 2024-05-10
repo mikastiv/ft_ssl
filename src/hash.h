@@ -5,6 +5,8 @@
 typedef struct {
     u32 state[4];
     u64 total_len;
+    u8 buffer[64];
+    u64 buffer_len;
 } Md5;
 
 Md5

@@ -67,6 +67,7 @@ md5_init(void) {
     Md5 md5 = {
         .state = { 0x67452301, 0xEFCDAB89, 0x98BADCFE, 0x10325476 },
         .total_len = 0,
+        .buffer_len = 0,
     };
 
     return md5;
@@ -80,6 +81,29 @@ md5_update(Md5* md5, Buffer buffer) {
 
 void
 md5_end(Md5* md5, Buffer out) {
-    (void)md5;
-    (void)out;
+    assert(out.len == 16);
+
+    Buffer buf = { .ptr = md5->buffer, .len = sizeof(md5->buffer) };
+    Buffer rest = {
+        .ptr = md5->buffer + md5->buffer_len,
+        .len = sizeof(md5->buffer) - md5->buffer_len,
+    };
+    ft_memset(rest, 0);
+
+    md5->buffer[md5->buffer_len++] = 0x80;
+    if (md5->buffer_len > 64 - 8) {
+        md5_round(md5, buf);
+        ft_memset(buf, 0);
+    }
+
+    u64 i = 0;
+    u64 len = md5->total_len * 8;
+    while (i < 8) {
+        md5->buffer[56 + i] = len & 0xFF;
+        len >>= 8;
+        i++;
+    }
+
+    md5_round(md5, buf);
+    ft_memcpy(out, (Buffer){ .ptr = (u8*)md5->state, .len = 16 });
 }

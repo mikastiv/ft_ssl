@@ -103,6 +103,15 @@ main(int argc, char** argv) {
     if (argc > 2) {
         first_input = parse_flags(argc, argv);
     }
+    (void)first_input;
 
-    printf("%lu\n", first_input);
+    u8 buffer[16];
+    Buffer out = { .ptr = buffer, .len = 16 };
+    Md5 md5 = md5_init();
+    md5_end(&md5, out);
+
+    for (u32 i = 0; i < 16; i++) {
+        printf("%02x", buffer[i]);
+    }
+    printf("\n");
 }
