@@ -221,8 +221,8 @@ main(int argc, char** argv) {
     }
 
     u64 digest_size;
-    hash_fd_func hasher_fd;
-    hash_str_func hasher_str;
+    HasherFd hasher_fd;
+    HasherStr hasher_str;
     switch (cmd) {
         case CMD_MD5: {
             digest_size = MD5_DIGEST_SIZE;

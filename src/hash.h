@@ -4,8 +4,8 @@
 
 #include <stdbool.h>
 
-typedef bool (*hash_fd_func)(int, Buffer);
-typedef void (*hash_str_func)(Buffer, Buffer);
+typedef bool (*HasherFd)(int, Buffer);
+typedef void (*HasherStr)(Buffer, Buffer);
 
 #define MD5_CHUNK_SIZE 64
 #define MD5_DIGEST_SIZE 16
