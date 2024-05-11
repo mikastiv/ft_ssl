@@ -135,9 +135,9 @@ print_hash(Buffer hash, Command cmd, bool is_str, const char* input) {
 
 static void
 print_hash_stdin(Buffer hash, Buffer input) {
-    if (options.quiet) {
-        printf("%s\n", input.ptr);
-    } else {
+    if (options.quiet && options.echo_stdin) {
+        printf("%s ", input.ptr);
+    } else if (!options.quiet) {
         printf("(");
         if (options.echo_stdin)
             printf("\"%s\"", input.ptr);
@@ -155,7 +155,7 @@ print_hash_stdin(Buffer hash, Buffer input) {
 static Buffer
 stdin_to_buffer(void) {
     u64 capacity = 2048;
-    Buffer str = { .ptr = malloc(capacity), .len = 0 };
+    Buffer str = { .ptr = malloc(capacity + 1), .len = 0 };
     if (!str.ptr) return (Buffer){ 0 };
 
     u8 buffer[2048];
@@ -170,7 +170,7 @@ stdin_to_buffer(void) {
             u64 rest = bytes - remaining;
             capacity = (capacity * 2 > rest) ? capacity * 2 : rest;
 
-            u8* ptr = malloc(capacity);
+            u8* ptr = malloc(capacity + 1);
             if (!ptr) return (Buffer){ 0 };
 
             ft_memcpy(buffer_create(ptr, str.len), str);
@@ -181,6 +181,8 @@ stdin_to_buffer(void) {
         ft_memcpy(buffer_create(str.ptr + str.len, bytes), buffer_create(buffer, bytes));
         str.len += bytes;
     }
+
+    str.ptr[str.len] = 0;
 
     return str;
 }
