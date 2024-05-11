@@ -171,7 +171,7 @@ sha256_hash_fd(int fd, Buffer out) {
     while (bytes == sizeof(buffer)) {
         bytes = read(fd, buffer, sizeof(buffer));
         if (bytes < 0) return false;
-        sha256_update(&sha, (Buffer){ .ptr = buffer, .len = (u64)bytes });
+        sha256_update(&sha, buffer_create(buffer, (u64)bytes));
     }
 
     sha256_final(&sha, out);
@@ -184,4 +184,57 @@ sha256_hash_str(Buffer in, Buffer out) {
     Sha256 sha = sha256_init();
     sha256_update(&sha, in);
     sha256_final(&sha, out);
+}
+
+Sha224
+sha224_init(void) {
+    Sha224 sha = sha256_init();
+    sha.state[0] = 0xC1059ED8;
+    sha.state[1] = 0x367CD507;
+    sha.state[2] = 0x3070DD17;
+    sha.state[3] = 0xF70E5939;
+    sha.state[4] = 0xFFC00B31;
+    sha.state[5] = 0x68581511;
+    sha.state[6] = 0x64F98FA7;
+    sha.state[7] = 0xBEFA4FA4;
+
+    return sha;
+}
+
+void
+sha224_update(Sha224* sha, Buffer buffer) {
+    sha256_update(sha, buffer);
+}
+
+void
+sha224_final(Sha224* sha, Buffer out) {
+    assert(out.len == SHA224_DIGEST_SIZE);
+
+    u8 tmp[SHA256_DIGEST_SIZE];
+    sha256_final(sha, buffer_create(tmp, SHA256_DIGEST_SIZE));
+    ft_memcpy(out, buffer_create(tmp, SHA224_DIGEST_SIZE));
+}
+
+bool
+sha224_hash_fd(int fd, Buffer out) {
+    Sha224 sha = sha224_init();
+
+    u8 buffer[2046];
+    i64 bytes = sizeof(buffer);
+    while (bytes == sizeof(buffer)) {
+        bytes = read(fd, buffer, sizeof(buffer));
+        if (bytes < 0) return false;
+        sha224_update(&sha, buffer_create(buffer, (u64)bytes));
+    }
+
+    sha224_final(&sha, out);
+
+    return true;
+}
+
+void
+sha224_hash_str(Buffer in, Buffer out) {
+    Sha224 sha = sha224_init();
+    sha224_update(&sha, in);
+    sha224_final(&sha, out);
 }

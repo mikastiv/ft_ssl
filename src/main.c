@@ -17,6 +17,7 @@ const char* cmd_names[] = {
     [CMD_NONE] = "none",
     [CMD_MD5] = "md5",
     [CMD_SHA256] = "sha256",
+    [CMD_SHA224] = "sha224",
 };
 
 static void
@@ -98,6 +99,9 @@ print_hash(Buffer hash, Command cmd, bool is_str, const char* input) {
         case CMD_SHA256: {
             name = "SHA256";
         } break;
+        case CMD_SHA224: {
+            name = "SHA224";
+        } break;
         case CMD_NONE: {
             name = "Unknown";
         } break;
@@ -165,15 +169,12 @@ stdin_to_buffer(void) {
             u8* ptr = malloc(capacity);
             if (!ptr) return (Buffer){ 0 };
 
-            ft_memcpy((Buffer){ .ptr = ptr, .len = str.len }, str);
+            ft_memcpy(buffer_create(ptr, str.len), str);
             free(str.ptr);
             str.ptr = ptr;
         }
 
-        ft_memcpy(
-            (Buffer){ .ptr = str.ptr + str.len, .len = bytes },
-            (Buffer){ .ptr = buffer, .len = bytes }
-        );
+        ft_memcpy(buffer_create(str.ptr + str.len, bytes), buffer_create(buffer, bytes));
         str.len += bytes;
     }
 
@@ -218,6 +219,11 @@ main(int argc, char** argv) {
             digest_size = SHA256_DIGEST_SIZE;
             hasher_fd = &sha256_hash_fd;
             hasher_str = &sha256_hash_str;
+        } break;
+        case CMD_SHA224: {
+            digest_size = SHA224_DIGEST_SIZE;
+            hasher_fd = &sha224_hash_fd;
+            hasher_str = &sha224_hash_str;
         } break;
         case CMD_NONE: {
             return EXIT_FAILURE;
