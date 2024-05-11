@@ -15,7 +15,7 @@ static Options options;
 
 const char* cmd_names[] = {
     [CMD_NONE] = "none",     [CMD_MD5] = "md5",       [CMD_SHA256] = "sha256",
-    [CMD_SHA224] = "sha224", [CMD_SHA512] = "sha512",
+    [CMD_SHA224] = "sha224", [CMD_SHA512] = "sha512", [CMD_SHA384] = "sha384",
 };
 
 static void
@@ -102,6 +102,9 @@ print_hash(Buffer hash, Command cmd, bool is_str, const char* input) {
         } break;
         case CMD_SHA512: {
             name = "SHA512";
+        } break;
+        case CMD_SHA384: {
+            name = "SHA384";
         } break;
         case CMD_NONE: {
             name = "Unknown";
@@ -230,6 +233,11 @@ main(int argc, char** argv) {
             digest_size = SHA512_DIGEST_SIZE;
             hasher_fd = &sha512_hash_fd;
             hasher_str = &sha512_hash_str;
+        } break;
+        case CMD_SHA384: {
+            digest_size = SHA384_DIGEST_SIZE;
+            hasher_fd = &sha384_hash_fd;
+            hasher_str = &sha384_hash_str;
         } break;
         case CMD_NONE: {
             return EXIT_FAILURE;

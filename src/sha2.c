@@ -188,17 +188,20 @@ sha256_hash_str(Buffer in, Buffer out) {
 
 Sha224
 sha224_init(void) {
-    Sha224 sha = sha256_init();
-    sha.state[0] = 0xC1059ED8;
-    sha.state[1] = 0x367CD507;
-    sha.state[2] = 0x3070DD17;
-    sha.state[3] = 0xF70E5939;
-    sha.state[4] = 0xFFC00B31;
-    sha.state[5] = 0x68581511;
-    sha.state[6] = 0x64F98FA7;
-    sha.state[7] = 0xBEFA4FA4;
-
-    return sha;
+    return (Sha224){
+        .state = {
+            0xC1059ED8,
+            0x367CD507,
+            0x3070DD17,
+            0xF70E5939,
+            0xFFC00B31,
+            0x68581511,
+            0x64F98FA7,
+            0xBEFA4FA4,
+        },
+        .total_len = 0,
+        .buffer_len = 0,
+    };
 }
 
 void
@@ -435,4 +438,60 @@ sha512_hash_str(Buffer in, Buffer out) {
     Sha512 sha = sha512_init();
     sha512_update(&sha, in);
     sha512_final(&sha, out);
+}
+
+Sha384
+sha384_init(void) {
+    return (Sha384){
+        .state = {
+            0xCBBB9D5DC1059ED8,
+            0x629A292A367CD507,
+            0x9159015A3070DD17,
+            0x152FECD8F70E5939,
+            0x67332667FFC00B31,
+            0x8EB44A8768581511,
+            0xDB0C2E0D64F98FA7,
+            0x47B5481DBEFA4FA4,
+        },
+        .total_len = 0,
+        .buffer_len = 0,
+    };
+}
+
+void
+sha384_update(Sha384* sha, Buffer buffer) {
+    sha512_update(sha, buffer);
+}
+
+void
+sha384_final(Sha384* sha, Buffer out) {
+    assert(out.len == SHA384_DIGEST_SIZE);
+
+    u8 tmp[SHA512_DIGEST_SIZE];
+    sha512_final(sha, buffer_create(tmp, SHA512_DIGEST_SIZE));
+    ft_memcpy(out, buffer_create(tmp, SHA384_DIGEST_SIZE));
+}
+
+bool
+sha384_hash_fd(int fd, Buffer out) {
+    Sha384 sha = sha384_init();
+
+    u8 buffer[2046];
+    i64 bytes = sizeof(buffer);
+    while (bytes == sizeof(buffer)) {
+        bytes = read(fd, buffer, sizeof(buffer));
+        if (bytes < 0) return false;
+        sha384_update(&sha, buffer_create(buffer, (u64)bytes));
+    }
+
+    sha384_final(&sha, out);
+
+    return true;
+}
+
+void
+sha384_hash_str(Buffer in, Buffer out) {
+    Sha384 sha = sha384_init();
+    sha384_update(&sha, in);
+    sha384_final(&sha, out);
 }

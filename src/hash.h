@@ -101,3 +101,23 @@ sha512_hash_fd(int fd, Buffer out);
 
 void
 sha512_hash_str(Buffer in, Buffer out);
+
+#define SHA384_CHUNK_SIZE 128
+#define SHA384_DIGEST_SIZE 48
+
+typedef Sha512 Sha384;
+
+Sha384
+sha384_init(void);
+
+void
+sha384_update(Sha384* sha, Buffer buffer);
+
+void
+sha384_final(Sha384* sha, Buffer out);
+
+bool
+sha384_hash_fd(int fd, Buffer out);
+
+void
+sha384_hash_str(Buffer in, Buffer out);
