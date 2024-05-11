@@ -38,6 +38,7 @@ print_help(void) {
     }
 
     dprintf(STDERR_FILENO, "\nFlags:\n");
+    print_flag('h', "print help");
     print_flag('p', "echo STDIN to STDOUT and append the checksum to STDOUT");
     print_flag('q', "quiet mode");
     print_flag('r', "reverse the format of the output");
@@ -124,6 +125,61 @@ print_hash(Buffer hash, Command cmd, bool is_str, const char* input) {
     printf("\n");
 }
 
+static void
+print_hash_stdin(Buffer hash, Buffer input) {
+    if (options.quiet) {
+        printf("%s\n", input.ptr);
+    } else {
+        printf("(");
+        if (options.echo_stdin)
+            printf("\"%s\"", input.ptr);
+        else
+            printf("stdin");
+        printf(")= ");
+    }
+
+    for (u64 i = 0; i < hash.len; i++) {
+        printf("%02x", hash.ptr[i]);
+    }
+    printf("\n");
+}
+
+static Buffer
+stdin_to_buffer(void) {
+    u64 capacity = 2048;
+    Buffer str = { .ptr = malloc(capacity), .len = 0 };
+    if (!str.ptr) return (Buffer){ 0 };
+
+    u8 buffer[2048];
+    i64 bytes = sizeof(buffer);
+    while (bytes > 0) {
+        bytes = read(STDIN_FILENO, buffer, sizeof(buffer));
+        if (bytes < 0) return (Buffer){ 0 };
+
+        u64 remaining = capacity - str.len;
+
+        if ((u64)bytes > remaining) {
+            u64 rest = bytes - remaining;
+            capacity = (capacity * 2 > rest) ? capacity * 2 : rest;
+
+            u8* ptr = malloc(capacity);
+            if (!ptr) return (Buffer){ 0 };
+
+            ft_memcpy((Buffer){ .ptr = ptr, .len = str.len }, str);
+            free(str.ptr);
+            str.ptr = ptr;
+        }
+
+        ft_memcpy(
+            (Buffer){ .ptr = str.ptr + str.len, .len = bytes },
+            (Buffer){ .ptr = buffer, .len = bytes }
+        );
+        str.len += bytes;
+    }
+
+    return str;
+}
+
 int
 main(int argc, char** argv) {
     if (argc > 0) progname = argv[0];
@@ -139,9 +195,14 @@ main(int argc, char** argv) {
         return EXIT_FAILURE;
     }
 
-    u64 first_input = 3;
+    u64 first_input = 2;
     if (argc > 2) {
         first_input = parse_flags(argc, argv);
+    }
+
+    if (options.print_help) {
+        print_help();
+        return EXIT_FAILURE;
     }
 
     u64 digest_size;
@@ -165,6 +226,17 @@ main(int argc, char** argv) {
 
     u8 buffer[64];
     Buffer out = { .ptr = buffer, .len = digest_size };
+
+    if (options.echo_stdin || first_input == (u64)argc) {
+        Buffer input = stdin_to_buffer();
+        if (!input.ptr) {
+            dprintf(STDERR_FILENO, "%s: %s: %s\n", progname, argv[1], strerror(errno));
+        }
+
+        hasher_str(input, out);
+        print_hash_stdin(out, input);
+        free(input.ptr);
+    }
 
     if (options.first_is_string) {
         Buffer input = {
