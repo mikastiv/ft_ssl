@@ -135,14 +135,19 @@ print_hash(Buffer hash, Command cmd, bool is_str, const char* input) {
 
 static void
 print_hash_stdin(Buffer hash, Buffer input) {
+    bool newline = input.len && input.ptr[input.len - 1] == '\n';
+    const char* label = options.echo_stdin ? (char*)input.ptr : "stdin";
+
+    // Remove last newline
+    if (newline) input.ptr[input.len - 1] = 0;
+
     if (options.quiet && options.echo_stdin) {
-        printf("%s ", input.ptr);
+        printf("%s\n", input.ptr);
     } else if (!options.quiet) {
         printf("(");
-        if (options.echo_stdin)
-            printf("\"%s\"", input.ptr);
-        else
-            printf("stdin");
+        if (options.echo_stdin) printf("\"");
+        printf("%s", label);
+        if (options.echo_stdin) printf("\"");
         printf(")= ");
     }
 
@@ -150,6 +155,9 @@ print_hash_stdin(Buffer hash, Buffer input) {
         printf("%02x", hash.ptr[i]);
     }
     printf("\n");
+
+    // Restore newline
+    if (newline) input.ptr[input.len - 1] = '\n';
 }
 
 static Buffer
