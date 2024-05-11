@@ -131,9 +131,9 @@ static void
 sha2x32_final(Sha2x32* sha, Buffer out, u32 digest_size) {
     assert(out.len == digest_size);
 
-    Buffer rest =
+    Buffer padding =
         buffer_create(sha->buffer + sha->buffer_len, SHA2X32_CHUNK_SIZE - sha->buffer_len);
-    ft_memset(rest, 0);
+    ft_memset(padding, 0);
 
     sha->buffer[sha->buffer_len++] = 0x80;
     if (sha->buffer_len > SHA2X32_CHUNK_SIZE - 8) {
@@ -271,19 +271,35 @@ static const u64 k64[] = {
     0x4cc5d4becb3e42b6, 0x597f299cfc657e2a, 0x5fcb6fab3ad6faec, 0x6c44198c4a475817,
 };
 
+static Sha2x64
+sha2x64_init(u64 iv[8]) {
+    return (Sha2x64){
+        .state = {
+            iv[0],
+            iv[1],
+            iv[2],
+            iv[3],
+            iv[4],
+            iv[5],
+            iv[6],
+            iv[7],
+        },
+    };
+}
+
 static Buffer
-sha512_buffer(Sha512* sha) {
-    return (Buffer){ .ptr = sha->buffer, .len = SHA512_CHUNK_SIZE };
+sha2x64_buffer(Sha2x64* sha) {
+    return (Buffer){ .ptr = sha->buffer, .len = sizeof(sha->buffer) };
 }
 
 static void
-sha512_round(Sha512* sha) {
+sha2x64_round(Sha512* sha) {
     u64 w[80];
-    for (u32 i = 0; i < SHA512_CHUNK_SIZE; i += 8) {
+    for (u32 i = 0; i < SHA2X64_CHUNK_SIZE; i += sizeof(w[0])) {
         u8* bytes = &sha->buffer[i];
         u64 hi = (bytes[0] << 24) | (bytes[1] << 16) | (bytes[2] << 8) | bytes[3];
         u64 lo = (bytes[4] << 24) | (bytes[5] << 16) | (bytes[6] << 8) | bytes[7];
-        w[i / 8] = (hi << 32) | lo;
+        w[i / sizeof(w[0])] = (hi << 32) | lo;
     }
 
     for (u32 i = 16; i < 80; i++) {
@@ -329,29 +345,11 @@ sha512_round(Sha512* sha) {
     sha->state[7] += h;
 }
 
-Sha512
-sha512_init(void) {
-    return (Sha512){
-        .state = {
-            0x6a09e667f3bcc908,
-            0xbb67ae8584caa73b,
-            0x3c6ef372fe94f82b,
-            0xa54ff53a5f1d36f1,
-            0x510e527fade682d1,
-            0x9b05688c2b3e6c1f,
-            0x1f83d9abfb41bd6b,
-            0x5be0cd19137e2179,
-        },
-        .total_len = 0,
-        .buffer_len = 0,
-    };
-}
-
-void
-sha512_update(Sha512* sha, Buffer buffer) {
+static void
+sha2x64_update(Sha2x64* sha, Buffer buffer) {
     u32 index = 0;
     if (sha->buffer_len != 0) {
-        u32 remaining = SHA512_CHUNK_SIZE - sha->buffer_len;
+        u32 remaining = SHA2X64_CHUNK_SIZE - sha->buffer_len;
         u32 len = (buffer.len > remaining) ? remaining : buffer.len;
 
         Buffer dst = buffer_create(sha->buffer + sha->buffer_len, len);
@@ -362,18 +360,18 @@ sha512_update(Sha512* sha, Buffer buffer) {
         sha->total_len += len;
         index = len;
 
-        if (sha->buffer_len == SHA512_CHUNK_SIZE) {
-            sha512_round(sha);
+        if (sha->buffer_len == SHA2X64_CHUNK_SIZE) {
+            sha2x64_round(sha);
             sha->buffer_len = 0;
         }
     }
 
-    while (buffer.len - index >= SHA512_CHUNK_SIZE) {
-        Buffer src = buffer_create(buffer.ptr + index, SHA512_CHUNK_SIZE);
-        ft_memcpy(sha512_buffer(sha), src);
-        sha512_round(sha);
-        index += SHA512_CHUNK_SIZE;
-        sha->total_len += SHA512_CHUNK_SIZE;
+    while (buffer.len - index >= SHA2X64_CHUNK_SIZE) {
+        Buffer src = buffer_create(buffer.ptr + index, SHA2X64_CHUNK_SIZE);
+        ft_memcpy(sha2x64_buffer(sha), src);
+        sha2x64_round(sha);
+        index += SHA2X64_CHUNK_SIZE;
+        sha->total_len += SHA2X64_CHUNK_SIZE;
     }
 
     if (index < buffer.len) {
@@ -386,31 +384,32 @@ sha512_update(Sha512* sha, Buffer buffer) {
     }
 }
 
-void
-sha512_final(Sha512* sha, Buffer out) {
-    assert(out.len == SHA512_DIGEST_SIZE);
+static void
+sha2x64_final(Sha2x64* sha, Buffer out, u32 digest_size) {
+    assert(out.len == digest_size);
 
-    Buffer rest = buffer_create(sha->buffer + sha->buffer_len, SHA512_CHUNK_SIZE - sha->buffer_len);
-    ft_memset(rest, 0);
+    Buffer padding =
+        buffer_create(sha->buffer + sha->buffer_len, SHA2X64_CHUNK_SIZE - sha->buffer_len);
+    ft_memset(padding, 0);
 
     sha->buffer[sha->buffer_len++] = 0x80;
-    if (sha->buffer_len > SHA512_CHUNK_SIZE - 16) {
-        sha512_round(sha);
-        ft_memset(sha512_buffer(sha), 0);
+    if (sha->buffer_len > SHA2X64_CHUNK_SIZE - 16) {
+        sha2x64_round(sha);
+        ft_memset(sha2x64_buffer(sha), 0);
     }
 
     u64 i = 0;
     u64 len = sha->total_len * 8;
     while (i < 16) {
-        sha->buffer[SHA512_CHUNK_SIZE - 1 - i] = (u8)len;
+        sha->buffer[SHA2X64_CHUNK_SIZE - 1 - i] = (u8)len;
         len >>= 8;
         i++;
     }
 
-    sha512_round(sha);
+    sha2x64_round(sha);
 
-    for (i = 0; i < SHA512_DIGEST_SIZE; i += 8) {
-        u8* bytes = (u8*)&sha->state[i / 8];
+    for (i = 0; i < digest_size; i += sizeof(u64)) {
+        u8* bytes = (u8*)&sha->state[i / sizeof(u64)];
         out.ptr[i] = bytes[7];
         out.ptr[i + 1] = bytes[6];
         out.ptr[i + 2] = bytes[5];
@@ -420,6 +419,26 @@ sha512_final(Sha512* sha, Buffer out) {
         out.ptr[i + 6] = bytes[1];
         out.ptr[i + 7] = bytes[0];
     }
+}
+
+Sha512
+sha512_init(void) {
+    u64 iv[] = {
+        0x6A09E667F3BCC908, 0xBB67AE8584CAA73B, 0x3C6EF372FE94F82B, 0xA54FF53A5F1D36F1,
+        0x510E527FADE682D1, 0x9B05688C2B3E6C1F, 0x1F83D9ABFB41BD6B, 0x5BE0CD19137E2179,
+    };
+
+    return sha2x64_init(iv);
+}
+
+void
+sha512_update(Sha512* sha, Buffer buffer) {
+    sha2x64_update(sha, buffer);
+}
+
+void
+sha512_final(Sha512* sha, Buffer out) {
+    sha2x64_final(sha, out, SHA512_DIGEST_SIZE);
 }
 
 bool
@@ -448,34 +467,22 @@ sha512_hash_str(Buffer in, Buffer out) {
 
 Sha384
 sha384_init(void) {
-    return (Sha384){
-        .state = {
-            0xCBBB9D5DC1059ED8,
-            0x629A292A367CD507,
-            0x9159015A3070DD17,
-            0x152FECD8F70E5939,
-            0x67332667FFC00B31,
-            0x8EB44A8768581511,
-            0xDB0C2E0D64F98FA7,
-            0x47B5481DBEFA4FA4,
-        },
-        .total_len = 0,
-        .buffer_len = 0,
+    u64 iv[] = {
+        0xCBBB9D5DC1059ED8, 0x629A292A367CD507, 0x9159015A3070DD17, 0x152FECD8F70E5939,
+        0x67332667FFC00B31, 0x8EB44A8768581511, 0xDB0C2E0D64F98FA7, 0x47B5481DBEFA4FA4,
     };
+
+    return sha2x64_init(iv);
 }
 
 void
 sha384_update(Sha384* sha, Buffer buffer) {
-    sha512_update(sha, buffer);
+    sha2x64_update(sha, buffer);
 }
 
 void
 sha384_final(Sha384* sha, Buffer out) {
-    assert(out.len == SHA384_DIGEST_SIZE);
-
-    u8 tmp[SHA512_DIGEST_SIZE];
-    sha512_final(sha, buffer_create(tmp, SHA512_DIGEST_SIZE));
-    ft_memcpy(out, buffer_create(tmp, SHA384_DIGEST_SIZE));
+    sha2x64_final(sha, out, SHA384_DIGEST_SIZE);
 }
 
 bool

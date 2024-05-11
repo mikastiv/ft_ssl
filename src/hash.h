@@ -77,15 +77,18 @@ sha224_hash_fd(int fd, Buffer out);
 void
 sha224_hash_str(Buffer in, Buffer out);
 
-#define SHA512_CHUNK_SIZE 128
+#define SHA2X64_CHUNK_SIZE 128
 #define SHA512_DIGEST_SIZE 64
+#define SHA384_DIGEST_SIZE 48
 
 typedef struct {
     u64 state[8];
     u64 total_len;
-    u8 buffer[SHA512_CHUNK_SIZE];
+    u8 buffer[SHA2X64_CHUNK_SIZE];
     u64 buffer_len;
-} Sha512;
+} Sha2x64;
+
+typedef Sha2x64 Sha512;
 
 Sha512
 sha512_init(void);
@@ -102,10 +105,7 @@ sha512_hash_fd(int fd, Buffer out);
 void
 sha512_hash_str(Buffer in, Buffer out);
 
-#define SHA384_CHUNK_SIZE 128
-#define SHA384_DIGEST_SIZE 48
-
-typedef Sha512 Sha384;
+typedef Sha2x64 Sha384;
 
 Sha384
 sha384_init(void);
