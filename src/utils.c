@@ -54,6 +54,18 @@ rotate_right(u32 value, u32 shift) {
     return (value >> shift) | (value << (32 - shift));
 }
 
+u64
+rotate_left64(u64 value, u64 shift) {
+    assert(shift < 64);
+    return (value << shift) | (value >> (64 - shift));
+}
+
+u64
+rotate_right64(u64 value, u64 shift) {
+    assert(shift < 64);
+    return (value >> shift) | (value << (64 - shift));
+}
+
 Buffer
 str(const char* s) {
     return (Buffer){ .ptr = (u8*)s, .len = ft_strlen(s) };

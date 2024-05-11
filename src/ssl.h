@@ -15,4 +15,5 @@ typedef enum {
     CMD_MD5,
     CMD_SHA256,
     CMD_SHA224,
+    CMD_SHA512,
 } Command;
