@@ -32,15 +32,18 @@ md5_hash_fd(int fd, Buffer out);
 void
 md5_hash_str(Buffer in, Buffer out);
 
-#define SHA256_CHUNK_SIZE 64
+#define SHA2X32_CHUNK_SIZE 64
 #define SHA256_DIGEST_SIZE 32
+#define SHA224_DIGEST_SIZE 28
 
 typedef struct {
     u32 state[8];
     u64 total_len;
-    u8 buffer[SHA256_CHUNK_SIZE];
+    u8 buffer[SHA2X32_CHUNK_SIZE];
     u64 buffer_len;
-} Sha256;
+} Sha2x32;
+
+typedef Sha2x32 Sha256;
 
 Sha256
 sha256_init(void);
@@ -57,10 +60,7 @@ sha256_hash_fd(int fd, Buffer out);
 void
 sha256_hash_str(Buffer in, Buffer out);
 
-#define SHA224_CHUNK_SIZE 64
-#define SHA224_DIGEST_SIZE 28
-
-typedef Sha256 Sha224;
+typedef Sha2x32 Sha224;
 
 Sha224
 sha224_init(void);
