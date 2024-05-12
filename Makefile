@@ -17,7 +17,7 @@ $(OBJDIR)/%.o: $(SRCDIR)/%.c
 all: $(NAME)
 
 $(NAME): $(OBJDIR) $(OBJ)
-	$(CC) $(OBJ) -lm -o $(NAME)
+	$(CC) $(OBJ) -o $(NAME)
 
 $(OBJDIR):
 	mkdir -p $(OBJDIR)
