@@ -5,7 +5,7 @@ CFLAGS = -Wall -Wextra -Werror -Wpedantic -Wshadow -fno-strict-aliasing
 
 SRCDIR = src
 OBJDIR = obj
-CFILES = main.c utils.c md5.c sha2.c
+CFILES = main.c utils.c md5.c sha2.c digest.c
 HFILES = types.h utils.h ssl.h
 SRC = $(addprefix $(SRCDIR)/, $(CFILES))
 INC = $(addprefix $(SRCDIR)/, $(HFILES))

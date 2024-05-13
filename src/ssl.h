@@ -1,5 +1,7 @@
 #pragma once
 
+#include "types.h"
+
 #include <stdbool.h>
 
 typedef struct {
@@ -18,3 +20,6 @@ typedef enum {
     CMD_SHA512,
     CMD_SHA384,
 } Command;
+
+bool
+digest(int argc, char** argv, u32 first_input, Command cmd);
