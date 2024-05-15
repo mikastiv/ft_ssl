@@ -1,4 +1,4 @@
-#include "hash.h"
+#include "digest.h"
 #include "types.h"
 #include "utils.h"
 
