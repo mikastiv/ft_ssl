@@ -8,6 +8,7 @@ typedef bool (*HasherFd)(int, Buffer);
 typedef void (*HasherStr)(Buffer, Buffer);
 
 #define MD5_CHUNK_SIZE 64
+#define MD5_LENGTH_SIZE 8
 #define MD5_DIGEST_SIZE 16
 
 typedef struct {
@@ -33,6 +34,7 @@ void
 md5_hash_str(Buffer in, Buffer out);
 
 #define SHA2X32_CHUNK_SIZE 64
+#define SHA2X32_LENGTH_SIZE 8
 #define SHA256_DIGEST_SIZE 32
 #define SHA224_DIGEST_SIZE 28
 
@@ -78,6 +80,7 @@ void
 sha224_hash_str(Buffer in, Buffer out);
 
 #define SHA2X64_CHUNK_SIZE 128
+#define SHA2X64_LENGTH_SIZE 16
 #define SHA512_DIGEST_SIZE 64
 #define SHA384_DIGEST_SIZE 48
 
@@ -121,3 +124,29 @@ sha384_hash_fd(int fd, Buffer out);
 
 void
 sha384_hash_str(Buffer in, Buffer out);
+
+#define WHIRLPOOL_CHUNK_SIZE 64
+#define WHIRLPOOL_DIGEST_SIZE 64
+#define WHIRLPOOL_LENGTH_SIZE 32
+
+typedef struct {
+    u64 state[8];
+    u8 total_bitlen[WHIRLPOOL_LENGTH_SIZE];
+    u8 buffer[WHIRLPOOL_CHUNK_SIZE];
+    u64 buffer_len;
+} Whirlpool;
+
+Whirlpool
+whirlpool_init(void);
+
+void
+whirlpool_update(Whirlpool* whrl, Buffer buffer);
+
+void
+whirlpool_final(Whirlpool* whrl, Buffer out);
+
+bool
+whirlpool_hash_fd(int fd, Buffer out);
+
+void
+whirlpool_hash_str(Buffer in, Buffer out);
