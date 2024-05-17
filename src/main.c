@@ -11,8 +11,9 @@ const char* progname;
 Options options;
 
 const char* cmd_names[] = {
-    [CMD_NONE] = "none",     [CMD_MD5] = "md5",       [CMD_SHA256] = "sha256",
-    [CMD_SHA224] = "sha224", [CMD_SHA512] = "sha512", [CMD_SHA384] = "sha384",
+    [CMD_NONE] = "none",           [CMD_MD5] = "md5",       [CMD_SHA256] = "sha256",
+    [CMD_SHA224] = "sha224",       [CMD_SHA512] = "sha512", [CMD_SHA384] = "sha384",
+    [CMD_WHIRLPOOL] = "whirlpool",
 };
 
 static void
@@ -114,7 +115,8 @@ main(int argc, char** argv) {
         case CMD_SHA256:
         case CMD_SHA224:
         case CMD_SHA512:
-        case CMD_SHA384: {
+        case CMD_SHA384:
+        case CMD_WHIRLPOOL: {
             bool success = digest(argc, argv, first_input, cmd);
             if (!success) return EXIT_FAILURE;
         } break;

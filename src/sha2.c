@@ -5,7 +5,7 @@
 #include <assert.h>
 #include <unistd.h>
 
-static const u32 k32[] = {
+static const u32 k32[SHA2X32_ROUNDS] = {
     0x428A2F98, 0x71374491, 0xB5C0FBCF, 0xE9B5DBA5, 0x3956C25B, 0x59F111F1, 0x923F82A4, 0xAB1C5ED5,
     0xD807AA98, 0x12835B01, 0x243185BE, 0x550C7DC3, 0x72BE5D74, 0x80DEB1FE, 0x9BDC06A7, 0xC19BF174,
     0xE49B69C1, 0xEFBE4786, 0x0FC19DC6, 0x240CA1CC, 0x2DE92C6F, 0x4A7484AA, 0x5CB0A9DC, 0x76F988DA,
@@ -39,13 +39,13 @@ sha2x32_buffer(Sha2x32* sha) {
 
 static void
 sha2x32_round(Sha2x32* sha) {
-    u32 w[64];
+    u32 w[SHA2X32_ROUNDS];
     for (u32 i = 0; i < SHA2X32_CHUNK_SIZE; i += sizeof(w[0])) {
         u8* bytes = &sha->buffer[i];
         w[i / sizeof(w[0])] = (bytes[0] << 24) | (bytes[1] << 16) | (bytes[2] << 8) | bytes[3];
     }
 
-    for (u32 i = 16; i < 64; i++) {
+    for (u32 i = 16; i < SHA2X32_ROUNDS; i++) {
         u32 s0 = rotate_right(w[i - 15], 7) ^ rotate_right(w[i - 15], 18) ^ (w[i - 15] >> 3);
         u32 s1 = rotate_right(w[i - 2], 17) ^ rotate_right(w[i - 2], 19) ^ (w[i - 2] >> 10);
         w[i] = w[i - 16] + s0 + w[i - 7] + s1;
@@ -60,7 +60,7 @@ sha2x32_round(Sha2x32* sha) {
     u32 g = sha->state[6];
     u32 h = sha->state[7];
 
-    for (u32 i = 0; i < 64; i++) {
+    for (u32 i = 0; i < SHA2X32_ROUNDS; i++) {
         u32 ep1 = rotate_right(e, 6) ^ rotate_right(e, 11) ^ rotate_right(e, 25);
         u32 ch = (e & f) ^ ((~e) & g);
         u32 t1 = h + ep1 + ch + k32[i] + w[i];
@@ -258,7 +258,7 @@ sha224_hash_str(Buffer in, Buffer out) {
     sha224_final(&sha, out);
 }
 
-static const u64 k64[] = {
+static const u64 k64[SHA2X64_ROUNDS] = {
     0x428A2F98D728AE22, 0x7137449123EF65CD, 0xB5C0FBCFEC4D3B2F, 0xE9B5DBA58189DBBC,
     0x3956C25BF348B538, 0x59F111F1B605D019, 0x923F82A4AF194F9B, 0xAB1C5ED5DA6D8118,
     0xD807AA98A3030242, 0x12835B0145706FBE, 0x243185BE4EE4B28C, 0x550C7DC3D5FFB4E2,
@@ -304,7 +304,7 @@ sha2x64_buffer(Sha2x64* sha) {
 
 static void
 sha2x64_round(Sha512* sha) {
-    u64 w[80];
+    u64 w[SHA2X64_ROUNDS];
     for (u32 i = 0; i < SHA2X64_CHUNK_SIZE; i += sizeof(w[0])) {
         u8* bytes = &sha->buffer[i];
         u64 hi = (bytes[0] << 24) | (bytes[1] << 16) | (bytes[2] << 8) | bytes[3];
@@ -312,7 +312,7 @@ sha2x64_round(Sha512* sha) {
         w[i / sizeof(w[0])] = (hi << 32) | lo;
     }
 
-    for (u32 i = 16; i < 80; i++) {
+    for (u32 i = 16; i < SHA2X64_ROUNDS; i++) {
         u64 s0 = rotate_right64(w[i - 15], 1) ^ rotate_right64(w[i - 15], 8) ^ (w[i - 15] >> 7);
         u64 s1 = rotate_right64(w[i - 2], 19) ^ rotate_right64(w[i - 2], 61) ^ (w[i - 2] >> 6);
         w[i] = w[i - 16] + s0 + w[i - 7] + s1;
@@ -327,7 +327,7 @@ sha2x64_round(Sha512* sha) {
     u64 g = sha->state[6];
     u64 h = sha->state[7];
 
-    for (u32 i = 0; i < 80; i++) {
+    for (u32 i = 0; i < SHA2X64_ROUNDS; i++) {
         u64 ep1 = rotate_right64(e, 14) ^ rotate_right64(e, 18) ^ rotate_right64(e, 41);
         u64 ch = (e & f) ^ ((~e) & g);
         u64 t1 = h + ep1 + ch + k64[i] + w[i];

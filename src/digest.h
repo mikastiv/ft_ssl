@@ -8,6 +8,7 @@ typedef bool (*HasherFd)(int, Buffer);
 typedef void (*HasherStr)(Buffer, Buffer);
 
 #define MD5_CHUNK_SIZE 64
+#define MD5_ROUNDS 64
 #define MD5_LENGTH_SIZE 8
 #define MD5_DIGEST_SIZE 16
 
@@ -34,6 +35,7 @@ void
 md5_hash_str(Buffer in, Buffer out);
 
 #define SHA2X32_CHUNK_SIZE 64
+#define SHA2X32_ROUNDS 64
 #define SHA2X32_LENGTH_SIZE 8
 #define SHA256_DIGEST_SIZE 32
 #define SHA224_DIGEST_SIZE 28
@@ -80,6 +82,7 @@ void
 sha224_hash_str(Buffer in, Buffer out);
 
 #define SHA2X64_CHUNK_SIZE 128
+#define SHA2X64_ROUNDS 80
 #define SHA2X64_LENGTH_SIZE 16
 #define SHA512_DIGEST_SIZE 64
 #define SHA384_DIGEST_SIZE 48
@@ -126,6 +129,7 @@ void
 sha384_hash_str(Buffer in, Buffer out);
 
 #define WHIRLPOOL_CHUNK_SIZE 64
+#define WHIRLPOOL_ROUNDS 10
 #define WHIRLPOOL_DIGEST_SIZE 64
 #define WHIRLPOOL_LENGTH_SIZE 32
 

@@ -19,6 +19,7 @@ typedef enum {
     CMD_SHA224,
     CMD_SHA512,
     CMD_SHA384,
+    CMD_WHIRLPOOL,
 } Command;
 
 bool

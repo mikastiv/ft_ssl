@@ -32,6 +32,9 @@ print_hash(Buffer hash, Command cmd, bool is_str, const char* input) {
         case CMD_SHA384: {
             name = "SHA384";
         } break;
+        case CMD_WHIRLPOOL: {
+            name = "WHIRLPOOL";
+        } break;
         case CMD_NONE: {
             name = "Unknown";
         } break;
@@ -151,6 +154,11 @@ digest(int argc, char** argv, u32 first_input, Command cmd) {
             digest_size = SHA384_DIGEST_SIZE;
             hasher_fd = &sha384_hash_fd;
             hasher_str = &sha384_hash_str;
+        } break;
+        case CMD_WHIRLPOOL: {
+            digest_size = WHIRLPOOL_DIGEST_SIZE;
+            hasher_fd = &whirlpool_hash_fd;
+            hasher_str = &whirlpool_hash_str;
         } break;
         default: {
             dprintf(STDERR_FILENO, "Unreachable\n");

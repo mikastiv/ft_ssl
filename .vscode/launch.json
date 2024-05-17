@@ -10,7 +10,9 @@
             "name": "Debug",
             "program": "${workspaceFolder}/ft_ssl",
             "args": [
-                "md5"
+                "whirlpool",
+                "-s",
+                "",
             ],
             "cwd": "${workspaceFolder}"
         }
