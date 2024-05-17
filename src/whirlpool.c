@@ -549,13 +549,13 @@ static const u64 rc[WHIRLPOOL_ROUNDS + 1] = {
 
 static Buffer
 whirlpool_buffer(Whirlpool* whrl) {
-    return (Buffer){ .ptr = whrl->buffer, .len = whrl->buffer_len };
+    return (Buffer){ .ptr = whrl->buffer, .len = sizeof(whrl->buffer) };
 }
 
 static void
 whirlpool_round(Whirlpool* whrl) {
     u64 block[8];
-    for (u32 i = 0; i < array_len(block); i += sizeof(block[0])) {
+    for (u32 i = 0; i < WHIRLPOOL_CHUNK_SIZE; i += sizeof(block[0])) {
         u8* bytes = &whrl->buffer[i];
         u64 hi = (bytes[0] << 24) | (bytes[1] << 16) | (bytes[2] << 8) | bytes[3];
         u64 lo = (bytes[4] << 24) | (bytes[5] << 16) | (bytes[6] << 8) | bytes[7];
