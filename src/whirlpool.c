@@ -541,10 +541,10 @@ static const u64 C7[256] = {
     0x28A0285D88507528, 0x5C6D5CDA31B8865C, 0xF8C7F8933FED6BF8, 0x86228644A411C286,
 };
 
-static const u64 rc[WHIRLPOOL_ROUNDS + 1] = {
-    0x0000000000000000, 0x1823C6E887B8014F, 0x36A6D2F5796F9152, 0x60BC9B8EA30C7B35,
-    0x1DE0D7C22E4BFE57, 0x157737E59FF04ADA, 0x58C9290AB1A06B85, 0xBD5D10F4CB3E0567,
-    0xE427418BA77D95D8, 0xFBEE7C66DD17479E, 0xCA2DBF07AD5A8333,
+static const u64 rc[WHIRLPOOL_ROUNDS] = {
+    0x1823C6E887B8014F, 0x36A6D2F5796F9152, 0x60BC9B8EA30C7B35, 0x1DE0D7C22E4BFE57,
+    0x157737E59FF04ADA, 0x58C9290AB1A06B85, 0xBD5D10F4CB3E0567, 0xE427418BA77D95D8,
+    0xFBEE7C66DD17479E, 0xCA2DBF07AD5A8333,
 };
 
 static Buffer
@@ -570,7 +570,7 @@ whirlpool_round(Whirlpool* whrl) {
     }
 
     u64 l[8];
-    for (u32 round = 1; round <= WHIRLPOOL_ROUNDS; round++) {
+    for (u32 round = 0; round < WHIRLPOOL_ROUNDS; round++) {
         for (u32 i = 0; i < array_len(l); i++) {
             l[i] = C0[(k[i % 8] >> 56) & 0xFF] ^ C1[(k[(i + 7) % 8] >> 48) & 0xFF] ^
                    C2[(k[(i + 6) % 8] >> 40) & 0xFF] ^ C3[(k[(i + 5) % 8] >> 32) & 0xFF] ^
