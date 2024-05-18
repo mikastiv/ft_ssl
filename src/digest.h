@@ -15,7 +15,7 @@ typedef void (*HasherStr)(Buffer, Buffer);
 typedef struct {
     u32 state[4];
     u64 total_len;
-    u8 buffer[MD5_CHUNK_SIZE];
+    _Alignas(4) u8 buffer[MD5_CHUNK_SIZE];
     u64 buffer_len;
 } Md5;
 
@@ -43,7 +43,7 @@ md5_hash_str(Buffer in, Buffer out);
 typedef struct {
     u32 state[8];
     u64 total_len;
-    u8 buffer[SHA2X32_CHUNK_SIZE];
+    _Alignas(4) u8 buffer[SHA2X32_CHUNK_SIZE];
     u64 buffer_len;
 } Sha2x32;
 
@@ -90,7 +90,7 @@ sha224_hash_str(Buffer in, Buffer out);
 typedef struct {
     u64 state[8];
     u64 total_len;
-    u8 buffer[SHA2X64_CHUNK_SIZE];
+    _Alignas(8) u8 buffer[SHA2X64_CHUNK_SIZE];
     u64 buffer_len;
 } Sha2x64;
 
@@ -136,7 +136,7 @@ sha384_hash_str(Buffer in, Buffer out);
 typedef struct {
     u64 state[8];
     u8 total_bitlen[WHIRLPOOL_LENGTH_SIZE];
-    u8 buffer[WHIRLPOOL_CHUNK_SIZE];
+    _Alignas(8) u8 buffer[WHIRLPOOL_CHUNK_SIZE];
     u64 buffer_len;
 } Whirlpool;
 

@@ -59,7 +59,7 @@ md5_round(Md5* md5) {
         a = d;
         d = c;
         c = b;
-        b = b + rotate_left(f, shift[i]);
+        b = b + rotate_left32(f, shift[i]);
     }
 
     md5->state[0] += a;

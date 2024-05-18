@@ -40,14 +40,14 @@ sha2x32_buffer(Sha2x32* sha) {
 static void
 sha2x32_round(Sha2x32* sha) {
     u32 w[SHA2X32_ROUNDS];
-    for (u32 i = 0; i < SHA2X32_CHUNK_SIZE; i += sizeof(w[0])) {
-        u8* bytes = &sha->buffer[i];
-        w[i / sizeof(w[0])] = (bytes[0] << 24) | (bytes[1] << 16) | (bytes[2] << 8) | bytes[3];
+    for (u32 i = 0; i < SHA2X32_CHUNK_SIZE; i += sizeof(u32)) {
+        u32* bytes = (u32*)&sha->buffer[i];
+        w[i / sizeof(u32)] = byte_swap32(*bytes);
     }
 
     for (u32 i = 16; i < SHA2X32_ROUNDS; i++) {
-        u32 s0 = rotate_right(w[i - 15], 7) ^ rotate_right(w[i - 15], 18) ^ (w[i - 15] >> 3);
-        u32 s1 = rotate_right(w[i - 2], 17) ^ rotate_right(w[i - 2], 19) ^ (w[i - 2] >> 10);
+        u32 s0 = rotate_right32(w[i - 15], 7) ^ rotate_right32(w[i - 15], 18) ^ (w[i - 15] >> 3);
+        u32 s1 = rotate_right32(w[i - 2], 17) ^ rotate_right32(w[i - 2], 19) ^ (w[i - 2] >> 10);
         w[i] = w[i - 16] + s0 + w[i - 7] + s1;
     }
 
@@ -61,10 +61,10 @@ sha2x32_round(Sha2x32* sha) {
     u32 h = sha->state[7];
 
     for (u32 i = 0; i < SHA2X32_ROUNDS; i++) {
-        u32 ep1 = rotate_right(e, 6) ^ rotate_right(e, 11) ^ rotate_right(e, 25);
+        u32 ep1 = rotate_right32(e, 6) ^ rotate_right32(e, 11) ^ rotate_right32(e, 25);
         u32 ch = (e & f) ^ ((~e) & g);
         u32 t1 = h + ep1 + ch + k32[i] + w[i];
-        u32 ep0 = rotate_right(a, 2) ^ rotate_right(a, 13) ^ rotate_right(a, 22);
+        u32 ep0 = rotate_right32(a, 2) ^ rotate_right32(a, 13) ^ rotate_right32(a, 22);
         u32 maj = (a & b) ^ (a & c) ^ (b & c);
         u32 t2 = ep0 + maj;
 
@@ -305,11 +305,9 @@ sha2x64_buffer(Sha2x64* sha) {
 static void
 sha2x64_round(Sha512* sha) {
     u64 w[SHA2X64_ROUNDS];
-    for (u32 i = 0; i < SHA2X64_CHUNK_SIZE; i += sizeof(w[0])) {
-        u8* bytes = &sha->buffer[i];
-        u64 hi = (bytes[0] << 24) | (bytes[1] << 16) | (bytes[2] << 8) | bytes[3];
-        u64 lo = (bytes[4] << 24) | (bytes[5] << 16) | (bytes[6] << 8) | bytes[7];
-        w[i / sizeof(w[0])] = (hi << 32) | lo;
+    for (u32 i = 0; i < SHA2X64_CHUNK_SIZE; i += sizeof(u64)) {
+        u64* bytes = (u64*)&sha->buffer[i];
+        w[i / sizeof(u64)] = byte_swap64(*bytes);
     }
 
     for (u32 i = 16; i < SHA2X64_ROUNDS; i++) {

@@ -47,8 +47,7 @@ parse_flags(int argc, char** argv) {
     for (int i = 2; i < argc; i++) {
         if (argv[i][0] != '-') return i;
 
-        u64 len = ft_strlen(argv[i]);
-        for (u64 j = 1; j < len; j++) {
+        for (u64 j = 1; argv[i][j]; j++) {
             switch (argv[i][j]) {
                 case 'h': {
                     options.print_help = true;

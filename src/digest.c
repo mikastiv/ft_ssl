@@ -181,10 +181,7 @@ digest(int argc, char** argv, u32 first_input, Command cmd) {
     }
 
     if (options.first_is_string) {
-        Buffer input = {
-            .ptr = (u8*)argv[first_input],
-            .len = ft_strlen(argv[first_input]),
-        };
+        Buffer input = str(argv[first_input]);
         hasher_str(input, out);
 
         print_hash(out, cmd, true, argv[first_input]);

@@ -555,11 +555,9 @@ whirlpool_buffer(Whirlpool* whrl) {
 static void
 whirlpool_round(Whirlpool* whrl) {
     u64 block[8];
-    for (u32 i = 0; i < WHIRLPOOL_CHUNK_SIZE; i += sizeof(block[0])) {
-        u8* bytes = &whrl->buffer[i];
-        u64 hi = (bytes[0] << 24) | (bytes[1] << 16) | (bytes[2] << 8) | bytes[3];
-        u64 lo = (bytes[4] << 24) | (bytes[5] << 16) | (bytes[6] << 8) | bytes[7];
-        block[i / sizeof(block[0])] = (hi << 32) | lo;
+    for (u32 i = 0; i < WHIRLPOOL_CHUNK_SIZE; i += sizeof(u64)) {
+        u64* bytes = (u64*)&whrl->buffer[i];
+        block[i / sizeof(u64)] = byte_swap64(*bytes);
     }
 
     u64 k[8];
