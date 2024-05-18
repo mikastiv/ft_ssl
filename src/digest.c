@@ -166,7 +166,7 @@ digest(int argc, char** argv, u32 first_input, Command cmd) {
         } break;
     }
 
-    u8 buffer[64];
+    u8 buffer[128];
     Buffer out = { .ptr = buffer, .len = digest_size };
 
     if (options.echo_stdin || first_input == (u32)argc) {
