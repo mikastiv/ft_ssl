@@ -572,10 +572,15 @@ whirlpool_round(Whirlpool* whrl) {
     u64 l[8];
     for (u32 round = 0; round < WHIRLPOOL_ROUNDS; round++) {
         for (u32 i = 0; i < array_len(l); i++) {
-            l[i] = C0[(k[i % 8] >> 56) & 0xFF] ^ C1[(k[(i + 7) % 8] >> 48) & 0xFF] ^
-                   C2[(k[(i + 6) % 8] >> 40) & 0xFF] ^ C3[(k[(i + 5) % 8] >> 32) & 0xFF] ^
-                   C4[(k[(i + 4) % 8] >> 24) & 0xFF] ^ C5[(k[(i + 3) % 8] >> 16) & 0xFF] ^
-                   C6[(k[(i + 2) % 8] >> 8) & 0xFF] ^ C7[(k[(i + 1) % 8]) & 0xFF];
+            u64 c0 = C0[(k[i % 8] >> 56) & 0xFF];
+            u64 c1 = C1[(k[(i + 7) % 8] >> 48) & 0xFF];
+            u64 c2 = C2[(k[(i + 6) % 8] >> 40) & 0xFF];
+            u64 c3 = C3[(k[(i + 5) % 8] >> 32) & 0xFF];
+            u64 c4 = C4[(k[(i + 4) % 8] >> 24) & 0xFF];
+            u64 c5 = C5[(k[(i + 3) % 8] >> 16) & 0xFF];
+            u64 c6 = C6[(k[(i + 2) % 8] >> 8) & 0xFF];
+            u64 c7 = C7[(k[(i + 1) % 8]) & 0xFF];
+            l[i] = c0 ^ c1 ^ c2 ^ c3 ^ c4 ^ c5 ^ c6 ^ c7;
         }
         l[0] ^= rc[round];
 
@@ -584,11 +589,15 @@ whirlpool_round(Whirlpool* whrl) {
         }
 
         for (u32 i = 0; i < array_len(l); i++) {
-            l[i] = C0[(state[i % 8] >> 56) & 0xFF] ^ C1[(state[(i + 7) % 8] >> 48) & 0xFF] ^
-                   C2[(state[(i + 6) % 8] >> 40) & 0xFF] ^ C3[(state[(i + 5) % 8] >> 32) & 0xFF] ^
-                   C4[(state[(i + 4) % 8] >> 24) & 0xFF] ^ C5[(state[(i + 3) % 8] >> 16) & 0xFF] ^
-                   C6[(state[(i + 2) % 8] >> 8) & 0xFF] ^ C7[(state[(i + 1) % 8]) & 0xFF] ^
-                   k[i % 8];
+            u64 c0 = C0[(state[i % 8] >> 56) & 0xFF];
+            u64 c1 = C1[(state[(i + 7) % 8] >> 48) & 0xFF];
+            u64 c2 = C2[(state[(i + 6) % 8] >> 40) & 0xFF];
+            u64 c3 = C3[(state[(i + 5) % 8] >> 32) & 0xFF];
+            u64 c4 = C4[(state[(i + 4) % 8] >> 24) & 0xFF];
+            u64 c5 = C5[(state[(i + 3) % 8] >> 16) & 0xFF];
+            u64 c6 = C6[(state[(i + 2) % 8] >> 8) & 0xFF];
+            u64 c7 = C7[(state[(i + 1) % 8]) & 0xFF];
+            l[i] = c0 ^ c1 ^ c2 ^ c3 ^ c4 ^ c5 ^ c6 ^ c7 ^ k[i % 8];
         }
 
         for (u32 i = 0; i < array_len(state); i++) {
