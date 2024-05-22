@@ -4,30 +4,37 @@
 
 #include <stdbool.h>
 
-#define declare_interface(prefix)                                                                  \
+#define digest_declare_interface(prefix)                                                           \
     bool prefix##_hash_fd(int fd, bool echo, Buffer out);                                          \
     void prefix##_hash_str(Buffer in, Buffer out)
 
-#define implement_interface(Type, prefix)                                                          \
-    bool prefix##_hash_fd(int fd, bool echo, Buffer out) {                                         \
-        Type hasher = prefix##_init();                                                             \
-        u8 buffer[2046];                                                                           \
-        i64 bytes = sizeof(buffer);                                                                \
-        while (true) {                                                                             \
-            bytes = read(fd, buffer, sizeof(buffer));                                              \
-            if (bytes < 0) return false;                                                           \
-            if (bytes == 0) break;                                                                 \
-            prefix##_update(&hasher, (Buffer){ .ptr = buffer, .len = (u64)bytes });                \
-            if (echo) write(STDOUT_FILENO, buffer, bytes);                                         \
-        }                                                                                          \
-        prefix##_final(&hasher, out);                                                              \
-        return true;                                                                               \
-    }                                                                                              \
-                                                                                                   \
+#define digest_implement_interface(Type, prefix)                                                   \
     void prefix##_hash_str(Buffer in, Buffer out) {                                                \
         Type hasher = prefix##_init();                                                             \
         prefix##_update(&hasher, in);                                                              \
         prefix##_final(&hasher, out);                                                              \
+    }                                                                                              \
+                                                                                                   \
+    bool prefix##_hash_fd(int fd, bool echo, Buffer out) {                                         \
+        Type hasher = prefix##_init();                                                             \
+        u8 buffer[2046];                                                                           \
+        i64 bytes = sizeof(buffer);                                                                \
+        if (echo) {                                                                                \
+            Buffer input = stdin_to_buffer();                                                      \
+            if (!input.ptr) return false;                                                          \
+            prefix##_hash_str(input, out);                                                         \
+            write(STDOUT_FILENO, input.ptr, input.len);                                            \
+            free(input.ptr);                                                                       \
+        } else {                                                                                   \
+            while (true) {                                                                         \
+                bytes = read(fd, buffer, sizeof(buffer));                                          \
+                if (bytes < 0) return false;                                                       \
+                if (bytes == 0) break;                                                             \
+                prefix##_update(&hasher, (Buffer){ .ptr = buffer, .len = (u64)bytes });            \
+            }                                                                                      \
+        }                                                                                          \
+        prefix##_final(&hasher, out);                                                              \
+        return true;                                                                               \
     }
 
 typedef bool (*HasherFd)(int, bool, Buffer);
@@ -145,9 +152,9 @@ whirlpool_update(Whirlpool* whrl, Buffer buffer);
 void
 whirlpool_final(Whirlpool* whrl, Buffer out);
 
-declare_interface(md5);
-declare_interface(sha256);
-declare_interface(sha224);
-declare_interface(sha512);
-declare_interface(sha384);
-declare_interface(whirlpool);
+digest_declare_interface(md5);
+digest_declare_interface(sha256);
+digest_declare_interface(sha224);
+digest_declare_interface(sha512);
+digest_declare_interface(sha384);
+digest_declare_interface(whirlpool);

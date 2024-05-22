@@ -1,6 +1,8 @@
 #include "utils.h"
 
 #include <assert.h>
+#include <stdlib.h>
+#include <unistd.h>
 
 u64
 ft_strlen(const char* str) {
@@ -96,4 +98,39 @@ str(const char* s) {
 Buffer
 buffer_create(u8* ptr, u64 len) {
     return (Buffer){ .ptr = ptr, .len = len };
+}
+
+Buffer
+stdin_to_buffer(void) {
+    u64 capacity = 10;
+    Buffer str = { .ptr = malloc(capacity + 1), .len = 0 };
+    if (!str.ptr) return (Buffer){ 0 };
+
+    u8 buffer[2048];
+    i64 bytes = sizeof(buffer);
+    while (bytes > 0) {
+        bytes = read(STDIN_FILENO, buffer, sizeof(buffer));
+        if (bytes < 0) return (Buffer){ 0 };
+
+        u64 remaining = capacity - str.len;
+
+        if ((u64)bytes > remaining) {
+            u64 rest = bytes - remaining;
+            capacity = (capacity * 2 > rest) ? capacity * 2 : rest;
+
+            u8* ptr = malloc(capacity + 1);
+            if (!ptr) return (Buffer){ 0 };
+
+            ft_memcpy(buffer_create(ptr, str.len), str);
+            free(str.ptr);
+            str.ptr = ptr;
+        }
+
+        ft_memcpy(buffer_create(str.ptr + str.len, bytes), buffer_create(buffer, bytes));
+        str.len += bytes;
+    }
+
+    str.ptr[str.len] = 0;
+
+    return str;
 }

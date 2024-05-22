@@ -4,6 +4,7 @@
 
 #include <assert.h>
 #include <unistd.h>
+#include <stdlib.h>
 
 static const u64 C0[256] = {
     0x18186018C07830D8, 0x23238C2305AF4626, 0xC6C63FC67EF991B8, 0xE8E887E8136FCDFB,
@@ -691,4 +692,4 @@ whirlpool_final(Whirlpool* whrl, Buffer out) {
     }
 }
 
-implement_interface(Whirlpool, whirlpool)
+digest_implement_interface(Whirlpool, whirlpool)

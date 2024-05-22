@@ -39,3 +39,6 @@ str(const char* s);
 
 Buffer
 buffer_create(u8* ptr, u64 len);
+
+Buffer
+stdin_to_buffer(void);
