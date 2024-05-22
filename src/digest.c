@@ -6,7 +6,6 @@
 #include <errno.h>
 #include <fcntl.h>
 #include <stdio.h>
-#include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
 
@@ -62,68 +61,6 @@ print_hash(Buffer hash, Command cmd, bool is_str, const char* input) {
     printf("\n");
 }
 
-static void
-print_hash_stdin(Buffer hash, Buffer input) {
-    bool newline = input.len && input.ptr[input.len - 1] == '\n';
-    const char* label = options.echo_stdin ? (char*)input.ptr : "stdin";
-
-    // Remove last newline
-    if (newline) input.ptr[input.len - 1] = 0;
-
-    if (options.quiet && options.echo_stdin) {
-        printf("%s\n", input.ptr);
-    } else if (!options.quiet) {
-        printf("(");
-        if (options.echo_stdin) printf("\"");
-        printf("%s", label);
-        if (options.echo_stdin) printf("\"");
-        printf(")= ");
-    }
-
-    for (u64 i = 0; i < hash.len; i++) {
-        printf("%02x", hash.ptr[i]);
-    }
-    printf("\n");
-
-    // Restore newline
-    if (newline) input.ptr[input.len - 1] = '\n';
-}
-
-static Buffer
-stdin_to_buffer(void) {
-    u64 capacity = 2048;
-    Buffer str = { .ptr = malloc(capacity + 1), .len = 0 };
-    if (!str.ptr) return (Buffer){ 0 };
-
-    u8 buffer[2048];
-    i64 bytes = sizeof(buffer);
-    while (bytes > 0) {
-        bytes = read(STDIN_FILENO, buffer, sizeof(buffer));
-        if (bytes < 0) return (Buffer){ 0 };
-
-        u64 remaining = capacity - str.len;
-
-        if ((u64)bytes > remaining) {
-            u64 rest = bytes - remaining;
-            capacity = (capacity * 2 > rest) ? capacity * 2 : rest;
-
-            u8* ptr = malloc(capacity + 1);
-            if (!ptr) return (Buffer){ 0 };
-
-            ft_memcpy(buffer_create(ptr, str.len), str);
-            free(str.ptr);
-            str.ptr = ptr;
-        }
-
-        ft_memcpy(buffer_create(str.ptr + str.len, bytes), buffer_create(buffer, bytes));
-        str.len += bytes;
-    }
-
-    str.ptr[str.len] = 0;
-
-    return str;
-}
-
 bool
 digest(int argc, char** argv, u32 first_input, Command cmd) {
     u64 digest_size;
@@ -170,14 +107,11 @@ digest(int argc, char** argv, u32 first_input, Command cmd) {
     Buffer out = { .ptr = buffer, .len = digest_size };
 
     if (options.echo_stdin || first_input == (u32)argc) {
-        Buffer input = stdin_to_buffer();
-        if (!input.ptr) {
-            dprintf(STDERR_FILENO, "%s: %s: %s\n", progname, argv[1], strerror(errno));
-        }
-
-        hasher_str(input, out);
-        print_hash_stdin(out, input);
-        free(input.ptr);
+        bool success = hasher_fd(STDIN_FILENO, options.echo_stdin, out);
+        if (success)
+            print_hash(out, cmd, false, "stdin");
+        else
+            dprintf(STDERR_FILENO, "%s: %s: %s: %s\n", progname, argv[1], "stdin", strerror(errno));
     }
 
     if (options.first_is_string) {
@@ -196,7 +130,7 @@ digest(int argc, char** argv, u32 first_input, Command cmd) {
             continue;
         }
 
-        bool success = hasher_fd(fd, out);
+        bool success = hasher_fd(fd, false, out);
         close(fd);
 
         if (!success) {

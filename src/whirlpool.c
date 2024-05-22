@@ -691,26 +691,4 @@ whirlpool_final(Whirlpool* whrl, Buffer out) {
     }
 }
 
-bool
-whirlpool_hash_fd(int fd, Buffer out) {
-    Whirlpool whrl = whirlpool_init();
-
-    u8 buffer[2046];
-    i64 bytes = sizeof(buffer);
-    while (bytes == sizeof(buffer)) {
-        bytes = read(fd, buffer, sizeof(buffer));
-        if (bytes < 0) return false;
-        whirlpool_update(&whrl, (Buffer){ .ptr = buffer, .len = (u64)bytes });
-    }
-
-    whirlpool_final(&whrl, out);
-
-    return true;
-}
-
-void
-whirlpool_hash_str(Buffer in, Buffer out) {
-    Whirlpool whrl = whirlpool_init();
-    whirlpool_update(&whrl, in);
-    whirlpool_final(&whrl, out);
-}
+implement_interface(Whirlpool, whirlpool)

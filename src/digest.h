@@ -4,7 +4,33 @@
 
 #include <stdbool.h>
 
-typedef bool (*HasherFd)(int, Buffer);
+#define declare_interface(prefix)                                                                  \
+    bool prefix##_hash_fd(int fd, bool echo, Buffer out);                                          \
+    void prefix##_hash_str(Buffer in, Buffer out)
+
+#define implement_interface(Type, prefix)                                                          \
+    bool prefix##_hash_fd(int fd, bool echo, Buffer out) {                                         \
+        Type hasher = prefix##_init();                                                             \
+        u8 buffer[2046];                                                                           \
+        i64 bytes = sizeof(buffer);                                                                \
+        while (true) {                                                                             \
+            bytes = read(fd, buffer, sizeof(buffer));                                              \
+            if (bytes < 0) return false;                                                           \
+            if (bytes == 0) break;                                                                 \
+            prefix##_update(&hasher, (Buffer){ .ptr = buffer, .len = (u64)bytes });                \
+            if (echo) write(STDOUT_FILENO, buffer, bytes);                                         \
+        }                                                                                          \
+        prefix##_final(&hasher, out);                                                              \
+        return true;                                                                               \
+    }                                                                                              \
+                                                                                                   \
+    void prefix##_hash_str(Buffer in, Buffer out) {                                                \
+        Type hasher = prefix##_init();                                                             \
+        prefix##_update(&hasher, in);                                                              \
+        prefix##_final(&hasher, out);                                                              \
+    }
+
+typedef bool (*HasherFd)(int, bool, Buffer);
 typedef void (*HasherStr)(Buffer, Buffer);
 
 #define MD5_CHUNK_SIZE 64
@@ -27,12 +53,6 @@ md5_update(Md5* md5, Buffer buffer);
 
 void
 md5_final(Md5* md5, Buffer out);
-
-bool
-md5_hash_fd(int fd, Buffer out);
-
-void
-md5_hash_str(Buffer in, Buffer out);
 
 #define SHA2X32_CHUNK_SIZE 64
 #define SHA2X32_ROUNDS 64
@@ -58,12 +78,6 @@ sha256_update(Sha256* sha, Buffer buffer);
 void
 sha256_final(Sha256* sha, Buffer out);
 
-bool
-sha256_hash_fd(int fd, Buffer out);
-
-void
-sha256_hash_str(Buffer in, Buffer out);
-
 typedef Sha2x32 Sha224;
 
 Sha224
@@ -74,12 +88,6 @@ sha224_update(Sha224* sha, Buffer buffer);
 
 void
 sha224_final(Sha224* sha, Buffer out);
-
-bool
-sha224_hash_fd(int fd, Buffer out);
-
-void
-sha224_hash_str(Buffer in, Buffer out);
 
 #define SHA2X64_CHUNK_SIZE 128
 #define SHA2X64_ROUNDS 80
@@ -105,12 +113,6 @@ sha512_update(Sha512* sha, Buffer buffer);
 void
 sha512_final(Sha512* sha, Buffer out);
 
-bool
-sha512_hash_fd(int fd, Buffer out);
-
-void
-sha512_hash_str(Buffer in, Buffer out);
-
 typedef Sha2x64 Sha384;
 
 Sha384
@@ -121,12 +123,6 @@ sha384_update(Sha384* sha, Buffer buffer);
 
 void
 sha384_final(Sha384* sha, Buffer out);
-
-bool
-sha384_hash_fd(int fd, Buffer out);
-
-void
-sha384_hash_str(Buffer in, Buffer out);
 
 #define WHIRLPOOL_CHUNK_SIZE 64
 #define WHIRLPOOL_ROUNDS 10
@@ -149,8 +145,9 @@ whirlpool_update(Whirlpool* whrl, Buffer buffer);
 void
 whirlpool_final(Whirlpool* whrl, Buffer out);
 
-bool
-whirlpool_hash_fd(int fd, Buffer out);
-
-void
-whirlpool_hash_str(Buffer in, Buffer out);
+declare_interface(md5);
+declare_interface(sha256);
+declare_interface(sha224);
+declare_interface(sha512);
+declare_interface(sha384);
+declare_interface(whirlpool);

@@ -147,26 +147,4 @@ md5_final(Md5* md5, Buffer out) {
     ft_memcpy(out, buffer_create((u8*)md5->state, MD5_DIGEST_SIZE));
 }
 
-bool
-md5_hash_fd(int fd, Buffer out) {
-    Md5 md5 = md5_init();
-
-    u8 buffer[2046];
-    i64 bytes = sizeof(buffer);
-    while (bytes == sizeof(buffer)) {
-        bytes = read(fd, buffer, sizeof(buffer));
-        if (bytes < 0) return false;
-        md5_update(&md5, (Buffer){ .ptr = buffer, .len = (u64)bytes });
-    }
-
-    md5_final(&md5, out);
-
-    return true;
-}
-
-void
-md5_hash_str(Buffer in, Buffer out) {
-    Md5 md5 = md5_init();
-    md5_update(&md5, in);
-    md5_final(&md5, out);
-}
+implement_interface(Md5, md5)
