@@ -4,7 +4,6 @@
 #include "utils.h"
 
 #include <assert.h>
-#include <stdlib.h>
 #include <unistd.h>
 
 extern Options options;
@@ -421,5 +420,9 @@ sha384_final(Sha384* sha, Buffer out) {
     sha2x64_final(sha, out, SHA384_DIGEST_SIZE);
 }
 
-digest_implement_interface(Sha256, sha256) digest_implement_interface(Sha224, sha224)
-    digest_implement_interface(Sha512, sha512) digest_implement_interface(Sha384, sha384)
+// clang-format off
+digest_implement_interface(Sha256, sha256)
+digest_implement_interface(Sha224, sha224)
+digest_implement_interface(Sha512, sha512)
+digest_implement_interface(Sha384, sha384)
+    // clang-format on

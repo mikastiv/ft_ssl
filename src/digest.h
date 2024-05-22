@@ -5,7 +5,7 @@
 #include <stdbool.h>
 
 #define digest_declare_interface(prefix)                                                           \
-    bool prefix##_hash_fd(int fd, bool echo, Buffer out);                                          \
+    bool prefix##_hash_fd(int fd, Buffer out);                                                     \
     void prefix##_hash_str(Buffer in, Buffer out)
 
 #define digest_implement_interface(Type, prefix)                                                   \
@@ -15,29 +15,21 @@
         prefix##_final(&hasher, out);                                                              \
     }                                                                                              \
                                                                                                    \
-    bool prefix##_hash_fd(int fd, bool echo, Buffer out) {                                         \
+    bool prefix##_hash_fd(int fd, Buffer out) {                                                    \
         Type hasher = prefix##_init();                                                             \
         u8 buffer[2046];                                                                           \
         i64 bytes = sizeof(buffer);                                                                \
-        if (echo) {                                                                                \
-            Buffer input = stdin_to_buffer();                                                      \
-            if (!input.ptr) return false;                                                          \
-            prefix##_hash_str(input, out);                                                         \
-            write(STDOUT_FILENO, input.ptr, input.len);                                            \
-            free(input.ptr);                                                                       \
-        } else {                                                                                   \
-            while (true) {                                                                         \
-                bytes = read(fd, buffer, sizeof(buffer));                                          \
-                if (bytes < 0) return false;                                                       \
-                if (bytes == 0) break;                                                             \
-                prefix##_update(&hasher, (Buffer){ .ptr = buffer, .len = (u64)bytes });            \
-            }                                                                                      \
+        while (true) {                                                                             \
+            bytes = read(fd, buffer, sizeof(buffer));                                              \
+            if (bytes < 0) return false;                                                           \
+            if (bytes == 0) break;                                                                 \
+            prefix##_update(&hasher, (Buffer){ .ptr = buffer, .len = (u64)bytes });                \
         }                                                                                          \
         prefix##_final(&hasher, out);                                                              \
         return true;                                                                               \
     }
 
-typedef bool (*HasherFd)(int, bool, Buffer);
+typedef bool (*HasherFd)(int, Buffer);
 typedef void (*HasherStr)(Buffer, Buffer);
 
 #define MD5_CHUNK_SIZE 64

@@ -6,9 +6,9 @@
 #include <errno.h>
 #include <fcntl.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
-#include <stdlib.h>
 
 extern const char* progname;
 extern Options options;
@@ -108,11 +108,22 @@ digest(int argc, char** argv, u32 first_input, Command cmd) {
     Buffer out = { .ptr = buffer, .len = digest_size };
 
     if (options.echo_stdin || first_input == (u32)argc) {
-        bool success = hasher_fd(STDIN_FILENO, options.echo_stdin, out);
-        if (success)
-            print_hash(out, cmd, false, "stdin");
-        else
-            dprintf(STDERR_FILENO, "%s: %s: %s: %s\n", progname, argv[1], "stdin", strerror(errno));
+        Buffer input = stdin_to_buffer();
+        if (input.ptr) {
+            bool success = hasher_fd(STDIN_FILENO, out);
+            if (success)
+                print_hash(out, cmd, false, "stdin");
+            else
+                dprintf(
+                    STDERR_FILENO,
+                    "%s: %s: %s: %s\n",
+                    progname,
+                    argv[1],
+                    "stdin",
+                    strerror(errno)
+                );
+        }
+        free(input.ptr);
     }
 
     if (options.first_is_string) {
@@ -131,7 +142,7 @@ digest(int argc, char** argv, u32 first_input, Command cmd) {
             continue;
         }
 
-        bool success = hasher_fd(fd, false, out);
+        bool success = hasher_fd(fd, out);
         close(fd);
 
         if (!success) {

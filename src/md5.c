@@ -4,7 +4,6 @@
 
 #include <assert.h>
 #include <unistd.h>
-#include <stdlib.h>
 
 static const u32 k[MD5_ROUNDS] = {
     0xD76AA478, 0xE8C7B756, 0x242070DB, 0xC1BDCEEE, 0xF57C0FAF, 0x4787C62A, 0xA8304613, 0xFD469501,
