@@ -10,6 +10,10 @@ typedef struct {
     bool reverse_fmt;
     bool first_is_string;
     bool echo_stdin;
+    bool encode;
+    bool decode;
+    const char* input_file;
+    const char* output_file;
 } Options;
 
 typedef enum {
@@ -20,6 +24,11 @@ typedef enum {
     CMD_SHA512,
     CMD_SHA384,
     CMD_WHIRLPOOL,
+    CMD_LAST_DIGEST = CMD_WHIRLPOOL,
+    CMD_BASE64,
+    CMD_DES,
+    CMD_DES_ECB,
+    CMD_DES_CBC,
 } Command;
 
 bool
