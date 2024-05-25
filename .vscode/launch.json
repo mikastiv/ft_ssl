@@ -12,7 +12,7 @@
             "args": [
                 "base64",
                 "-i",
-                "Zm9vYmFyCg=="
+                "light work."
             ],
             "cwd": "${workspaceFolder}"
         }

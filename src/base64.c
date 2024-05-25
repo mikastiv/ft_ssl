@@ -4,7 +4,7 @@
 #include <assert.h>
 #include <stdlib.h>
 
-static const char* base64 = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz+/";
+static const char* base64 = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
 static const char padding = '=';
 
 static u32
@@ -20,34 +20,22 @@ alpha_index(char c) {
 
 Buffer
 base64_encode(Buffer input) {
-    u64 chunks = input.len / 6;
-    u64 extra = input.len % 6;
+    u64 chunks = input.len / 3;
+    u64 extra = input.len % 3;
 
-    u64 size = chunks * 8 + (extra > 0 ? 8 : 0);
+    u64 size = chunks * 4 + (extra > 0 ? 4 : 0);
     Buffer buffer = buffer_create(malloc(size), size);
     if (!buffer.ptr) return (Buffer){ 0 };
     ft_memset(buffer, 0);
 
     u64 i = 0;
     u64 j = 0;
-    for (; i < input.len; i += 6) {
-        u64 bytes = read_u48_be(&input.ptr[i]);
-        for (u64 k = 0; k < 8; j++, k++) {
-            buffer.ptr[j] = base64[(bytes >> (6 * (7 - k))) & 0x3F];
-        }
-    }
-
-    while (extra >= 3) {
+    for (; i + 3 < input.len; i += 3, j += 4) {
         u32 bytes = read_u24_be(&input.ptr[i]);
-
         buffer.ptr[j + 0] = base64[(bytes >> 18) & 0x3F];
         buffer.ptr[j + 1] = base64[(bytes >> 12) & 0x3F];
         buffer.ptr[j + 2] = base64[(bytes >> 6) & 0x3F];
-        buffer.ptr[j + 3] = base64[bytes & 0x3F];
-
-        extra -= 3;
-        i += 3;
-        j += 4;
+        buffer.ptr[j + 3] = base64[(bytes >> 0) & 0x3F];
     }
 
     switch (extra) {
