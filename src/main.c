@@ -192,7 +192,7 @@ main(int argc, char** argv) {
             if (!options.decode && !options.encode) options.encode = true;
 
             Buffer res =
-                base64_encode(buffer_create((u8*)options.input_file, ft_strlen(options.input_file))
+                base64_decode(buffer_create((u8*)options.input_file, ft_strlen(options.input_file))
                 );
             write(STDOUT_FILENO, res.ptr, res.len);
         } break;

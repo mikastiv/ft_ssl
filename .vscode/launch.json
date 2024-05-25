@@ -12,7 +12,7 @@
             "args": [
                 "base64",
                 "-i",
-                "testte"
+                "Zm9vYmFyCg=="
             ],
             "cwd": "${workspaceFolder}"
         }
