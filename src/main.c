@@ -187,6 +187,8 @@ main(int argc, char** argv) {
             if (options.echo_stdin) unsupported_flag('p', cmd);
             if (options.reverse_fmt) unsupported_flag('r', cmd);
             if (options.first_is_string) unsupported_flag('s', cmd);
+
+            if (!options.decode && !options.encode) options.encode = true;
         } break;
         case CMD_NONE: {
             dprintf(STDERR_FILENO, "Unreachable\n");
