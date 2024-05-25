@@ -44,8 +44,8 @@ static void
 sha2x32_round(Sha2x32* sha) {
     u32 w[SHA2X32_ROUNDS];
     for (u32 i = 0; i < SHA2X32_CHUNK_SIZE; i += sizeof(u32)) {
-        u32* bytes = (u32*)&sha->buffer[i];
-        w[i / sizeof(u32)] = byte_swap32(*bytes);
+        u32 bytes = read_u32(&sha->buffer[i]);
+        w[i / sizeof(u32)] = byte_swap32(bytes);
     }
 
     for (u32 i = 16; i < SHA2X32_ROUNDS; i++) {
@@ -258,8 +258,8 @@ static void
 sha2x64_round(Sha512* sha) {
     u64 w[SHA2X64_ROUNDS];
     for (u32 i = 0; i < SHA2X64_CHUNK_SIZE; i += sizeof(u64)) {
-        u64* bytes = (u64*)&sha->buffer[i];
-        w[i / sizeof(u64)] = byte_swap64(*bytes);
+        u64 bytes = read_u64(&sha->buffer[i]);
+        w[i / sizeof(u64)] = byte_swap64(bytes);
     }
 
     for (u32 i = 16; i < SHA2X64_ROUNDS; i++) {

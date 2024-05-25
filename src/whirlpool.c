@@ -556,8 +556,8 @@ static void
 whirlpool_round(Whirlpool* whrl) {
     u64 block[8];
     for (u32 i = 0; i < WHIRLPOOL_CHUNK_SIZE; i += sizeof(u64)) {
-        u64* bytes = (u64*)&whrl->buffer[i];
-        block[i / sizeof(u64)] = byte_swap64(*bytes);
+        u64 bytes = read_u64(&whrl->buffer[i]);
+        block[i / sizeof(u64)] = byte_swap64(bytes);
     }
 
     u64 k[8];

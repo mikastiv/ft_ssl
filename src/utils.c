@@ -102,7 +102,7 @@ buffer_create(u8* ptr, u64 len) {
 
 Buffer
 stdin_to_buffer(void) {
-    u64 capacity = 10;
+    u64 capacity = 2048;
     Buffer str = { .ptr = malloc(capacity + 1), .len = 0 };
     if (!str.ptr) return (Buffer){ 0 };
 
@@ -133,4 +133,32 @@ stdin_to_buffer(void) {
     str.ptr[str.len] = 0;
 
     return str;
+}
+
+u32
+read_u32(u8* buffer) {
+    u32 out = 0;
+
+    out |= (u32)buffer[0];
+    out |= (u32)buffer[1] << 8;
+    out |= (u32)buffer[2] << 16;
+    out |= (u32)buffer[3] << 24;
+
+    return out;
+}
+
+u64
+read_u64(u8* buffer) {
+    u64 out = 0;
+
+    out |= (u64)buffer[0];
+    out |= (u64)buffer[1] << 8;
+    out |= (u64)buffer[2] << 16;
+    out |= (u64)buffer[3] << 24;
+    out |= (u64)buffer[4] << 32;
+    out |= (u64)buffer[5] << 40;
+    out |= (u64)buffer[6] << 48;
+    out |= (u64)buffer[7] << 56;
+
+    return out;
 }

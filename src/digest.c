@@ -35,7 +35,7 @@ print_hash(Buffer hash, Command cmd, bool is_str, const char* input) {
         case CMD_WHIRLPOOL: {
             name = "WHIRLPOOL";
         } break;
-        case CMD_NONE: {
+        default: {
             name = "Unknown";
         } break;
     }
@@ -110,18 +110,8 @@ digest(int argc, char** argv, u32 first_input, Command cmd) {
     if (options.echo_stdin || first_input == (u32)argc) {
         Buffer input = stdin_to_buffer();
         if (input.ptr) {
-            bool success = hasher_fd(STDIN_FILENO, out);
-            if (success)
-                print_hash(out, cmd, false, "stdin");
-            else
-                dprintf(
-                    STDERR_FILENO,
-                    "%s: %s: %s: %s\n",
-                    progname,
-                    argv[1],
-                    "stdin",
-                    strerror(errno)
-                );
+            hasher_str(input, out);
+            print_hash(out, cmd, false, "stdin");
         }
         free(input.ptr);
     }

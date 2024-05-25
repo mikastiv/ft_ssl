@@ -42,3 +42,9 @@ buffer_create(u8* ptr, u64 len);
 
 Buffer
 stdin_to_buffer(void);
+
+u32
+read_u32(u8* buffer);
+
+u64
+read_u64(u8* buffer);
