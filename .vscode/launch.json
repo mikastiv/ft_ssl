@@ -10,9 +10,9 @@
             "name": "Debug",
             "program": "${workspaceFolder}/ft_ssl",
             "args": [
-                "whirlpool",
-                "-s",
-                "The quick brown fox jumps over the lazy dogThe quick brown fox jumps over the lazy dog",
+                "base64",
+                "-i",
+                "testte"
             ],
             "cwd": "${workspaceFolder}"
         }

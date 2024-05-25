@@ -1,3 +1,4 @@
+#include "cipher.h"
 #include "ssl.h"
 #include "types.h"
 #include "utils.h"
@@ -189,6 +190,11 @@ main(int argc, char** argv) {
             if (options.first_is_string) unsupported_flag('s', cmd);
 
             if (!options.decode && !options.encode) options.encode = true;
+
+            Buffer res =
+                base64_encode(buffer_create((u8*)options.input_file, ft_strlen(options.input_file))
+                );
+            write(STDOUT_FILENO, res.ptr, res.len);
         } break;
         case CMD_NONE: {
             dprintf(STDERR_FILENO, "Unreachable\n");

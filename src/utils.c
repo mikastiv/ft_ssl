@@ -162,3 +162,38 @@ read_u64(u8* buffer) {
 
     return out;
 }
+
+u64
+read_u48_be(u8* buffer) {
+    u64 out = 0;
+
+    out |= (u64)buffer[5];
+    out |= (u64)buffer[4] << 8;
+    out |= (u64)buffer[3] << 16;
+    out |= (u64)buffer[2] << 24;
+    out |= (u64)buffer[1] << 32;
+    out |= (u64)buffer[0] << 40;
+
+    return out;
+}
+
+u32
+read_u24_be(u8* buffer) {
+    u32 out = 0;
+
+    out |= (u32)buffer[2];
+    out |= (u32)buffer[1] << 8;
+    out |= (u32)buffer[0] << 16;
+
+    return out;
+}
+
+u32
+read_u16_be(u8* buffer) {
+    u32 out = 0;
+
+    out |= (u32)buffer[1];
+    out |= (u32)buffer[0] << 8;
+
+    return out;
+}
