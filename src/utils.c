@@ -44,6 +44,50 @@ ft_memset(Buffer dst, u8 value) {
     }
 }
 
+bool
+ft_memcmp(Buffer a, Buffer b) {
+    if (a.len != b.len) return false;
+    for (u64 i = 0; i < a.len; i++) {
+        if (a.ptr[i] != b.ptr[i]) return false;
+    }
+    return true;
+}
+
+char
+ft_lower(char c) {
+    if (c >= 'A' && c <= 'Z') return c - 'A' + 'a';
+    return c;
+}
+
+u64
+ft_hextol(const char* value) {
+    u64 i = 0;
+    if (ft_memcmp(str("0x"), buffer_create((u8*)value, 2)) ||
+        ft_memcmp(str("0X"), buffer_create((u8*)value, 2))) {
+        i += 2;
+    }
+
+    u64 len = ft_strlen(value);
+    u64 out = 0;
+    while (i < len) {
+        char c = ft_lower(value[i]);
+
+        if (c >= '0' && c <= '9')
+            c -= '0';
+        else if (c >= 'a' && c <= 'f')
+            c = (c - 'a') + 10;
+        else
+            return out;
+
+        out *= 16;
+        out += c;
+
+        i++;
+    }
+
+    return out;
+}
+
 u32
 rotate_left32(u32 value, u32 shift) {
     assert(shift < 32);

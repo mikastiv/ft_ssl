@@ -1,6 +1,7 @@
 #pragma once
 
 #include "types.h"
+#include <stdbool.h>
 
 #define array_len(array) (sizeof(array) / sizeof(array[0]))
 
@@ -15,6 +16,15 @@ ft_memcpy(Buffer dst, Buffer src);
 
 void
 ft_memset(Buffer dst, u8 value);
+
+bool
+ft_memcmp(Buffer a, Buffer b);
+
+char
+ft_lower(char c);
+
+u64
+ft_hextol(const char* value);
 
 u32
 rotate_left32(u32 value, u32 shift);

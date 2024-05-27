@@ -16,20 +16,34 @@ typedef struct {
     const char* output_file;
 } Options;
 
+typedef struct {
+    bool quiet;
+    bool reverse_fmt;
+    bool echo_stdin;
+    const char* string_argument;
+} DigestOptions;
+
+typedef struct {
+    bool encode;
+    bool decode;
+    const char* input_file;
+    const char* output_file;
+} Base64Options;
+
 typedef enum {
-    CMD_NONE,
-    CMD_MD5,
-    CMD_SHA256,
-    CMD_SHA224,
-    CMD_SHA512,
-    CMD_SHA384,
-    CMD_WHIRLPOOL,
-    CMD_LAST_DIGEST = CMD_WHIRLPOOL,
-    CMD_BASE64,
-    CMD_DES,
-    CMD_DES_ECB,
-    CMD_DES_CBC,
+    Command_None,
+    Command_Md5,
+    Command_Sha256,
+    Command_Sha224,
+    Command_Sha512,
+    Command_Sha384,
+    Command_Whirlpool,
+    Command_LastDigest = Command_Whirlpool,
+    Command_Base64,
+    Command_Des,
+    Command_DesEcb,
+    Command_DesCbc,
 } Command;
 
 bool
-digest(int argc, char** argv, u32 first_input, Command cmd);
+digest(u32 first_input, Command cmd, DigestOptions options);

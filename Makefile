@@ -5,8 +5,8 @@ CFLAGS = -Wall -Wextra -Werror -Wpedantic -Wshadow -fno-strict-aliasing
 
 SRCDIR = src
 OBJDIR = obj
-CFILES = main.c utils.c md5.c sha2.c digest.c whirlpool.c base64.c
-HFILES = types.h utils.h ssl.h
+CFILES = main.c utils.c md5.c sha2.c digest.c whirlpool.c base64.c parse.c
+HFILES = types.h utils.h ssl.h parse.h cipher.h digest.h globals.h
 SRC = $(addprefix $(SRCDIR)/, $(CFILES))
 INC = $(addprefix $(SRCDIR)/, $(HFILES))
 OBJ = $(addprefix $(OBJDIR)/, $(CFILES:.c=.o))

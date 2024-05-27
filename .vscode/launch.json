@@ -10,9 +10,9 @@
             "name": "Debug",
             "program": "${workspaceFolder}/ft_ssl",
             "args": [
-                "base64",
-                "-i",
-                "light work."
+                "md5",
+                "-s",
+                "42 is nice"
             ],
             "cwd": "${workspaceFolder}"
         }

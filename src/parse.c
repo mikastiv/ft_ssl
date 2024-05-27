@@ -1,0 +1,213 @@
+#include "ssl.h"
+
+#include "utils.h"
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <unistd.h>
+
+#include "globals.h"
+
+static const char* cmd_names[] = {
+    [Command_None] = "none",           [Command_Md5] = "md5",       [Command_Sha256] = "sha256",
+    [Command_Sha224] = "sha224",       [Command_Sha512] = "sha512", [Command_Sha384] = "sha384",
+    [Command_Whirlpool] = "whirlpool", [Command_Base64] = "base64", [Command_Des] = "des",
+    [Command_DesEcb] = "des-ecb",      [Command_DesCbc] = "des-cbc"
+};
+
+typedef enum {
+    OptionType_Bool,
+    OptionType_String,
+    OptionType_Hex,
+} OptionType;
+
+typedef struct {
+    const char* name;
+    char flag;
+    OptionType type;
+    void* value;
+} Option;
+
+Command
+parse_command(const char* str) {
+    for (u64 i = 0; i < array_len(cmd_names); i++) {
+        if (ft_strcmp(cmd_names[i], str) == 0) return (Command)i;
+    }
+
+    return Command_None;
+}
+
+void
+usage(void) {
+    dprintf(STDERR_FILENO, "usage: %s command [flags] [file/string]\n", progname);
+}
+
+static void
+print_flag(char f, const char* desc) {
+    dprintf(STDERR_FILENO, "    -%c: %s\n", f, desc);
+}
+
+void
+print_help(void) {
+    usage();
+
+    dprintf(STDERR_FILENO, "\nStandard commands:\n");
+
+    dprintf(STDERR_FILENO, "\nMessage Digest commands:\n");
+    for (u64 i = Command_None + 1; i <= Command_LastDigest; i++) {
+        dprintf(STDERR_FILENO, "    %s\n", cmd_names[i]);
+    }
+
+    dprintf(STDERR_FILENO, "\nCipher commands:\n");
+    for (u64 i = Command_LastDigest + 1; i < array_len(cmd_names); i++) {
+        dprintf(STDERR_FILENO, "    %s\n", cmd_names[i]);
+    }
+
+    dprintf(STDERR_FILENO, "\nFlags:\n");
+    print_flag('h', "print help");
+    print_flag('p', "echo STDIN to STDOUT and append the checksum to STDOUT");
+    print_flag('q', "quiet mode");
+    print_flag('r', "reverse the format of the output");
+    print_flag('s', "print the sum of the given string");
+}
+
+static void
+unknown_flag(const char* flag) {
+    dprintf(STDERR_FILENO, "%s: unknown flag: '%s'\n", progname, flag);
+    print_help();
+    exit(EXIT_FAILURE);
+}
+
+static bool
+parse_flag(const char flag, const Option* options, u64 size, u32* index) {
+    for (u32 j = 0; j < size; j++) {
+        Option op = options[j];
+        if (flag == op.flag) {
+            switch (op.type) {
+                case OptionType_String: {
+                    const char** value = options[j].value;
+                    if (*index >= argc) {
+                        dprintf(STDERR_FILENO, "%s: '-%c': missing value\n", progname, flag);
+                        exit(EXIT_FAILURE);
+                    }
+                    *value = argv[++*index];
+                } break;
+                case OptionType_Hex: {
+                    u64* value = options[j].value;
+                    if (*index >= argc) {
+                        dprintf(STDERR_FILENO, "%s: '-%c': missing value\n", progname, flag);
+                        exit(EXIT_FAILURE);
+                    }
+                    *value = ft_hextol(argv[++*index]);
+                } break;
+                case OptionType_Bool: {
+                    bool* value = options[j].value;
+                    *value = true;
+                } break;
+            }
+
+            return true;
+        }
+    }
+
+    return false;
+}
+
+u32
+parse_options(Command cmd, void* out_options) {
+
+    for (u32 i = 2; i < argc; i++) {
+        if (argv[i][0] != '-') return i;
+        if (ft_strlen(&argv[i][1]) != 1) unknown_flag(argv[i]);
+
+        const char flag = argv[i][1];
+        if (flag == 'h') {
+            print_help();
+            exit(EXIT_FAILURE);
+        }
+
+        switch (cmd) {
+            case Command_Md5:
+            case Command_Sha256:
+            case Command_Sha224:
+            case Command_Sha512:
+            case Command_Sha384:
+            case Command_Whirlpool: {
+                DigestOptions* options = out_options;
+                const Option digest_options[] = {
+                    {
+                     .name = "echo stdin",
+                     .flag = 'p',
+                     .type = OptionType_Bool,
+                     .value = &options->echo_stdin,
+                     },
+                    {
+                     .name = "reverse format",
+                     .flag = 'r',
+                     .type = OptionType_Bool,
+                     .value = &options->reverse_fmt,
+                     },
+                    {
+                     .name = "string argument",
+                     .flag = 's',
+                     .type = OptionType_String,
+                     .value = &options->string_argument,
+                     },
+                    {
+                     .name = "quiet",
+                     .flag = 'q',
+                     .type = OptionType_Bool,
+                     .value = &options->quiet,
+                     },
+                };
+
+                bool found = parse_flag(flag, digest_options, array_len(digest_options), &i);
+                if (!found) {
+                    unknown_flag(argv[i]);
+                }
+            } break;
+            case Command_Base64: {
+                Base64Options* options = out_options;
+                const Option base64_options[] = {
+                    {
+                     .name = "encode",
+                     .flag = 'e',
+                     .type = OptionType_Bool,
+                     .value = &options->encode,
+                     },
+                    {
+                     .name = "decode",
+                     .flag = 'd',
+                     .type = OptionType_Bool,
+                     .value = &options->decode,
+                     },
+                    {
+                     .name = "input file",
+                     .flag = 'i',
+                     .type = OptionType_String,
+                     .value = &options->input_file,
+                     },
+                    {
+                     .name = "output file",
+                     .flag = 'o',
+                     .type = OptionType_String,
+                     .value = &options->output_file,
+                     },
+                };
+
+                bool found = parse_flag(flag, base64_options, array_len(base64_options), &i);
+                if (!found) {
+                    unknown_flag(argv[i]);
+                }
+            } break;
+            case Command_Des:
+            case Command_DesEcb:
+            case Command_DesCbc: {
+            } break;
+            default: {
+            } break;
+        }
+    }
+
+    return argc;
+}
