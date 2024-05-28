@@ -74,8 +74,15 @@ print_help(void) {
 static void
 unknown_flag(const char* flag) {
     dprintf(STDERR_FILENO, "%s: unknown flag: '%s'\n", progname, flag);
-    print_help();
     exit(EXIT_FAILURE);
+}
+
+static void
+check_next_argument(u32 index, char flag) {
+    if (index + 1 >= argc) {
+        dprintf(STDERR_FILENO, "%s: '-%c': missing value\n", progname, flag);
+        exit(EXIT_FAILURE);
+    }
 }
 
 static bool
@@ -86,19 +93,15 @@ parse_flag(const char flag, const Option* options, u64 size, u32* index) {
             switch (op.type) {
                 case OptionType_String: {
                     const char** value = options[j].value;
-                    if (*index >= argc) {
-                        dprintf(STDERR_FILENO, "%s: '-%c': missing value\n", progname, flag);
-                        exit(EXIT_FAILURE);
-                    }
-                    *value = argv[++*index];
+                    check_next_argument(*index, flag);
+                    *index += 1;
+                    *value = argv[*index];
                 } break;
                 case OptionType_Hex: {
                     u64* value = options[j].value;
-                    if (*index >= argc) {
-                        dprintf(STDERR_FILENO, "%s: '-%c': missing value\n", progname, flag);
-                        exit(EXIT_FAILURE);
-                    }
-                    *value = ft_hextol(argv[++*index]);
+                    check_next_argument(*index, flag);
+                    *index += 1;
+                    *value = ft_hextol(argv[*index]);
                 } break;
                 case OptionType_Bool: {
                     bool* value = options[j].value;
@@ -115,7 +118,6 @@ parse_flag(const char flag, const Option* options, u64 size, u32* index) {
 
 u32
 parse_options(Command cmd, void* out_options) {
-
     for (u32 i = 2; i < argc; i++) {
         if (argv[i][0] != '-') return i;
         if (ft_strlen(&argv[i][1]) != 1) unknown_flag(argv[i]);

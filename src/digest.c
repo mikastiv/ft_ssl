@@ -109,6 +109,7 @@ digest(u32 first_input, Command cmd, DigestOptions options) {
     if (options.echo_stdin || (first_input == argc && !options.string_argument)) {
         Buffer input = stdin_to_buffer();
         if (input.ptr) {
+            if (options.echo_stdin) write(STDOUT_FILENO, input.ptr, input.len);
             hasher_str(input, out);
             print_hash(out, cmd, false, "stdin", options);
         }
@@ -120,8 +121,6 @@ digest(u32 first_input, Command cmd, DigestOptions options) {
         hasher_str(input, out);
 
         print_hash(out, cmd, true, options.string_argument, options);
-
-        first_input++;
     }
 
     for (u64 i = first_input; i < (u64)argc; i++) {

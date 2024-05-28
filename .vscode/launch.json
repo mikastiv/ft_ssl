@@ -11,8 +11,7 @@
             "program": "${workspaceFolder}/ft_ssl",
             "args": [
                 "md5",
-                "-s",
-                "42 is nice"
+                "-p"
             ],
             "cwd": "${workspaceFolder}"
         }
