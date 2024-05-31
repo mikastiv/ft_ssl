@@ -18,7 +18,7 @@ static const char* cmd_names[] = {
 typedef enum {
     OptionType_Bool,
     OptionType_String,
-    OptionType_Hex,
+    // OptionType_Hex,
 } OptionType;
 
 typedef struct {
@@ -85,6 +85,12 @@ check_next_argument(u32 index, char flag) {
     }
 }
 
+static void
+duplicate_flag(char flag) {
+    dprintf(STDERR_FILENO, "%s: duplicate flag: '-%c'\n", progname, flag);
+    exit(EXIT_FAILURE);
+}
+
 static bool
 parse_flag(const char flag, const Option* options, u64 size, u32* index) {
     for (u32 j = 0; j < size; j++) {
@@ -93,16 +99,17 @@ parse_flag(const char flag, const Option* options, u64 size, u32* index) {
             switch (op.type) {
                 case OptionType_String: {
                     const char** value = options[j].value;
+                    if (*value) duplicate_flag(flag);
                     check_next_argument(*index, flag);
                     *index += 1;
                     *value = argv[*index];
                 } break;
-                case OptionType_Hex: {
-                    u64* value = options[j].value;
-                    check_next_argument(*index, flag);
-                    *index += 1;
-                    *value = ft_hextol(argv[*index]);
-                } break;
+                // case OptionType_Hex: {
+                //     u64* value = options[j].value;
+                //     check_next_argument(*index, flag);
+                //     *index += 1;
+                //     *value = ft_hextol(argv[*index]);
+                // } break;
                 case OptionType_Bool: {
                     bool* value = options[j].value;
                     *value = true;
