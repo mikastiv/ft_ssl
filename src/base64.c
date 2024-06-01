@@ -30,7 +30,7 @@ base64_encode(Buffer input) {
 
     u64 i = 0;
     u64 j = 0;
-    for (; i + 3 < input.len; i += 3, j += 4) {
+    for (; i + 2 < input.len; i += 3, j += 4) {
         u32 bytes = read_u24_be(&input.ptr[i]);
         buffer.ptr[j + 0] = base64[(bytes >> 18) & 0x3F];
         buffer.ptr[j + 1] = base64[(bytes >> 12) & 0x3F];

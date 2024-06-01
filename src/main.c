@@ -4,9 +4,11 @@
 #include "types.h"
 #include "utils.h"
 
+#include <errno.h>
 #include <fcntl.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include <unistd.h>
 
 u32 argc;
@@ -54,8 +56,27 @@ main(int in_argc, const char* const* in_argv) {
             }
             if (!options.decode && !options.encode) options.encode = true;
 
-            Buffer res = base64_decode(str(options.input_file));
+            int fd = -1;
+            if (options.input_file) {
+                fd = open(options.input_file, O_RDONLY);
+                if (fd < 0) print_error_and_quit();
+            } else {
+                fd = STDIN_FILENO;
+            }
+
+            Buffer input = read_all_fd(fd);
+            if (options.input_file) close(fd);
+            if (!input.ptr) print_error_and_quit();
+
+            Buffer res;
+            if (options.decode) {
+                res = base64_decode(input);
+            } else {
+                res = base64_encode(input);
+            }
+
             write(STDOUT_FILENO, res.ptr, res.len);
+            write(STDOUT_FILENO, "\n", 1);
         } break;
         case Command_Des:
         case Command_DesEcb:

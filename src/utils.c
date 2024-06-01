@@ -1,7 +1,11 @@
 #include "utils.h"
+#include "globals.h"
 
 #include <assert.h>
+#include <errno.h>
+#include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include <unistd.h>
 
 u64
@@ -145,7 +149,7 @@ buffer_create(u8* ptr, u64 len) {
 }
 
 Buffer
-stdin_to_buffer(void) {
+read_all_fd(int fd) {
     u64 capacity = 2048;
     Buffer str = { .ptr = malloc(capacity + 1), .len = 0 };
     if (!str.ptr) return (Buffer){ 0 };
@@ -153,7 +157,7 @@ stdin_to_buffer(void) {
     u8 buffer[2048];
     i64 bytes = sizeof(buffer);
     while (bytes > 0) {
-        bytes = read(STDIN_FILENO, buffer, sizeof(buffer));
+        bytes = read(fd, buffer, sizeof(buffer));
         if (bytes < 0) return (Buffer){ 0 };
 
         u64 remaining = capacity - str.len;
@@ -252,4 +256,10 @@ read_u16_be(u8* buffer) {
     out |= (u32)buffer[0] << 8;
 
     return out;
+}
+
+void
+print_error_and_quit(void) {
+    dprintf(STDERR_FILENO, "%s: %s\n", progname, strerror(errno));
+    exit(EXIT_FAILURE);
 }

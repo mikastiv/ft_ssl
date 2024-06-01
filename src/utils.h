@@ -51,7 +51,7 @@ Buffer
 buffer_create(u8* ptr, u64 len);
 
 Buffer
-stdin_to_buffer(void);
+read_all_fd(int fd);
 
 u32
 read_u32(u8* buffer);
@@ -70,3 +70,6 @@ read_u24_be(u8* buffer);
 
 u32
 read_u16_be(u8* buffer);
+
+void
+print_error_and_quit(void);
