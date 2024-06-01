@@ -4,11 +4,9 @@
 #include "types.h"
 #include "utils.h"
 
-#include <errno.h>
 #include <fcntl.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <string.h>
 #include <unistd.h>
 
 u32 argc;
@@ -73,6 +71,11 @@ main(int in_argc, const char* const* in_argv) {
                 res = base64_decode(input);
             } else {
                 res = base64_encode(input);
+            }
+
+            if (!res.ptr) {
+                dprintf(STDERR_FILENO, "%s: invalid input\n", progname);
+                exit(EXIT_FAILURE);
             }
 
             write(STDOUT_FILENO, res.ptr, res.len);

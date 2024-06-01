@@ -14,8 +14,8 @@ alpha_index(char c) {
     if (c >= '0' && c <= '9') return c - '0' + 52;
     if (c == '+') return 62;
     if (c == padding) return 0;
-    assert(c == '/');
-    return 63;
+    if (c == '/') return 63;
+    return (u32)-1;
 }
 
 Buffer
@@ -61,6 +61,7 @@ base64_encode(Buffer input) {
 Buffer
 base64_decode(Buffer input) {
     u64 chunks = input.len / 4;
+    if (input.len % 4 != 0) return (Buffer){ 0 };
 
     u64 size = chunks * 3;
     Buffer buffer = buffer_create(malloc(size), size);
@@ -73,10 +74,18 @@ base64_decode(Buffer input) {
         u32 bytes = 0;
         for (u64 k = 0; k < 4; k++) {
             bytes <<= 6;
-            bytes |= alpha_index(input.ptr[i + k]);
+            u32 index = alpha_index(input.ptr[i + k]);
+            if (index > 63) goto error;
+            bytes |= index;
         }
 
+        if (input.ptr[i] == padding || input.ptr[i + 1] == padding) goto error;
+
         u32 padding_count = (input.ptr[i + 2] == padding) + (input.ptr[i + 3] == padding);
+        if (padding_count) {
+            if (input.ptr[i + 2] == padding && input.ptr[i + 3] != padding) goto error;
+            if (i + 4 < input.len) goto error;
+        }
 
         buffer.ptr[j] = (bytes >> 16) & 0xFF;
         buffer.ptr[j + 1] = (padding_count < 2) ? (bytes >> 8) & 0xFF : 0;
@@ -84,4 +93,8 @@ base64_decode(Buffer input) {
     }
 
     return buffer;
+
+error:
+    free(buffer.ptr);
+    return (Buffer){ 0 };
 }
