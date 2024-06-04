@@ -90,9 +90,7 @@ base64_decode(Buffer input) {
     if (!buffer.ptr) return (Buffer){ 0 };
     ft_memset(buffer, 0);
 
-    u64 i = 0;
-    u64 j = 0;
-    for (; i + 3 < clean_input.len; i += 4, j += 3) {
+    for (u64 i = 0, j = 0; i < clean_input.len; i += 4, j += 3) {
         u32 bytes = 0;
         for (u64 k = 0; k < 4; k++) {
             bytes <<= 6;
@@ -107,7 +105,6 @@ base64_decode(Buffer input) {
             (clean_input.ptr[i + 2] == padding) + (clean_input.ptr[i + 3] == padding);
         if (padding_count) {
             if (clean_input.ptr[i + 2] == padding && clean_input.ptr[i + 3] != padding) goto error;
-            if (i + 4 < clean_input.len) goto error;
         }
 
         buffer.ptr[j] = (bytes >> 16) & 0xFF;
