@@ -58,53 +58,40 @@ base64_encode(Buffer input) {
     return buffer;
 }
 
-static u64
-count_ignore_whitespace(Buffer buffer) {
-    u64 len = 0;
-    for (u64 i = 0; i < buffer.len; i++) {
-        if (!is_space(buffer.ptr[i])) len++;
-    }
-    return len;
-}
-
-static void
-memcpy_ignore_whitespace(Buffer dst, Buffer src) {
+static Buffer
+remove_whitespace(Buffer input) {
     u64 i = 0;
-    for (u64 j = 0; j < src.len; j++) {
-        if (!is_space(src.ptr[j])) dst.ptr[i++] = src.ptr[j];
+    for (u64 j = 0; j < input.len; j++) {
+        if (!is_space(input.ptr[j])) input.ptr[i++] = input.ptr[j];
     }
+    return buffer_create(input.ptr, i);
 }
 
 Buffer
 base64_decode(Buffer input) {
-    const u64 size = count_ignore_whitespace(input);
-    u64 chunks = size / 4;
-    if (size % 4 != 0) return (Buffer){ 0 };
-
-    Buffer clean_input = buffer_create(malloc(size), size);
-    if (!clean_input.ptr) return (Buffer){ 0 };
-    memcpy_ignore_whitespace(clean_input, input);
+    input = remove_whitespace(input);
+    u64 chunks = input.len / 4;
+    if (input.len % 4 != 0) return (Buffer){ 0 };
 
     u64 output_size = chunks * 3;
     Buffer buffer = buffer_create(malloc(output_size), output_size);
     if (!buffer.ptr) return (Buffer){ 0 };
     ft_memset(buffer, 0);
 
-    for (u64 i = 0, j = 0; i < clean_input.len; i += 4, j += 3) {
+    for (u64 i = 0, j = 0; i < input.len; i += 4, j += 3) {
         u32 bytes = 0;
         for (u64 k = 0; k < 4; k++) {
             bytes <<= 6;
-            u32 index = alpha_index(clean_input.ptr[i + k]);
+            u32 index = alpha_index(input.ptr[i + k]);
             if (index > 63) goto error;
             bytes |= index;
         }
 
-        if (clean_input.ptr[i] == padding || clean_input.ptr[i + 1] == padding) goto error;
+        if (input.ptr[i] == padding || input.ptr[i + 1] == padding) goto error;
 
-        u32 padding_count =
-            (clean_input.ptr[i + 2] == padding) + (clean_input.ptr[i + 3] == padding);
+        u32 padding_count = (input.ptr[i + 2] == padding) + (input.ptr[i + 3] == padding);
         if (padding_count) {
-            if (clean_input.ptr[i + 2] == padding && clean_input.ptr[i + 3] != padding) goto error;
+            if (input.ptr[i + 2] == padding && input.ptr[i + 3] != padding) goto error;
         }
 
         buffer.ptr[j] = (bytes >> 16) & 0xFF;
@@ -112,11 +99,9 @@ base64_decode(Buffer input) {
         buffer.ptr[j + 2] = (padding_count < 1) ? bytes & 0xFF : 0;
     }
 
-    free(clean_input.ptr);
     return buffer;
 
 error:
     free(buffer.ptr);
-    free(clean_input.ptr);
     return (Buffer){ 0 };
 }
