@@ -73,3 +73,6 @@ read_u16_be(u8* buffer);
 
 void
 print_error_and_quit(void);
+
+bool
+is_space(u8 c);

@@ -79,7 +79,7 @@ main(int in_argc, const char* const* in_argv) {
             }
 
             write(STDOUT_FILENO, res.ptr, res.len);
-            write(STDOUT_FILENO, "\n", 1);
+            if (options.encode) write(STDOUT_FILENO, res.ptr, res.len);
         } break;
         case Command_Des:
         case Command_DesEcb:

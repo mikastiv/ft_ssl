@@ -263,3 +263,8 @@ print_error_and_quit(void) {
     dprintf(STDERR_FILENO, "%s: %s\n", progname, strerror(errno));
     exit(EXIT_FAILURE);
 }
+
+bool
+is_space(u8 c) {
+    return (c == '\n' || c == '\v' || c == '\t' || c == '\r' || c == '\f' | c == ' ');
+}
