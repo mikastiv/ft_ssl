@@ -54,16 +54,24 @@ main(int in_argc, const char* const* in_argv) {
             }
             if (!options.decode && !options.encode) options.encode = true;
 
-            int fd = -1;
+            int in_fd = -1;
             if (options.input_file) {
-                fd = open(options.input_file, O_RDONLY);
-                if (fd < 0) print_error_and_quit();
+                in_fd = open(options.input_file, O_RDONLY);
+                if (in_fd < 0) print_error_and_quit();
             } else {
-                fd = STDIN_FILENO;
+                in_fd = STDIN_FILENO;
             }
 
-            Buffer input = read_all_fd(fd);
-            if (options.input_file) close(fd);
+            int out_fd = -1;
+            if (options.output_file) {
+                out_fd = open(options.output_file, O_WRONLY | O_CREAT | O_TRUNC, S_IRWXU | S_IRGRP | S_IROTH);
+                if (out_fd < 0) print_error_and_quit();
+            } else {
+                out_fd = STDOUT_FILENO;
+            }
+
+            Buffer input = read_all_fd(in_fd);
+            if (options.input_file) close(in_fd);
             if (!input.ptr) print_error_and_quit();
 
             Buffer res;
@@ -78,8 +86,11 @@ main(int in_argc, const char* const* in_argv) {
                 exit(EXIT_FAILURE);
             }
 
-            write(STDOUT_FILENO, res.ptr, res.len);
-            if (options.encode) write(STDOUT_FILENO, "\n", 1);
+            write(out_fd, res.ptr, res.len);
+            if (out_fd != STDOUT_FILENO) {
+                if (options.encode) write(out_fd, "\n", 1);
+                close(out_fd);
+            }
         } break;
         case Command_Des:
         case Command_DesEcb:

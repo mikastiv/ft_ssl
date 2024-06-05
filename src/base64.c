@@ -92,6 +92,7 @@ base64_decode(Buffer input) {
         u32 padding_count = (input.ptr[i + 2] == padding) + (input.ptr[i + 3] == padding);
         if (padding_count) {
             if (input.ptr[i + 2] == padding && input.ptr[i + 3] != padding) goto error;
+            buffer.len -= padding_count;
         }
 
         buffer.ptr[j] = (bytes >> 16) & 0xFF;

@@ -13,7 +13,9 @@
                 "base64",
                 "-d",
                 "-i",
-                "base64"
+                "base64",
+                "-o",
+                "test"
             ],
             "cwd": "${workspaceFolder}"
         }

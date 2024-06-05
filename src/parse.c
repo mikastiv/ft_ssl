@@ -18,7 +18,6 @@ static const char* cmd_names[] = {
 typedef enum {
     OptionType_Bool,
     OptionType_String,
-    // OptionType_Hex,
 } OptionType;
 
 typedef struct {
@@ -104,12 +103,6 @@ parse_flag(const char flag, const Option* options, u64 size, u32* index) {
                     *index += 1;
                     *value = argv[*index];
                 } break;
-                // case OptionType_Hex: {
-                //     u64* value = options[j].value;
-                //     check_next_argument(*index, flag);
-                //     *index += 1;
-                //     *value = ft_hextol(argv[*index]);
-                // } break;
                 case OptionType_Bool: {
                     bool* value = options[j].value;
                     *value = true;
@@ -212,6 +205,68 @@ parse_options(Command cmd, void* out_options) {
             case Command_Des:
             case Command_DesEcb:
             case Command_DesCbc: {
+                DesOptions* options = out_options;
+                const Option des_options[] = {
+                    {
+                     .name = "use base64",
+                     .flag = 'a',
+                     .type = OptionType_Bool,
+                     .value = &options->use_base64,
+                     },
+                    {
+                     .name = "decrypt",
+                     .flag = 'd',
+                     .type = OptionType_Bool,
+                     .value = &options->decrypt,
+                     },
+                    {
+                     .name = "encrypt",
+                     .flag = 'e',
+                     .type = OptionType_Bool,
+                     .value = &options->encrypt,
+                     },
+                    {
+                     .name = "input file",
+                     .flag = 'i',
+                     .type = OptionType_String,
+                     .value = &options->input_file,
+                     },
+                    {
+                     .name = "output file",
+                     .flag = 'o',
+                     .type = OptionType_String,
+                     .value = &options->output_file,
+                     },
+                    {
+                     .name = "hex key",
+                     .flag = 'k',
+                     .type = OptionType_String,
+                     .value = &options->hex_key,
+                     },
+                    {
+                     .name = "hex salt",
+                     .flag = 's',
+                     .type = OptionType_String,
+                     .value = &options->hex_salt,
+                     },
+                    {
+                     .name = "hex iv",
+                     .flag = 'v',
+                     .type = OptionType_String,
+                     .value = &options->hex_iv,
+                     },
+                    {
+                     .name = "password",
+                     .flag = 'p',
+                     .type = OptionType_String,
+                     .value = &options->password,
+                     },
+                };
+
+                bool found = parse_flag(flag, des_options, array_len(des_options), &i);
+                if (!found) {
+                    unknown_flag(argv[i]);
+                }
             } break;
             default: {
             } break;

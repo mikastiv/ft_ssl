@@ -30,6 +30,18 @@ typedef struct {
     const char* output_file;
 } Base64Options;
 
+typedef struct {
+    bool use_base64;
+    bool decrypt;
+    bool encrypt;
+    const char* input_file;
+    const char* output_file;
+    const char* hex_key;
+    const char* password;
+    const char* hex_salt;
+    const char* hex_iv;
+} DesOptions;
+
 typedef enum {
     Command_None,
     Command_Md5,
