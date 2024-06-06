@@ -64,7 +64,11 @@ main(int in_argc, const char* const* in_argv) {
 
             int out_fd = -1;
             if (options.output_file) {
-                out_fd = open(options.output_file, O_WRONLY | O_CREAT | O_TRUNC, S_IRWXU | S_IRGRP | S_IROTH);
+                out_fd = open(
+                    options.output_file,
+                    O_WRONLY | O_CREAT | O_TRUNC,
+                    S_IRWXU | S_IRGRP | S_IROTH
+                );
                 if (out_fd < 0) print_error_and_quit();
             } else {
                 out_fd = STDOUT_FILENO;
@@ -87,10 +91,9 @@ main(int in_argc, const char* const* in_argv) {
             }
 
             write(out_fd, res.ptr, res.len);
-            if (out_fd != STDOUT_FILENO) {
-                if (options.encode) write(out_fd, "\n", 1);
-                close(out_fd);
-            }
+            if (options.encode) write(out_fd, "\n", 1);
+            if (out_fd != STDOUT_FILENO) close(out_fd);
+
         } break;
         case Command_Des:
         case Command_DesEcb:
