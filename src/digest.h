@@ -17,7 +17,7 @@
                                                                                                    \
     bool prefix##_hash_fd(int fd, Buffer out) {                                                    \
         Type hasher = prefix##_init();                                                             \
-        u8 buffer[2046];                                                                           \
+        u8 buffer[4096];                                                                           \
         i64 bytes = sizeof(buffer);                                                                \
         while (true) {                                                                             \
             bytes = read(fd, buffer, sizeof(buffer));                                              \
