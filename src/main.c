@@ -92,7 +92,7 @@ main(int in_argc, const char* const* in_argv) {
 
             write(out_fd, res.ptr, res.len);
             if (options.encode) write(out_fd, "\n", 1);
-            if (out_fd != STDOUT_FILENO) close(out_fd);
+            if (options.output_file) close(out_fd);
 
         } break;
         case Command_Des:
