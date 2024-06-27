@@ -93,16 +93,16 @@ typedef u64 Subkey;
 typedef Subkey Subkeys[16];
 
 static u64
-permute(u64 key, const u8* permuted_choice, u64 len) {
-    u64 permuted_key = 0;
+permute(u64 value, const u8* permuted_choice, u64 len) {
+    u64 permuted_value = 0;
     for (u64 i = 0; i < len; i++) {
         u64 bit = permuted_choice[i] - 1;
-        if (key & (1ull << bit)) {
-            permuted_key |= 1ull << i;
+        if (value & (1ull << bit)) {
+            permuted_value |= 1ull << i;
         }
     }
 
-    return permuted_key;
+    return permuted_value;
 }
 
 static void
@@ -158,10 +158,37 @@ feistel(u32 halfblock, Subkey subkey) {
     return (u32)permute(substituted, p, array_len(p));
 }
 
+static u64
+process_block(u64 block, Subkeys subkeys) {
+    u64 permuted = permute(block, ip, array_len(ip));
+    u32 left = (permuted >> 32) & 0xFFFFFFFF;
+    u32 right = permuted & 0xFFFFFFFF;
+
+    for (u64 i = 0; i < 16; i++) {
+        u32 tmp = right;
+        right = feistel(right, subkeys[i]);
+        right ^= left;
+        left = tmp;
+    }
+
+    u64 block_cipher = ((u64)left << 32) | (u64)right;
+    block_cipher = permute(block_cipher, ip2, array_len(ip2));
+
+    return block_cipher;
+}
+
+#include <stdio.h>
+
 Buffer
 des_encrypt(Buffer message, DesKey key) {
-    (void)message;
-    (void)key;
+    Subkeys subkeys;
+    generate_subkeys(key, subkeys);
+
+    u64 block = read_u64(message.ptr);
+    u64 cipher = process_block(block, subkeys);
+    printf("%016lX\n", key);
+    printf("%016lX\n", block);
+    printf("%lX\n", cipher);
     return (Buffer){ 0 };
 }
 
