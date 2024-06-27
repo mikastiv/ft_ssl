@@ -97,8 +97,8 @@ permute(u64 value, const u8* permuted_choice, u64 len) {
     u64 permuted_value = 0;
     for (u64 i = 0; i < len; i++) {
         u64 bit = permuted_choice[i] - 1;
-        if (value & (1ull << bit)) {
-            permuted_value |= 1ull << i;
+        if (value & (1ull << (63ull - bit))) {
+            permuted_value |= 1ull << (63ull - i);
         }
     }
 
@@ -109,14 +109,15 @@ static void
 generate_subkeys(DesKey key, Subkeys out) {
     DesKey permuted_key = permute(key, pc1, array_len(pc1));
 
-    u32 left = (permuted_key >> 28) & 0xFFFFFFF;
-    u32 right = permuted_key & 0xFFFFFFF;
+    u32 left = (permuted_key >> 36) & 0xFFFFFFF;
+    u32 right = (permuted_key >> 8) & 0xFFFFFFF;
 
     for (u32 i = 0; i < 16; i++) {
-        right = rotate_left32(right, shift[i]);
-        left = rotate_left32(left, shift[i]);
+        right = rotate_left28(right, shift[i]);
+        left = rotate_left28(left, shift[i]);
 
         u64 concat = ((u64)left << 28) | (u64)right;
+        concat <<= 8;
         out[i] = permute(concat, pc2, array_len(pc2));
     }
 }

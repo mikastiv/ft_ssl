@@ -93,6 +93,20 @@ ft_hextol(const char* value) {
 }
 
 u32
+rotate_left28(u32 value, u32 shift) {
+    assert(shift < 32);
+
+    u32 carry = (value & (1u << 27)) != 0;
+    value <<= shift;
+    value &= 0xFFFFFFF;
+    if (carry) {
+        value |= 1u;
+    }
+
+    return value;
+}
+
+u32
 rotate_left32(u32 value, u32 shift) {
     assert(shift < 32);
     return (value << shift) | (value >> (32 - shift));
