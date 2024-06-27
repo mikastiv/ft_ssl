@@ -144,7 +144,7 @@ feistel(u32 halfblock, Subkey subkey) {
 
         while (m > 0) {
             u64 bit = (i + 1) * 4 - n;
-            if (m % 2) {
+            if (m & 1ull) {
                 substituted |= 1ull << bit;
             } else {
                 substituted &= ~(1ull << bit);
