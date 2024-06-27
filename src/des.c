@@ -92,9 +92,9 @@ const static u8 shift[] = { 1, 1, 2, 2, 2, 2, 2, 2, 1, 2, 2, 2, 2, 2, 2, 1 };
 typedef u64 Subkey;
 typedef Subkey Subkeys[16];
 
-static DesKey
-permute_key(DesKey key, const u8* permuted_choice, u64 len) {
-    DesKey permuted_key = 0;
+static u64
+permute(u64 key, const u8* permuted_choice, u64 len) {
+    u64 permuted_key = 0;
     for (u64 i = 0; i < len; i++) {
         u64 bit = permuted_choice[i] - 1;
         if (key & (1ull << bit)) {
@@ -107,7 +107,7 @@ permute_key(DesKey key, const u8* permuted_choice, u64 len) {
 
 static void
 generate_subkeys(DesKey key, Subkeys out) {
-    DesKey permuted_key = permute_key(key, pc1, array_len(pc1));
+    DesKey permuted_key = permute(key, pc1, array_len(pc1));
 
     u32 left = (permuted_key >> 28) & 0xFFFFFFF;
     u32 right = permuted_key & 0xFFFFFFF;
@@ -116,9 +116,46 @@ generate_subkeys(DesKey key, Subkeys out) {
         right = rotate_left32(right, shift[i]);
         left = rotate_left32(left, shift[i]);
 
-        DesKey concat = ((DesKey)left << 28) | (DesKey)right;
-        out[i] = permute_key(concat, pc2, array_len(pc2));
+        u64 concat = ((u64)left << 28) | (u64)right;
+        out[i] = permute(concat, pc2, array_len(pc2));
     }
+}
+
+static u32
+feistel(u32 halfblock, Subkey subkey) {
+    u64 expanded = permute(halfblock, e, array_len(e));
+    expanded ^= subkey;
+
+    u32 substituted = 0;
+    for (u64 i = 0; i < 8; i++) {
+        u64 j = i * 6;
+        u32 bits[6] = { 0 };
+        for (u64 k = 0; k < 6; k++) {
+            u64 mask = 1ull << (j + k);
+            if (expanded & mask) {
+                bits[k] = 1;
+            }
+        }
+
+        u64 row = 2 * bits[0] + bits[5];
+        u64 col = 8 * bits[1] + 4 * bits[2] + 2 * bits[3] + bits[4];
+        u64 m = s[i][row * 16 + col];
+        u64 n = 1;
+
+        while (m > 0) {
+            u64 bit = (i + 1) * 4 - n;
+            if (m % 2) {
+                substituted |= 1ull << bit;
+            } else {
+                substituted &= ~(1ull << bit);
+            }
+
+            m >>= 1;
+            n++;
+        }
+    }
+
+    return (u32)permute(substituted, p, array_len(p));
 }
 
 Buffer
