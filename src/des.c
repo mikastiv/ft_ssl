@@ -1,15 +1,16 @@
-
+#include "cipher.h"
 #include "types.h"
+#include "utils.h"
 
 // Permuted choice 1
-const static u8 p1[] = {
+const static u8 pc1[] = {
     57, 49, 41, 33, 25, 17, 9,  1,  58, 50, 42, 34, 26, 18, 10, 2,  59, 51, 43,
     35, 27, 19, 11, 3,  60, 52, 44, 36, 63, 55, 47, 39, 31, 23, 15, 7,  62, 54,
     46, 38, 30, 22, 14, 6,  61, 53, 45, 37, 29, 21, 13, 5,  28, 20, 12, 4,
 };
 
 // Permuted choice 2
-const static u8 p2[] = {
+const static u8 pc2[] = {
     14, 17, 11, 24, 1,  5,  3,  28, 15, 6,  21, 10, 23, 19, 12, 4,  26, 8,  16, 7,  27, 20, 13, 2,
     41, 52, 31, 37, 47, 55, 30, 40, 51, 45, 33, 48, 44, 49, 39, 56, 34, 53, 46, 42, 50, 36, 29, 32,
 };
@@ -87,3 +88,43 @@ const static u8 s[][64] = {
 };
 
 const static u8 shift[] = { 1, 1, 2, 2, 2, 2, 2, 2, 1, 2, 2, 2, 2, 2, 2, 1 };
+
+typedef u64 Subkey;
+typedef Subkey Subkeys[16];
+
+static DesKey
+permute_key(DesKey key, const u8* permuted_choice, u64 len) {
+    DesKey permuted_key = 0;
+    for (u32 i = 0; i < len; i++) {
+        u64 bit = pc1[i] - 1;
+        if (key & (1 << bit)) {
+            permuted_key |= 1 << i;
+        }
+    }
+
+    return permuted_key;
+}
+
+static void
+generate_subkeys(DesKey key, Subkeys out) {
+    DesKey permuted_key = permute_key(key, pc1, array_len(pc1));
+
+    u32 left = (key >> 28) & 0xFFFFFFF;
+    u32 right = key & 0xFFFFFFF;
+
+    for (u32 i = 0; i < 16; i++) {
+        right = rotate_left32(right, shift[i]);
+        left = rotate_left32(left, shift[i]);
+
+        DesKey concat = ((DesKey)left << 28) | (DesKey)right;
+        out[i] = permute_key(concat, pc2, array_len(pc2));
+    }
+}
+
+Buffer
+des_encrypt(Buffer message, DesKey key) {
+}
+
+Buffer
+des_decrypt(Buffer message, DesKey key) {
+}
