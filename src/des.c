@@ -92,14 +92,28 @@ const static u8 shift[] = { 1, 1, 2, 2, 2, 2, 2, 2, 1, 2, 2, 2, 2, 2, 2, 1 };
 typedef u64 Subkey;
 typedef Subkey Subkeys[16];
 
+static bool
+get_bit(u64 value, u64 bit) {
+    u64 mask = 1ull << (63ull - bit);
+    return (value & mask) != 0;
+}
+
+static u64
+set_bit(u64 value, u64 bit, bool v) {
+    u64 mask = 1ull << (63ull - bit);
+    if (v) {
+        return value | mask;
+    } else {
+        return value & ~mask;
+    }
+}
+
 static u64
 permute(u64 value, const u8* permuted_choice, u64 len) {
     u64 permuted_value = 0;
     for (u64 i = 0; i < len; i++) {
         u64 bit = permuted_choice[i] - 1;
-        if (value & (1ull << (63ull - bit))) {
-            permuted_value |= 1ull << (63ull - i);
-        }
+        permuted_value = set_bit(permuted_value, i, get_bit(value, bit));
     }
 
     return permuted_value;
