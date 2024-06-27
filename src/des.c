@@ -95,10 +95,10 @@ typedef Subkey Subkeys[16];
 static DesKey
 permute_key(DesKey key, const u8* permuted_choice, u64 len) {
     DesKey permuted_key = 0;
-    for (u32 i = 0; i < len; i++) {
-        u64 bit = pc1[i] - 1;
-        if (key & (1 << bit)) {
-            permuted_key |= 1 << i;
+    for (u64 i = 0; i < len; i++) {
+        u64 bit = permuted_choice[i] - 1;
+        if (key & (1ull << bit)) {
+            permuted_key |= 1ull << i;
         }
     }
 
@@ -109,8 +109,8 @@ static void
 generate_subkeys(DesKey key, Subkeys out) {
     DesKey permuted_key = permute_key(key, pc1, array_len(pc1));
 
-    u32 left = (key >> 28) & 0xFFFFFFF;
-    u32 right = key & 0xFFFFFFF;
+    u32 left = (permuted_key >> 28) & 0xFFFFFFF;
+    u32 right = permuted_key & 0xFFFFFFF;
 
     for (u32 i = 0; i < 16; i++) {
         right = rotate_left32(right, shift[i]);
@@ -123,8 +123,14 @@ generate_subkeys(DesKey key, Subkeys out) {
 
 Buffer
 des_encrypt(Buffer message, DesKey key) {
+    (void)message;
+    (void)key;
+    return (Buffer){ 0 };
 }
 
 Buffer
 des_decrypt(Buffer message, DesKey key) {
+    (void)message;
+    (void)key;
+    return (Buffer){ 0 };
 }
