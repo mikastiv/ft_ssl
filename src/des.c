@@ -141,7 +141,7 @@ feistel(u32 halfblock, Subkey subkey) {
     u64 expanded = permute((u64)halfblock << 32, e, array_len(e));
     expanded ^= subkey;
 
-    u32 substituted = 0;
+    u64 substituted = 0;
     for (u64 i = 0; i < 8; i++) {
         u64 j = i * 6;
         u32 bits[6] = { 0 };
@@ -165,7 +165,7 @@ feistel(u32 halfblock, Subkey subkey) {
         }
     }
 
-    return (u32)permute(substituted, p, array_len(p));
+    return permute(substituted, p, array_len(p)) >> 32;
 }
 
 static u64
@@ -181,7 +181,7 @@ process_block(u64 block, Subkeys subkeys) {
         left = tmp;
     }
 
-    u64 block_cipher = ((u64)left << 32) | (u64)right;
+    u64 block_cipher = ((u64)right << 32) | (u64)left;
     block_cipher = permute(block_cipher, ip2, array_len(ip2));
 
     return block_cipher;
