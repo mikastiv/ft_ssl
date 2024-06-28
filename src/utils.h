@@ -65,6 +65,9 @@ read_u32_be(u8* buffer);
 u64
 read_u48_be(u8* buffer);
 
+u64
+read_u64_be(u8* buffer);
+
 u32
 read_u24_be(u8* buffer);
 

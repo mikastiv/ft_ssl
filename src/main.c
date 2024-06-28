@@ -99,10 +99,16 @@ main(int in_argc, const char* const* in_argv) {
         case Command_DesEcb:
         case Command_DesCbc: {
             u64 msg = 0x0123456789ABCDEF;
-            Buffer cipher = des_encrypt(buffer_create((u8*)&msg, 8), 0x133457799BBCDFF1);
 
+            Buffer cipher = des_encrypt(buffer_create((u8*)&msg, 8), 0x133457799BBCDFF1);
             for (u64 i = 0; i < cipher.len; i++) {
                 dprintf(1, "%02X", cipher.ptr[i]);
+            }
+            dprintf(1, "\n");
+
+            Buffer original = des_decrypt(cipher, 0x133457799BBCDFF1);
+            for (u64 i = 0; i < original.len; i++) {
+                dprintf(1, "%02X", original.ptr[i]);
             }
             dprintf(1, "\n");
         } break;

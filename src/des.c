@@ -255,7 +255,36 @@ des_encrypt(Buffer message, DesKey key) {
 
 Buffer
 des_decrypt(Buffer message, DesKey key) {
-    (void)message;
-    (void)key;
-    return (Buffer){ 0 };
+    Subkeys subkeys;
+    generate_subkeys(key, subkeys);
+
+    for (u64 i = 0; i < array_len(subkeys) / 2; i++) {
+        Subkey tmp = subkeys[i];
+        subkeys[i] = subkeys[array_len(subkeys) - i - 1];
+        subkeys[array_len(subkeys) - i - 1] = tmp;
+    }
+
+    u64 len = message.len;
+    u8* buffer = malloc(len);
+    if (!buffer) return (Buffer){ 0 };
+
+    for (u64 i = 0; i + 7 < message.len; i += 8) {
+        u64 block = read_u64_be(&message.ptr[i]);
+        u64 cipher = process_block(block, subkeys);
+
+        u8* bytes = (u8*)&cipher;
+        buffer[i + 0] = bytes[7];
+        buffer[i + 1] = bytes[6];
+        buffer[i + 2] = bytes[5];
+        buffer[i + 3] = bytes[4];
+        buffer[i + 4] = bytes[3];
+        buffer[i + 5] = bytes[2];
+        buffer[i + 6] = bytes[1];
+        buffer[i + 7] = bytes[0];
+    }
+
+    u8 padding = buffer[len - 1];
+    len -= padding;
+
+    return buffer_create(buffer, len);
 }
