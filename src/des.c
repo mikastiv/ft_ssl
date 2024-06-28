@@ -1,6 +1,7 @@
 #include "cipher.h"
 #include "types.h"
 #include "utils.h"
+#include <stdlib.h>
 
 // Permuted choice 1
 const static u8 pc1[] = {
@@ -199,22 +200,57 @@ process_block(u64 block, Subkeys subkeys) {
     return block_cipher;
 }
 
-#include <stdio.h>
-
 Buffer
 des_encrypt(Buffer message, DesKey key) {
     Subkeys subkeys;
     generate_subkeys(key, subkeys);
-    for (u32 i = 0; i < 16; i++) {
-        printf("key %u: %016lX\n", i, subkeys[i]);
+
+    u8 padding = 8 - (message.len % 8);
+    u64 len = message.len + padding;
+    u8* buffer = malloc(len);
+    if (!buffer) return (Buffer){ 0 };
+
+    u64 i;
+    for (i = 0; i + 7 < message.len; i += 8) {
+        u64 block = read_u64(&message.ptr[i]);
+        u64 cipher = process_block(block, subkeys);
+
+        u8* bytes = (u8*)&cipher;
+        buffer[i + 0] = bytes[7];
+        buffer[i + 1] = bytes[6];
+        buffer[i + 2] = bytes[5];
+        buffer[i + 3] = bytes[4];
+        buffer[i + 4] = bytes[3];
+        buffer[i + 5] = bytes[2];
+        buffer[i + 6] = bytes[1];
+        buffer[i + 7] = bytes[0];
+    }
+    if (i < len) {
+        u64 block;
+        ft_memset(buffer_create((u8*)&block, sizeof(block)), padding);
+
+        u8* ptr = &message.ptr[i];
+        for (u64 j = 56; i < message.len; i++, j -= 8) {
+            u64 mask = (0xFFull << j);
+            block &= ~mask;
+            block |= (u64)*ptr << j;
+            ptr++;
+        }
+
+        u64 cipher = process_block(block, subkeys);
+
+        u8* bytes = (u8*)&cipher;
+        buffer[i + 0] = bytes[7];
+        buffer[i + 1] = bytes[6];
+        buffer[i + 2] = bytes[5];
+        buffer[i + 3] = bytes[4];
+        buffer[i + 4] = bytes[3];
+        buffer[i + 5] = bytes[2];
+        buffer[i + 6] = bytes[1];
+        buffer[i + 7] = bytes[0];
     }
 
-    u64 block = read_u64(message.ptr);
-    u64 cipher = process_block(block, subkeys);
-    printf("%016lX\n", key);
-    printf("%016lX\n", block);
-    printf("%016lX\n", cipher);
-    return (Buffer){ 0 };
+    return buffer_create(buffer, len);
 }
 
 Buffer
