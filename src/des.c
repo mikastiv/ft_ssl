@@ -138,7 +138,7 @@ generate_subkeys(DesKey key, Subkeys out) {
 
 static u32
 feistel(u32 halfblock, Subkey subkey) {
-    u64 expanded = permute(halfblock, e, array_len(e));
+    u64 expanded = permute((u64)halfblock << 32, e, array_len(e));
     expanded ^= subkey;
 
     u32 substituted = 0;
@@ -146,8 +146,7 @@ feistel(u32 halfblock, Subkey subkey) {
         u64 j = i * 6;
         u32 bits[6] = { 0 };
         for (u64 k = 0; k < 6; k++) {
-            u64 mask = 1ull << (j + k);
-            if (expanded & mask) {
+            if (get_bit(expanded, j + k)) {
                 bits[k] = 1;
             }
         }
@@ -159,11 +158,7 @@ feistel(u32 halfblock, Subkey subkey) {
 
         while (m > 0) {
             u64 bit = (i + 1) * 4 - n;
-            if (m & 1ull) {
-                substituted |= 1ull << bit;
-            } else {
-                substituted &= ~(1ull << bit);
-            }
+            substituted = set_bit(substituted, bit, m & 1ul);
 
             m >>= 1;
             n++;
@@ -203,7 +198,7 @@ des_encrypt(Buffer message, DesKey key) {
     u64 cipher = process_block(block, subkeys);
     printf("%016lX\n", key);
     printf("%016lX\n", block);
-    printf("%lX\n", cipher);
+    printf("%016lX\n", cipher);
     return (Buffer){ 0 };
 }
 
