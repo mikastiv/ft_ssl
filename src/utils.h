@@ -30,9 +30,6 @@ u32
 rotate_left32(u32 value, u32 shift);
 
 u32
-rotate_left28(u32 value, u32 shift);
-
-u32
 rotate_right32(u32 value, u32 shift);
 
 u64

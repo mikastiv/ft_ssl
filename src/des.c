@@ -119,6 +119,18 @@ permute(u64 value, const u8* permuted_choice, u64 len) {
     return permuted_value;
 }
 
+u32
+shift_left28(u32 value, u32 times) {
+    for (u32 i = 0; i < times; i++) {
+        u32 carry = value & (1u << 27);
+        value <<= 1;
+        value &= 0xFFFFFFF;
+        if (carry) value |= 1;
+    }
+
+    return value;
+}
+
 static void
 generate_subkeys(DesKey key, Subkeys out) {
     DesKey permuted_key = permute(key, pc1, array_len(pc1));
@@ -127,8 +139,8 @@ generate_subkeys(DesKey key, Subkeys out) {
     u32 right = (permuted_key >> 8) & 0xFFFFFFF;
 
     for (u32 i = 0; i < 16; i++) {
-        right = rotate_left28(right, shift[i]);
-        left = rotate_left28(left, shift[i]);
+        right = shift_left28(right, shift[i]);
+        left = shift_left28(left, shift[i]);
 
         u64 concat = ((u64)left << 28) | (u64)right;
         concat <<= 8;
@@ -193,6 +205,9 @@ Buffer
 des_encrypt(Buffer message, DesKey key) {
     Subkeys subkeys;
     generate_subkeys(key, subkeys);
+    for (u32 i = 0; i < 16; i++) {
+        printf("key %u: %016lX\n", i, subkeys[i]);
+    }
 
     u64 block = read_u64(message.ptr);
     u64 cipher = process_block(block, subkeys);
