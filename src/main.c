@@ -98,17 +98,18 @@ main(int in_argc, const char* const* in_argv) {
         case Command_Des:
         case Command_DesEcb:
         case Command_DesCbc: {
-            u64 msg = 0x0123456789ABCDEF;
-            DesKey key = { .raw = byte_swap64(0x133457799BBCDFF1) };
+            u64 msg = byte_swap64(0x8787878787878787);
+            DesKey key = { .raw = byte_swap64(0x0E329232EA6D0D73) };
             Des64 iv = { .raw = 0x5711577929EFDFF1 };
+            (void)iv;
 
-            Buffer cipher = des_cbc_encrypt(buffer_create((u8*)&msg, 8), key, iv);
+            Buffer cipher = des_ecb_encrypt(buffer_create((u8*)&msg, 8), key);
             for (u64 i = 0; i < cipher.len; i++) {
                 dprintf(1, "%02X", cipher.ptr[i]);
             }
             dprintf(1, "\n");
 
-            Buffer original = des_cbc_decrypt(cipher, key, iv);
+            Buffer original = des_ecb_decrypt(cipher, key);
             for (u64 i = 0; i < original.len; i++) {
                 dprintf(1, "%02X", original.ptr[i]);
             }

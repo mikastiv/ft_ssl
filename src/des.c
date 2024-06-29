@@ -259,7 +259,7 @@ des_encrypt(Buffer message, DesKey key, const Des64* iv) {
 
     u64 i;
     for (i = 0; i + 7 < message.len; i += 8) {
-        Des64 block = { .raw = read_u64_be(&message.ptr[i]) };
+        Des64 block = { .raw = read_u64(&message.ptr[i]) };
         if (iv) block.raw ^= prev_block.raw;
 
         Des64 cipher = process_block(block, subkeys);
