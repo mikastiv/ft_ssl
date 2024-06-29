@@ -242,8 +242,8 @@ print_subkeys(Subkeys subkeys) {
     }
 }
 
-Buffer
-des_encrypt(Buffer message, DesKey key) {
+static Buffer
+des_encrypt(Buffer message, DesKey key, const Des64* iv) {
     Subkeys subkeys;
     generate_subkeys(key, subkeys);
 
@@ -254,10 +254,16 @@ des_encrypt(Buffer message, DesKey key) {
     u8* buffer = malloc(len);
     if (!buffer) return (Buffer){ 0 };
 
+    Des64 prev_block = { .raw = 0 };
+    if (iv) prev_block.raw = iv->raw;
+
     u64 i;
     for (i = 0; i + 7 < message.len; i += 8) {
         Des64 block = { .raw = read_u64_be(&message.ptr[i]) };
+        if (iv) block.raw ^= prev_block.raw;
+
         Des64 cipher = process_block(block, subkeys);
+        prev_block.raw = cipher.raw;
 
         for (u64 j = 0; j < 8; j++) {
             buffer[i + j] = cipher.block[j];
@@ -271,6 +277,7 @@ des_encrypt(Buffer message, DesKey key) {
             block.block[j] = message.ptr[i];
         }
 
+        if (iv) block.raw ^= prev_block.raw;
         Des64 cipher = process_block(block, subkeys);
 
         for (u64 j = 0; j < 8; j++) {
@@ -281,8 +288,8 @@ des_encrypt(Buffer message, DesKey key) {
     return buffer_create(buffer, len);
 }
 
-Buffer
-des_decrypt(Buffer message, DesKey key) {
+static Buffer
+des_decrypt(Buffer message, DesKey key, const Des64* iv) {
     if (message.len % 8 != 0) return (Buffer){ 0 };
 
     Subkeys subkeys;
@@ -298,12 +305,18 @@ des_decrypt(Buffer message, DesKey key) {
     u8* buffer = malloc(len);
     if (!buffer) return (Buffer){ 0 };
 
+    Des64 prev_block = { .raw = 0 };
+    if (iv) prev_block.raw = iv->raw;
+
     for (u64 i = 0; i + 7 < message.len; i += 8) {
         Des64 block = { .raw = read_u64(&message.ptr[i]) };
-        Des64 cipher = process_block(block, subkeys);
+
+        Des64 decoded = process_block(block, subkeys);
+        if (iv) decoded.raw ^= prev_block.raw;
+        prev_block.raw = block.raw;
 
         for (u64 j = 0; j < 8; j++) {
-            buffer[i + j] = cipher.block[j];
+            buffer[i + j] = decoded.block[j];
         }
     }
 
@@ -315,4 +328,24 @@ des_decrypt(Buffer message, DesKey key) {
     len -= padding;
 
     return buffer_create(buffer, len);
+}
+
+Buffer
+des_cbc_encrypt(Buffer message, DesKey key, Des64 iv) {
+    return des_encrypt(message, key, &iv);
+}
+
+Buffer
+des_cbc_decrypt(Buffer message, DesKey key, Des64 iv) {
+    return des_decrypt(message, key, &iv);
+}
+
+Buffer
+des_ecb_encrypt(Buffer message, DesKey key) {
+    return des_encrypt(message, key, 0);
+}
+
+Buffer
+des_ecb_decrypt(Buffer message, DesKey key) {
+    return des_decrypt(message, key, 0);
 }

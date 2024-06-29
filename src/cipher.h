@@ -16,7 +16,13 @@ Buffer
 base64_decode(Buffer input);
 
 Buffer
-des_encrypt(Buffer message, DesKey key);
+des_ecb_encrypt(Buffer message, DesKey key);
 
 Buffer
-des_decrypt(Buffer message, DesKey key);
+des_ecb_decrypt(Buffer message, DesKey key);
+
+Buffer
+des_cbc_encrypt(Buffer message, DesKey key, Des64 iv);
+
+Buffer
+des_cbc_decrypt(Buffer message, DesKey key, Des64 iv);
