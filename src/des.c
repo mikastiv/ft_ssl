@@ -128,7 +128,7 @@ permute(Des64 value, const u8* permutation_table, u64 table_len) {
 }
 
 static Des64
-shift_left28(Des64 value, u64 times) {
+circular_shift_left28(Des64 value, u64 times) {
     for (u64 i = 0; i < times; i++) {
         bool carry = get_bit(value, 0);
         for (u64 j = 0; j < 27; j++) {
@@ -168,8 +168,8 @@ generate_subkeys(Des64 key, Subkeys out) {
     split_block(permuted_key, 28, &left, &right);
 
     for (u64 i = 0; i < 16; i++) {
-        right = shift_left28(right, shift[i]);
-        left = shift_left28(left, shift[i]);
+        right = circular_shift_left28(right, shift[i]);
+        left = circular_shift_left28(left, shift[i]);
 
         Des64 concat = merge_blocks(left, right, 28);
         out[i] = permute(concat, pc2, array_len(pc2));
