@@ -2,7 +2,12 @@
 
 #include "types.h"
 
-typedef u64 DesKey;
+typedef union {
+    u8 block[8];
+    u64 raw;
+} Des64;
+
+typedef Des64 DesKey;
 
 Buffer
 base64_encode(Buffer input);

@@ -90,74 +90,101 @@ const static u8 s[][64] = {
 
 const static u8 shift[] = { 1, 1, 2, 2, 2, 2, 2, 2, 1, 2, 2, 2, 2, 2, 2, 1 };
 
-typedef u64 Subkey;
+typedef Des64 Subkey;
 typedef Subkey Subkeys[16];
 
 static bool
-get_bit(u64 value, u64 bit) {
-    u64 mask = 1ull << (63ull - bit);
-    return (value & mask) != 0;
+get_bit(Des64 value, u64 bit) {
+    u64 index = bit / 8;
+    u64 offset = bit % 8;
+    u64 mask = 1ull << (7ull - offset);
+    return (value.block[index] & mask) != 0;
 }
 
-static u64
-set_bit(u64 value, u64 bit, bool v) {
-    u64 mask = 1ull << (63ull - bit);
+static Des64
+set_bit(Des64 value, u64 bit, bool v) {
+    u64 index = bit / 8;
+    u64 offset = bit % 8;
+    u64 mask = 1ull << (7ull - offset);
+
     if (v) {
-        return value | mask;
+        value.block[index] |= mask;
     } else {
-        return value & ~mask;
+        value.block[index] &= ~mask;
     }
+
+    return value;
 }
 
-static u64
-permute(u64 value, const u8* permuted_choice, u64 len) {
-    u64 permuted_value = 0;
-    for (u64 i = 0; i < len; i++) {
-        u64 bit = permuted_choice[i] - 1;
-        permuted_value = set_bit(permuted_value, i, get_bit(value, bit));
+static Des64
+permute(Des64 value, const u8* permutation_table, u64 table_len) {
+    Des64 permuted_value = { .raw = 0 };
+    for (u64 i = 0; i < table_len; i++) {
+        u64 bit = get_bit(value, permutation_table[i] - 1);
+        permuted_value = set_bit(permuted_value, i, bit);
     }
 
     return permuted_value;
 }
 
-u32
-shift_left28(u32 value, u32 times) {
-    for (u32 i = 0; i < times; i++) {
-        u32 carry = value & (1u << 27);
-        value <<= 1;
-        value &= 0xFFFFFFF;
-        if (carry) value |= 1;
+static Des64
+shift_left28(Des64 value, u64 times) {
+    for (u64 i = 0; i < times; i++) {
+        bool carry = get_bit(value, 0);
+        for (u64 j = 0; j < 27; j++) {
+            value = set_bit(value, j, get_bit(value, j + 1));
+        }
+        value = set_bit(value, 27, carry);
     }
 
     return value;
 }
 
 static void
-generate_subkeys(DesKey key, Subkeys out) {
-    DesKey permuted_key = permute(key, pc1, array_len(pc1));
+split_block(Des64 block, u64 size, Des64* left, Des64* right) {
+    for (u64 i = 0; i < size; i++) {
+        *left = set_bit(*left, i, get_bit(block, i));
+        *right = set_bit(*right, i, get_bit(block, i + size));
+    }
+}
 
-    u32 left = (permuted_key >> 36) & 0xFFFFFFF;
-    u32 right = (permuted_key >> 8) & 0xFFFFFFF;
+static Des64
+merge_blocks(Des64 left, Des64 right, u64 size) {
+    Des64 merged = { .raw = 0 };
+    for (u64 j = 0; j < size; j++) {
+        merged = set_bit(merged, j, get_bit(left, j));
+        merged = set_bit(merged, j + size, get_bit(right, j));
+    }
 
-    for (u32 i = 0; i < 16; i++) {
+    return merged;
+}
+
+static void
+generate_subkeys(Des64 key, Subkeys out) {
+    Des64 permuted_key = permute(key, pc1, array_len(pc1));
+
+    Des64 left = { .raw = 0 };
+    Des64 right = { .raw = 0 };
+    split_block(permuted_key, 28, &left, &right);
+
+    for (u64 i = 0; i < 16; i++) {
         right = shift_left28(right, shift[i]);
         left = shift_left28(left, shift[i]);
 
-        u64 concat = ((u64)left << 28) | (u64)right;
-        concat <<= 8;
+        Des64 concat = merge_blocks(left, right, 28);
         out[i] = permute(concat, pc2, array_len(pc2));
     }
 }
 
-static u32
-feistel(u32 halfblock, Subkey subkey) {
-    u64 expanded = permute((u64)halfblock << 32, e, array_len(e));
-    expanded ^= subkey;
+static Des64
+feistel(Des64 halfblock, Subkey subkey) {
+    Des64 expanded = permute(halfblock, e, array_len(e));
+    expanded.raw ^= subkey.raw;
 
-    u64 substituted = 0;
+    Des64 substituted = { .raw = 0 };
     for (u64 i = 0; i < 8; i++) {
         u64 j = i * 6;
-        u32 bits[6] = { 0 };
+        u64 bits[6] = { 0 };
         for (u64 k = 0; k < 6; k++) {
             if (get_bit(expanded, j + k)) {
                 bits[k] = 1;
@@ -178,32 +205,49 @@ feistel(u32 halfblock, Subkey subkey) {
         }
     }
 
-    return permute(substituted, p, array_len(p)) >> 32;
+    return permute(substituted, p, array_len(p));
 }
 
-static u64
-process_block(u64 block, Subkeys subkeys) {
-    u64 permuted = permute(block, ip, array_len(ip));
-    u32 left = (permuted >> 32) & 0xFFFFFFFF;
-    u32 right = permuted & 0xFFFFFFFF;
+static Des64
+process_block(Des64 block, Subkeys subkeys) {
+    Des64 permuted = permute(block, ip, array_len(ip));
+
+    Des64 left = { .raw = 0 };
+    Des64 right = { .raw = 0 };
+    split_block(permuted, 32, &left, &right);
 
     for (u64 i = 0; i < 16; i++) {
-        u32 tmp = right;
+        Des64 tmp = right;
         right = feistel(right, subkeys[i]);
-        right ^= left;
+        right.raw ^= left.raw;
         left = tmp;
     }
 
-    u64 block_cipher = ((u64)right << 32) | (u64)left;
+    Des64 block_cipher = merge_blocks(right, left, 32);
     block_cipher = permute(block_cipher, ip2, array_len(ip2));
 
     return block_cipher;
+}
+
+#include <stdio.h>
+
+static void
+print_subkeys(Subkeys subkeys) {
+    for (u64 i = 0; i < 16; i++) {
+        printf("subkey %lu: ", i);
+        for (u64 j = 0; j < 8; j++) {
+            printf("%02X", subkeys[i].block[j]);
+        }
+        printf("\n");
+    }
 }
 
 Buffer
 des_encrypt(Buffer message, DesKey key) {
     Subkeys subkeys;
     generate_subkeys(key, subkeys);
+
+    print_subkeys(subkeys);
 
     u8 padding = 8 - (message.len % 8);
     u64 len = message.len + padding;
@@ -212,42 +256,26 @@ des_encrypt(Buffer message, DesKey key) {
 
     u64 i;
     for (i = 0; i + 7 < message.len; i += 8) {
-        u64 block = read_u64(&message.ptr[i]);
-        u64 cipher = process_block(block, subkeys);
+        Des64 block = { .raw = read_u64_be(&message.ptr[i]) };
+        Des64 cipher = process_block(block, subkeys);
 
-        u8* bytes = (u8*)&cipher;
-        buffer[i + 0] = bytes[7];
-        buffer[i + 1] = bytes[6];
-        buffer[i + 2] = bytes[5];
-        buffer[i + 3] = bytes[4];
-        buffer[i + 4] = bytes[3];
-        buffer[i + 5] = bytes[2];
-        buffer[i + 6] = bytes[1];
-        buffer[i + 7] = bytes[0];
+        for (u64 j = 0; j < 8; j++) {
+            buffer[i + j] = cipher.block[j];
+        }
     }
     if (i < len) {
-        u64 block;
-        ft_memset(buffer_create((u8*)&block, sizeof(block)), padding);
+        Des64 block;
+        ft_memset(buffer_create(block.block, sizeof(block)), padding);
 
-        u8* ptr = &message.ptr[i];
-        for (u64 j = 56; i < message.len; i++, j -= 8) {
-            u64 mask = (0xFFull << j);
-            block &= ~mask;
-            block |= (u64)*ptr << j;
-            ptr++;
+        for (u64 j = 0; i < message.len; i++, j++) {
+            block.block[j] = message.ptr[i];
         }
 
-        u64 cipher = process_block(block, subkeys);
+        Des64 cipher = process_block(block, subkeys);
 
-        u8* bytes = (u8*)&cipher;
-        buffer[i + 0] = bytes[7];
-        buffer[i + 1] = bytes[6];
-        buffer[i + 2] = bytes[5];
-        buffer[i + 3] = bytes[4];
-        buffer[i + 4] = bytes[3];
-        buffer[i + 5] = bytes[2];
-        buffer[i + 6] = bytes[1];
-        buffer[i + 7] = bytes[0];
+        for (u64 j = 0; j < 8; j++) {
+            buffer[i + j] = cipher.block[j];
+        }
     }
 
     return buffer_create(buffer, len);
@@ -255,6 +283,8 @@ des_encrypt(Buffer message, DesKey key) {
 
 Buffer
 des_decrypt(Buffer message, DesKey key) {
+    if (message.len % 8 != 0) return (Buffer){ 0 };
+
     Subkeys subkeys;
     generate_subkeys(key, subkeys);
 
@@ -269,21 +299,19 @@ des_decrypt(Buffer message, DesKey key) {
     if (!buffer) return (Buffer){ 0 };
 
     for (u64 i = 0; i + 7 < message.len; i += 8) {
-        u64 block = read_u64_be(&message.ptr[i]);
-        u64 cipher = process_block(block, subkeys);
+        Des64 block = { .raw = read_u64(&message.ptr[i]) };
+        Des64 cipher = process_block(block, subkeys);
 
-        u8* bytes = (u8*)&cipher;
-        buffer[i + 0] = bytes[7];
-        buffer[i + 1] = bytes[6];
-        buffer[i + 2] = bytes[5];
-        buffer[i + 3] = bytes[4];
-        buffer[i + 4] = bytes[3];
-        buffer[i + 5] = bytes[2];
-        buffer[i + 6] = bytes[1];
-        buffer[i + 7] = bytes[0];
+        for (u64 j = 0; j < 8; j++) {
+            buffer[i + j] = cipher.block[j];
+        }
     }
 
     u8 padding = buffer[len - 1];
+    if (padding > len) {
+        free(buffer);
+        return (Buffer){ 0 };
+    }
     len -= padding;
 
     return buffer_create(buffer, len);
