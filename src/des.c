@@ -412,7 +412,7 @@ des_pbkdf2_f(Buffer password, Des64 salt, u64 iter, u32 block_num) {
     Des64 result = des_pbkdf2_hmac_sha256(password, buffer_create(block, sizeof(block)));
     for (u64 i = 1; i < iter; i++) {
         Des64 prev = result;
-        result = des_pbkdf2_hmac_sha256(password, buffer_create(block, sizeof(block)));
+        result = des_pbkdf2_hmac_sha256(password, buffer_create(result.block, sizeof(result)));
         result.raw ^= prev.raw;
     }
 

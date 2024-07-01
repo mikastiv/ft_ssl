@@ -114,6 +114,13 @@ main(int in_argc, const char* const* in_argv) {
                 dprintf(1, "%02X", original.ptr[i]);
             }
             dprintf(1, "\n");
+
+            Des64 salt = { .raw = 0x23879823498FDCE3 };
+            Des64 prf = des_pbkdf2_generate(str("Hello World!"), &salt);
+            for (u64 i = 0; i < 8; i++) {
+                printf("%02X", prf.block[i]);
+            }
+            printf("\n");
         } break;
         case Command_None: {
             dprintf(STDERR_FILENO, "Unreachable\n");
