@@ -26,3 +26,6 @@ des_cbc_encrypt(Buffer message, DesKey key, Des64 iv);
 
 Buffer
 des_cbc_decrypt(Buffer message, DesKey key, Des64 iv);
+
+DesKey
+des_pbkdf2_generate(Buffer password, Des64* salt);

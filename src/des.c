@@ -1,4 +1,5 @@
 #include "cipher.h"
+#include "digest.h"
 #include "types.h"
 #include "utils.h"
 #include <stdlib.h>
@@ -348,4 +349,79 @@ des_ecb_encrypt(Buffer message, DesKey key) {
 Buffer
 des_ecb_decrypt(Buffer message, DesKey key) {
     return des_decrypt(message, key, 0);
+}
+
+static Des64
+des_pbkdf2_hmac_sha256(Buffer password, Buffer block) {
+    u8 buffer[SHA2X32_CHUNK_SIZE];
+    u8 ipad_buffer[SHA2X32_CHUNK_SIZE];
+    u8 opad_buffer[SHA2X32_CHUNK_SIZE];
+    u8 digest_buffer[SHA256_DIGEST_SIZE];
+    Buffer buffer_slice = buffer_create(buffer, sizeof(buffer));
+    Buffer ipad = buffer_create(ipad_buffer, sizeof(ipad_buffer));
+    Buffer opad = buffer_create(opad_buffer, sizeof(opad_buffer));
+    Buffer digest = buffer_create(digest_buffer, sizeof(digest_buffer));
+
+    ft_memset(buffer_slice, 0);
+    ft_memset(ipad, 0x36);
+    ft_memset(opad, 0x5C);
+
+    if (password.len > sizeof(buffer)) {
+        sha256_hash_str(password, digest);
+        ft_memcpy(buffer_slice, digest);
+    } else {
+        ft_memcpy(buffer_create(buffer, password.len), password);
+    }
+
+    for (u64 i = 0; i < SHA2X32_CHUNK_SIZE; i++) {
+        ipad_buffer[i] ^= buffer[i];
+        opad_buffer[i] ^= buffer[i];
+    }
+
+    Sha256 sha = sha256_init();
+    sha256_update(&sha, ipad);
+    sha256_update(&sha, block);
+    sha256_final(&sha, digest);
+
+    sha = sha256_init();
+    sha256_update(&sha, opad);
+    sha256_update(&sha, digest);
+    sha256_final(&sha, digest);
+
+    Des64 result = { .raw = 0 };
+    for (u64 i = 0; i < sizeof(result); i++) {
+        result.block[i] = digest.ptr[i];
+    }
+
+    return result;
+}
+
+static Des64
+des_pbkdf2_f(Buffer password, Des64 salt, u64 iter, u32 block_num) {
+    u8 block[sizeof(salt) + sizeof(block_num)];
+
+    for (u64 i = 0; i < sizeof(salt); i++) {
+        block[i] = salt.block[i];
+    }
+
+    block[sizeof(salt) + 0] = (u8)(block_num >> 24);
+    block[sizeof(salt) + 1] = (u8)(block_num >> 16);
+    block[sizeof(salt) + 2] = (u8)(block_num >> 8);
+    block[sizeof(salt) + 3] = (u8)block_num;
+
+    Des64 result = des_pbkdf2_hmac_sha256(password, buffer_create(block, sizeof(block)));
+    for (u64 i = 1; i < iter; i++) {
+        Des64 prev = result;
+        result = des_pbkdf2_hmac_sha256(password, buffer_create(block, sizeof(block)));
+        result.raw ^= prev.raw;
+    }
+
+    return result;
+}
+
+DesKey
+des_pbkdf2_generate(Buffer password, Des64* salt) {
+    // https://datatracker.ietf.org/doc/html/rfc2898#section-5.2
+
+    return des_pbkdf2_f(password, *salt, 1000, 1);
 }
