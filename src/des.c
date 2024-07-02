@@ -2,6 +2,7 @@
 #include "digest.h"
 #include "types.h"
 #include "utils.h"
+#include <assert.h>
 #include <stdlib.h>
 
 // Permuted choice 1
@@ -351,44 +352,48 @@ des_ecb_decrypt(Buffer message, DesKey key) {
     return des_decrypt(message, key, 0);
 }
 
+typedef void (*HmacFunc)(Buffer, Buffer, Buffer);
+
+static void
+hmac_sha256(Buffer x, Buffer y, Buffer out) {
+    Sha256 sha = sha256_init();
+    sha256_update(&sha, x);
+    sha256_update(&sha, y);
+    sha256_final(&sha, out);
+}
+
 static Des64
-des_pbkdf2_hmac_sha256(Buffer password, Buffer block) {
-    u8 buffer[SHA2X32_CHUNK_SIZE];
-    u8 ipad_buffer[SHA2X32_CHUNK_SIZE];
-    u8 opad_buffer[SHA2X32_CHUNK_SIZE];
-    u8 digest_buffer[SHA256_DIGEST_SIZE];
-    Buffer buffer_slice = buffer_create(buffer, sizeof(buffer));
-    Buffer ipad = buffer_create(ipad_buffer, sizeof(ipad_buffer));
-    Buffer opad = buffer_create(opad_buffer, sizeof(opad_buffer));
-    Buffer digest = buffer_create(digest_buffer, sizeof(digest_buffer));
+des_pbkdf2_hmac(
+    Buffer password,
+    Buffer block,
+    HmacFunc hmac,
+    u64 hash_block_size,
+    u64 hash_digest_size
+) {
+    assert(hash_block_size <= 64);
 
-    ft_memset(buffer_slice, 0);
-    ft_memset(ipad, 0x36);
-    ft_memset(opad, 0x5C);
+    u8 buffer[64] = { 0 };
+    u8 digest_buffer[64];
+    Buffer digest = buffer_create(digest_buffer, hash_digest_size);
 
-    if (password.len > sizeof(buffer)) {
-        sha256_hash_str(password, digest);
-        ft_memcpy(buffer_slice, digest);
+    if (password.len > hash_block_size) {
+        hmac(password, (Buffer){ 0 }, digest);
+        ft_memcpy(buffer_create(buffer, hash_digest_size), digest);
     } else {
         ft_memcpy(buffer_create(buffer, password.len), password);
     }
 
-    for (u64 i = 0; i < SHA2X32_CHUNK_SIZE; i++) {
-        ipad_buffer[i] ^= buffer[i];
-        opad_buffer[i] ^= buffer[i];
+    u8 ipad[64];
+    u8 opad[64];
+    for (u64 i = 0; i < hash_block_size; i++) {
+        ipad[i] = 0x36 ^ buffer[i];
+        opad[i] = 0x5C ^ buffer[i];
     }
 
-    Sha256 sha = sha256_init();
-    sha256_update(&sha, ipad);
-    sha256_update(&sha, block);
-    sha256_final(&sha, digest);
+    hmac(buffer_create(ipad, hash_block_size), block, digest);
+    hmac(buffer_create(opad, hash_block_size), digest, digest);
 
-    sha = sha256_init();
-    sha256_update(&sha, opad);
-    sha256_update(&sha, digest);
-    sha256_final(&sha, digest);
-
-    Des64 result = { .raw = 0 };
+    Des64 result;
     for (u64 i = 0; i < sizeof(result); i++) {
         result.block[i] = digest.ptr[i];
     }
@@ -409,10 +414,22 @@ des_pbkdf2_f(Buffer password, Des64 salt, u64 iter, u32 block_num) {
     block[sizeof(salt) + 2] = (u8)(block_num >> 8);
     block[sizeof(salt) + 3] = (u8)block_num;
 
-    Des64 result = des_pbkdf2_hmac_sha256(password, buffer_create(block, sizeof(block)));
+    Des64 result = des_pbkdf2_hmac(
+        password,
+        buffer_create(block, sizeof(block)),
+        &hmac_sha256,
+        SHA2X32_BLOCK_SIZE,
+        SHA256_DIGEST_SIZE
+    );
     for (u64 i = 1; i < iter; i++) {
         Des64 prev = result;
-        result = des_pbkdf2_hmac_sha256(password, buffer_create(result.block, sizeof(result)));
+        result = des_pbkdf2_hmac(
+            password,
+            buffer_create(result.block, sizeof(result)),
+            &hmac_sha256,
+            SHA2X32_BLOCK_SIZE,
+            SHA256_DIGEST_SIZE
+        );
         result.raw ^= prev.raw;
     }
 

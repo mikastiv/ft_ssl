@@ -32,7 +32,7 @@
 typedef bool (*HasherFd)(int, Buffer);
 typedef void (*HasherStr)(Buffer, Buffer);
 
-#define MD5_CHUNK_SIZE 64
+#define MD5_BLOCK_SIZE 64
 #define MD5_ROUNDS 64
 #define MD5_LENGTH_SIZE 8
 #define MD5_DIGEST_SIZE 16
@@ -40,7 +40,7 @@ typedef void (*HasherStr)(Buffer, Buffer);
 typedef struct {
     u32 state[4];
     u64 total_len;
-    _Alignas(4) u8 buffer[MD5_CHUNK_SIZE];
+    _Alignas(4) u8 buffer[MD5_BLOCK_SIZE];
     u64 buffer_len;
 } Md5;
 
@@ -53,7 +53,7 @@ md5_update(Md5* md5, Buffer buffer);
 void
 md5_final(Md5* md5, Buffer out);
 
-#define SHA2X32_CHUNK_SIZE 64
+#define SHA2X32_BLOCK_SIZE 64
 #define SHA2X32_ROUNDS 64
 #define SHA2X32_LENGTH_SIZE 8
 #define SHA256_DIGEST_SIZE 32
@@ -62,7 +62,7 @@ md5_final(Md5* md5, Buffer out);
 typedef struct {
     u32 state[8];
     u64 total_len;
-    _Alignas(4) u8 buffer[SHA2X32_CHUNK_SIZE];
+    _Alignas(4) u8 buffer[SHA2X32_BLOCK_SIZE];
     u64 buffer_len;
 } Sha2x32;
 
@@ -88,7 +88,7 @@ sha224_update(Sha224* sha, Buffer buffer);
 void
 sha224_final(Sha224* sha, Buffer out);
 
-#define SHA2X64_CHUNK_SIZE 128
+#define SHA2X64_BLOCK_SIZE 128
 #define SHA2X64_ROUNDS 80
 #define SHA2X64_LENGTH_SIZE 16
 #define SHA512_DIGEST_SIZE 64
@@ -97,7 +97,7 @@ sha224_final(Sha224* sha, Buffer out);
 typedef struct {
     u64 state[8];
     u64 total_len;
-    _Alignas(8) u8 buffer[SHA2X64_CHUNK_SIZE];
+    _Alignas(8) u8 buffer[SHA2X64_BLOCK_SIZE];
     u64 buffer_len;
 } Sha2x64;
 
@@ -123,7 +123,7 @@ sha384_update(Sha384* sha, Buffer buffer);
 void
 sha384_final(Sha384* sha, Buffer out);
 
-#define WHIRLPOOL_CHUNK_SIZE 64
+#define WHIRLPOOL_BLOCK_SIZE 64
 #define WHIRLPOOL_ROUNDS 10
 #define WHIRLPOOL_DIGEST_SIZE 64
 #define WHIRLPOOL_LENGTH_SIZE 32
@@ -131,7 +131,7 @@ sha384_final(Sha384* sha, Buffer out);
 typedef struct {
     u64 state[8];
     u8 total_bitlen[WHIRLPOOL_LENGTH_SIZE];
-    _Alignas(8) u8 buffer[WHIRLPOOL_CHUNK_SIZE];
+    _Alignas(8) u8 buffer[WHIRLPOOL_BLOCK_SIZE];
     u64 buffer_len;
 } Whirlpool;
 

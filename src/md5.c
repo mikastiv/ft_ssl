@@ -24,14 +24,14 @@ static const u32 shift[MD5_ROUNDS] = {
 
 static Buffer
 md5_buffer(Md5* md5) {
-    return (Buffer){ .ptr = md5->buffer, .len = MD5_CHUNK_SIZE };
+    return (Buffer){ .ptr = md5->buffer, .len = MD5_BLOCK_SIZE };
 }
 
 static void
 md5_round(Md5* md5) {
     u32 s[16];
 
-    Buffer dst = buffer_create((u8*)s, MD5_CHUNK_SIZE);
+    Buffer dst = buffer_create((u8*)s, MD5_BLOCK_SIZE);
     ft_memcpy(dst, md5_buffer(md5));
 
     u32 a = md5->state[0];
@@ -89,7 +89,7 @@ md5_update(Md5* md5, Buffer buffer) {
 
     u32 index = 0;
     if (md5->buffer_len != 0) {
-        u32 remaining = MD5_CHUNK_SIZE - md5->buffer_len;
+        u32 remaining = MD5_BLOCK_SIZE - md5->buffer_len;
         u32 len = (buffer.len > remaining) ? remaining : buffer.len;
 
         Buffer dst = buffer_create(md5->buffer + md5->buffer_len, len);
@@ -99,14 +99,14 @@ md5_update(Md5* md5, Buffer buffer) {
         md5->buffer_len += len;
         index = len;
 
-        if (md5->buffer_len == MD5_CHUNK_SIZE) {
+        if (md5->buffer_len == MD5_BLOCK_SIZE) {
             md5_round(md5);
             md5->buffer_len = 0;
         }
     }
 
-    while (buffer.len - index >= MD5_CHUNK_SIZE) {
-        Buffer src = buffer_create(buffer.ptr + index, MD5_CHUNK_SIZE);
+    while (buffer.len - index >= MD5_BLOCK_SIZE) {
+        Buffer src = buffer_create(buffer.ptr + index, MD5_BLOCK_SIZE);
         ft_memcpy(md5_buffer(md5), src);
         md5_round(md5);
         index += 64;
@@ -125,11 +125,11 @@ void
 md5_final(Md5* md5, Buffer out) {
     assert(out.len == MD5_DIGEST_SIZE);
 
-    Buffer rest = buffer_create(md5->buffer + md5->buffer_len, MD5_CHUNK_SIZE - md5->buffer_len);
+    Buffer rest = buffer_create(md5->buffer + md5->buffer_len, MD5_BLOCK_SIZE - md5->buffer_len);
     ft_memset(rest, 0);
 
     md5->buffer[md5->buffer_len++] = 0x80;
-    if (md5->buffer_len > MD5_CHUNK_SIZE - MD5_LENGTH_SIZE) {
+    if (md5->buffer_len > MD5_BLOCK_SIZE - MD5_LENGTH_SIZE) {
         md5_round(md5);
         ft_memset(md5_buffer(md5), 0);
     }
@@ -137,7 +137,7 @@ md5_final(Md5* md5, Buffer out) {
     u32 i = 0;
     u64 len = md5->total_len * 8;
     while (i < MD5_LENGTH_SIZE) {
-        md5->buffer[MD5_CHUNK_SIZE - 8 + i] = (u8)len;
+        md5->buffer[MD5_BLOCK_SIZE - 8 + i] = (u8)len;
         len >>= 8;
         i++;
     }

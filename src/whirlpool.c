@@ -555,7 +555,7 @@ whirlpool_buffer(Whirlpool* whrl) {
 static void
 whirlpool_round(Whirlpool* whrl) {
     u64 block[8];
-    for (u32 i = 0; i < WHIRLPOOL_CHUNK_SIZE; i += sizeof(u64)) {
+    for (u32 i = 0; i < WHIRLPOOL_BLOCK_SIZE; i += sizeof(u64)) {
         u64 bytes = read_u64(&whrl->buffer[i]);
         block[i / sizeof(u64)] = byte_swap64(bytes);
     }
@@ -626,7 +626,7 @@ whirlpool_update(Whirlpool* whrl, Buffer buffer) {
 
     u32 index = 0;
     if (whrl->buffer_len != 0) {
-        u32 remaining = WHIRLPOOL_CHUNK_SIZE - whrl->buffer_len;
+        u32 remaining = WHIRLPOOL_BLOCK_SIZE - whrl->buffer_len;
         u32 len = (buffer.len > remaining) ? remaining : buffer.len;
 
         Buffer dst = buffer_create(whrl->buffer + whrl->buffer_len, len);
@@ -636,17 +636,17 @@ whirlpool_update(Whirlpool* whrl, Buffer buffer) {
         whrl->buffer_len += len;
         index = len;
 
-        if (whrl->buffer_len == WHIRLPOOL_CHUNK_SIZE) {
+        if (whrl->buffer_len == WHIRLPOOL_BLOCK_SIZE) {
             whirlpool_round(whrl);
             whrl->buffer_len = 0;
         }
     }
 
-    while (buffer.len - index >= WHIRLPOOL_CHUNK_SIZE) {
-        Buffer src = buffer_create(buffer.ptr + index, WHIRLPOOL_CHUNK_SIZE);
+    while (buffer.len - index >= WHIRLPOOL_BLOCK_SIZE) {
+        Buffer src = buffer_create(buffer.ptr + index, WHIRLPOOL_BLOCK_SIZE);
         ft_memcpy(whirlpool_buffer(whrl), src);
         whirlpool_round(whrl);
-        index += WHIRLPOOL_CHUNK_SIZE;
+        index += WHIRLPOOL_BLOCK_SIZE;
     }
 
     if (index < buffer.len) {
@@ -663,17 +663,17 @@ whirlpool_final(Whirlpool* whrl, Buffer out) {
     assert(out.len == WHIRLPOOL_DIGEST_SIZE);
 
     Buffer padding =
-        buffer_create(whrl->buffer + whrl->buffer_len, WHIRLPOOL_CHUNK_SIZE - whrl->buffer_len);
+        buffer_create(whrl->buffer + whrl->buffer_len, WHIRLPOOL_BLOCK_SIZE - whrl->buffer_len);
     ft_memset(padding, 0);
 
     whrl->buffer[whrl->buffer_len++] = 0x80;
-    if (whrl->buffer_len > WHIRLPOOL_CHUNK_SIZE - WHIRLPOOL_LENGTH_SIZE) {
+    if (whrl->buffer_len > WHIRLPOOL_BLOCK_SIZE - WHIRLPOOL_LENGTH_SIZE) {
         whirlpool_round(whrl);
         ft_memset(whirlpool_buffer(whrl), 0);
     }
 
     for (u32 i = 0; i < WHIRLPOOL_LENGTH_SIZE; i++) {
-        whrl->buffer[WHIRLPOOL_CHUNK_SIZE - WHIRLPOOL_LENGTH_SIZE + i] = whrl->total_bitlen[i];
+        whrl->buffer[WHIRLPOOL_BLOCK_SIZE - WHIRLPOOL_LENGTH_SIZE + i] = whrl->total_bitlen[i];
     }
 
     whirlpool_round(whrl);
