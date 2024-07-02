@@ -231,25 +231,10 @@ process_block(Des64 block, Subkeys subkeys) {
     return block_cipher;
 }
 
-#include <stdio.h>
-
-static void
-print_subkeys(Subkeys subkeys) {
-    for (u64 i = 0; i < 16; i++) {
-        printf("subkey %lu: ", i);
-        for (u64 j = 0; j < 8; j++) {
-            printf("%02X", subkeys[i].block[j]);
-        }
-        printf("\n");
-    }
-}
-
 static Buffer
 des_encrypt(Buffer message, DesKey key, const Des64* iv) {
     Subkeys subkeys;
     generate_subkeys(key, subkeys);
-
-    print_subkeys(subkeys);
 
     u8 padding = 8 - (message.len % 8);
     u64 len = message.len + padding;
@@ -275,8 +260,8 @@ des_encrypt(Buffer message, DesKey key, const Des64* iv) {
         Des64 block;
         ft_memset(buffer_create(block.block, sizeof(block)), padding);
 
-        for (u64 j = 0; i < message.len; i++, j++) {
-            block.block[j] = message.ptr[i];
+        for (u64 j = 0; i + j < message.len; j++) {
+            block.block[j] = message.ptr[i + j];
         }
 
         if (iv) block.raw ^= prev_block.raw;
@@ -440,5 +425,5 @@ DesKey
 des_pbkdf2_generate(Buffer password, Des64* salt) {
     // https://datatracker.ietf.org/doc/html/rfc2898#section-5.2
 
-    return des_pbkdf2_f(password, *salt, 1000, 1);
+    return des_pbkdf2_f(password, *salt, 10000, 1);
 }
