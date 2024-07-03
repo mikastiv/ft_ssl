@@ -337,85 +337,67 @@ des_ecb_decrypt(Buffer message, DesKey key) {
     return des_decrypt(message, key, 0);
 }
 
-typedef void (*HmacFunc)(Buffer, Buffer, Buffer);
-
 static void
-hmac_sha256(Buffer x, Buffer y, Buffer out) {
+hmac_sha256(Buffer password, Buffer data, Buffer out) {
+    u8 key_block[SHA2X32_BLOCK_SIZE] = { 0 };
+
+    if (password.len > SHA2X32_BLOCK_SIZE) {
+        sha256_hash_str(password, buffer_create(key_block, SHA256_DIGEST_SIZE));
+    } else {
+        ft_memcpy(buffer_create(key_block, password.len), password);
+    }
+
+    u8 ipad[SHA2X32_BLOCK_SIZE];
+    u8 opad[SHA2X32_BLOCK_SIZE];
+    for (u64 i = 0; i < SHA2X32_BLOCK_SIZE; i++) {
+        ipad[i] = 0x36 ^ key_block[i];
+        opad[i] = 0x5C ^ key_block[i];
+    }
+
+    u8 temp_hash[SHA256_DIGEST_SIZE];
+
     Sha256 sha = sha256_init();
-    sha256_update(&sha, x);
-    sha256_update(&sha, y);
+    sha256_update(&sha, buffer_create(ipad, SHA2X32_BLOCK_SIZE));
+    sha256_update(&sha, data);
+    sha256_final(&sha, buffer_create(temp_hash, SHA256_DIGEST_SIZE));
+
+    sha = sha256_init();
+    sha256_update(&sha, buffer_create(opad, SHA2X32_BLOCK_SIZE));
+    sha256_update(&sha, buffer_create(temp_hash, SHA256_DIGEST_SIZE));
     sha256_final(&sha, out);
 }
 
 static Des64
-des_pbkdf2_hmac(
-    Buffer password,
-    Buffer block,
-    HmacFunc hmac,
-    u64 hash_block_size,
-    u64 hash_digest_size
-) {
-    assert(hash_block_size <= 64);
-
-    u8 buffer[64] = { 0 };
-    u8 digest_buffer[64];
-    Buffer digest = buffer_create(digest_buffer, hash_digest_size);
-
-    if (password.len > hash_block_size) {
-        hmac(password, (Buffer){ 0 }, digest);
-        ft_memcpy(buffer_create(buffer, hash_digest_size), digest);
-    } else {
-        ft_memcpy(buffer_create(buffer, password.len), password);
-    }
-
-    u8 ipad[64];
-    u8 opad[64];
-    for (u64 i = 0; i < hash_block_size; i++) {
-        ipad[i] = 0x36 ^ buffer[i];
-        opad[i] = 0x5C ^ buffer[i];
-    }
-
-    hmac(buffer_create(ipad, hash_block_size), block, digest);
-    hmac(buffer_create(opad, hash_block_size), digest, digest);
-
-    Des64 result;
-    for (u64 i = 0; i < sizeof(result); i++) {
-        result.block[i] = digest.ptr[i];
-    }
-
-    return result;
-}
-
-static Des64
-des_pbkdf2_f(Buffer password, Des64 salt, u64 iter, u32 block_num) {
-    u8 block[sizeof(salt) + sizeof(block_num)];
+des_pbkdf2_hmac_sha256_f(Buffer password, Des64 salt, u64 iter, u32 block_num) {
+    u8 salt_block[sizeof(salt) + sizeof(block_num)];
 
     for (u64 i = 0; i < sizeof(salt); i++) {
-        block[i] = salt.block[i];
+        salt_block[i] = salt.block[i];
     }
 
-    block[sizeof(salt) + 0] = (u8)(block_num >> 24);
-    block[sizeof(salt) + 1] = (u8)(block_num >> 16);
-    block[sizeof(salt) + 2] = (u8)(block_num >> 8);
-    block[sizeof(salt) + 3] = (u8)block_num;
+    salt_block[sizeof(salt) + 0] = (u8)(block_num >> 24);
+    salt_block[sizeof(salt) + 1] = (u8)(block_num >> 16);
+    salt_block[sizeof(salt) + 2] = (u8)(block_num >> 8);
+    salt_block[sizeof(salt) + 3] = (u8)block_num;
 
-    Des64 result = des_pbkdf2_hmac(
-        password,
-        buffer_create(block, sizeof(block)),
-        &hmac_sha256,
-        SHA2X32_BLOCK_SIZE,
-        SHA256_DIGEST_SIZE
-    );
+    u8 buffer1[SHA256_DIGEST_SIZE];
+    u8 buffer2[SHA256_DIGEST_SIZE];
+    Buffer hmac_tmp1 = buffer_create(buffer1, SHA256_DIGEST_SIZE);
+    Buffer hmac_tmp2 = buffer_create(buffer2, SHA256_DIGEST_SIZE);
+
+    hmac_sha256(password, buffer_create(salt_block, sizeof(salt_block)), hmac_tmp1);
+    ft_memcpy(hmac_tmp2, hmac_tmp1);
+
     for (u64 i = 1; i < iter; i++) {
-        Des64 prev = result;
-        result = des_pbkdf2_hmac(
-            password,
-            buffer_create(result.block, sizeof(result)),
-            &hmac_sha256,
-            SHA2X32_BLOCK_SIZE,
-            SHA256_DIGEST_SIZE
-        );
-        result.raw ^= prev.raw;
+        hmac_sha256(password, hmac_tmp2, hmac_tmp2);
+        for (u64 j = 0; j < hmac_tmp1.len; j++) {
+            hmac_tmp1.ptr[j] ^= hmac_tmp2.ptr[j];
+        }
+    }
+
+    Des64 result;
+    for (u64 i = 0; i < sizeof(result.block); i++) {
+        result.block[i] = hmac_tmp1.ptr[i];
     }
 
     return result;
@@ -425,5 +407,5 @@ DesKey
 des_pbkdf2_generate(Buffer password, Des64* salt) {
     // https://datatracker.ietf.org/doc/html/rfc2898#section-5.2
 
-    return des_pbkdf2_f(password, *salt, 10000, 1);
+    return des_pbkdf2_hmac_sha256_f(password, *salt, 10000, 1);
 }

@@ -98,16 +98,15 @@ main(int in_argc, const char* const* in_argv) {
         case Command_Des:
         case Command_DesEcb:
         case Command_DesCbc: {
-            u64 msg = byte_swap64(0x8787878787878787);
-            DesKey key = { .raw = byte_swap64(0x0E329232EA6D0D73) };
-            Des64 iv = { .raw = 0x5711577929EFDFF1 };
-            (void)iv;
+            // u64 msg = byte_swap64(0x8787878787878787);
+            DesKey key = { .raw = byte_swap64(0x1DBC4D792F5EED1F) };
+            // Des64 iv = { .raw = byte_swap64(0x0011223344556677) };
 
-            Buffer cipher = des_ecb_encrypt(buffer_create((u8*)&msg, 8), key);
-            for (u64 i = 0; i < cipher.len; i++) {
-                dprintf(1, "%02X", cipher.ptr[i]);
-            }
-            dprintf(1, "\n");
+            Buffer cipher = des_ecb_encrypt(str("one deep secret\n"), key);
+
+            Buffer b64 = base64_encode(cipher);
+            write(1, b64.ptr, b64.len);
+            printf("\n");
 
             Buffer original = des_ecb_decrypt(cipher, key);
             for (u64 i = 0; i < original.len; i++) {
@@ -115,8 +114,8 @@ main(int in_argc, const char* const* in_argv) {
             }
             dprintf(1, "\n");
 
-            Des64 salt = { .raw = 0x23879823498FDCE3 };
-            Des64 prf = des_pbkdf2_generate(str("Hello World!"), &salt);
+            Des64 salt = { .raw = byte_swap64(0x1DBC4D792F5EED1F) };
+            Des64 prf = des_pbkdf2_generate(str("test"), &salt);
             for (u64 i = 0; i < 8; i++) {
                 printf("%02X", prf.block[i]);
             }
