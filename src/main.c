@@ -13,6 +13,20 @@ u32 argc;
 const char* const* argv;
 const char* progname = 0;
 
+static u64
+parse_option_hex(const char* s, const char* name) {
+    if (!s) return 0;
+
+    u32 err = 0;
+    u64 value = parse_hex_u64_be(str(s), &err);
+    if (err) {
+        dprintf(STDERR_FILENO, "%s: invalid hex character in %s\n", progname, name);
+        exit(EXIT_FAILURE);
+    }
+
+    return value;
+}
+
 int
 main(int in_argc, const char* const* in_argv) {
     argc = in_argc;
@@ -96,19 +110,51 @@ main(int in_argc, const char* const* in_argv) {
 
         } break;
         case Command_Des:
-        case Command_DesEcb:
-        case Command_DesCbc: {
+        case Command_DesCbc:
+        case Command_DesEcb: {
             DesOptions options = { 0 };
             first_input = parse_options(cmd, &options);
 
-            // u64 msg = byte_swap64(0x8787878787878787);
-            DesKey key = { .raw = byte_swap64(0x1DBC4D792F5EED1F) };
-            printf("key: ");
-            for (u64 i = 0; i < 8; i++) {
-                printf("%02X", key.block[i]);
+            if (options.decrypt && options.encrypt) {
+                dprintf(
+                    STDERR_FILENO,
+                    "%s: cannot encrypt and decrypt at the same time\n",
+                    progname
+                );
+                exit(EXIT_FAILURE);
             }
-            printf("\n");
-            // Des64 iv = { .raw = byte_swap64(0x0011223344556677) };
+            if (!options.decrypt && !options.encrypt) options.encrypt = true;
+
+            int in_fd = -1;
+            if (options.input_file) {
+                in_fd = open(options.input_file, O_RDONLY);
+                if (in_fd < 0) print_error_and_quit();
+            } else {
+                in_fd = STDIN_FILENO;
+            }
+
+            int out_fd = -1;
+            if (options.output_file) {
+                out_fd = open(
+                    options.output_file,
+                    O_WRONLY | O_CREAT | O_TRUNC,
+                    S_IRWXU | S_IRGRP | S_IROTH
+                );
+                if (out_fd < 0) print_error_and_quit();
+            } else {
+                out_fd = STDOUT_FILENO;
+            }
+
+            DesKey key = { .raw = parse_option_hex(options.hex_key, "key") };
+            Des64 salt = { .raw = parse_option_hex(options.hex_salt, "salt") };
+            Des64 iv = { .raw = parse_option_hex(options.hex_iv, "iv") };
+
+            printf("key: ");
+            print_hex(key.raw);
+            printf("salt: ");
+            print_hex(salt.raw);
+            printf("iv: ");
+            print_hex(iv.raw);
 
             Buffer cipher = des_ecb_encrypt(str("one deep secret\n"), key);
 
@@ -121,13 +167,6 @@ main(int in_argc, const char* const* in_argv) {
                 dprintf(1, "%c", original.ptr[i]);
             }
 
-            u32 err = 0;
-            Des64 salt = { .raw = parse_hex_u64_be(str(options.hex_salt), &err) };
-            printf("salt: ");
-            for (u64 i = 0; i < 8; i++) {
-                printf("%02X", salt.block[i]);
-            }
-            printf("\n");
             Des64 prf = des_pbkdf2_generate(str("test"), &salt);
             for (u64 i = 0; i < 8; i++) {
                 printf("%02X", prf.block[i]);

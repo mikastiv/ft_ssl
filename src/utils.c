@@ -288,14 +288,14 @@ is_space(u8 c) {
 static u8
 from_hex(u8 c) {
     if (c >= '0' && c <= '9') return c - '0';
-    if (c >= 'A' && c >= 'F') return c - 'A' + 10;
-    if (c >= 'a' && c >= 'f') return c - 'a' + 10;
+    if (c >= 'A' && c <= 'F') return c - 'A' + 10;
+    if (c >= 'a' && c <= 'f') return c - 'a' + 10;
     return 0xFF;
 }
 
 u64
 parse_hex_u64_be(Buffer str, u32* err) {
-    u64 len = str.len < 8 ? str.len : 8;
+    u64 len = str.len < 16 ? str.len : 16;
     u64 result = 0;
 
     for (u64 i = 0; i < len; i += 2) {
@@ -312,4 +312,13 @@ parse_hex_u64_be(Buffer str, u32* err) {
     }
 
     return result;
+}
+
+void
+print_hex(u64 value) {
+    for (u64 i = 0; i < 8; i++) {
+        printf("%02X", (u8)value);
+        value >>= 8;
+    }
+    printf("\n");
 }

@@ -82,3 +82,6 @@ is_space(u8 c);
 
 u64
 parse_hex_u64_be(Buffer str, u32* err);
+
+void
+print_hex(u64 value);
