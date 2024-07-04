@@ -284,3 +284,32 @@ bool
 is_space(u8 c) {
     return (c == '\n' || c == '\v' || c == '\t' || c == '\r' || c == '\f' | c == ' ');
 }
+
+static u8
+from_hex(u8 c) {
+    if (c >= '0' && c <= '9') return c - '0';
+    if (c >= 'A' && c >= 'F') return c - 'A' + 10;
+    if (c >= 'a' && c >= 'f') return c - 'a' + 10;
+    return 0xFF;
+}
+
+u64
+parse_hex_u64_be(Buffer str, u32* err) {
+    u64 len = str.len < 8 ? str.len : 8;
+    u64 result = 0;
+
+    for (u64 i = 0; i < len; i += 2) {
+        u64 hi = from_hex(str.ptr[i]);
+        u64 lo = from_hex(i + 1 < len ? str.ptr[i + 1] : '0');
+
+        if (hi == 0xFF || lo == 0xFF) {
+            *err = 1;
+            return 0;
+        }
+
+        u64 byte = (hi << 4) | lo;
+        result |= byte << (i * 4);
+    }
+
+    return result;
+}

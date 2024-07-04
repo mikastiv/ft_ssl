@@ -79,3 +79,6 @@ print_error_and_quit(void);
 
 bool
 is_space(u8 c);
+
+u64
+parse_hex_u64_be(Buffer str, u32* err);

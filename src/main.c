@@ -98,8 +98,16 @@ main(int in_argc, const char* const* in_argv) {
         case Command_Des:
         case Command_DesEcb:
         case Command_DesCbc: {
+            DesOptions options = { 0 };
+            first_input = parse_options(cmd, &options);
+
             // u64 msg = byte_swap64(0x8787878787878787);
             DesKey key = { .raw = byte_swap64(0x1DBC4D792F5EED1F) };
+            printf("key: ");
+            for (u64 i = 0; i < 8; i++) {
+                printf("%02X", key.block[i]);
+            }
+            printf("\n");
             // Des64 iv = { .raw = byte_swap64(0x0011223344556677) };
 
             Buffer cipher = des_ecb_encrypt(str("one deep secret\n"), key);
@@ -110,11 +118,16 @@ main(int in_argc, const char* const* in_argv) {
 
             Buffer original = des_ecb_decrypt(cipher, key);
             for (u64 i = 0; i < original.len; i++) {
-                dprintf(1, "%02X", original.ptr[i]);
+                dprintf(1, "%c", original.ptr[i]);
             }
-            dprintf(1, "\n");
 
-            Des64 salt = { .raw = byte_swap64(0x1DBC4D792F5EED1F) };
+            u32 err = 0;
+            Des64 salt = { .raw = parse_hex_u64_be(str(options.hex_salt), &err) };
+            printf("salt: ");
+            for (u64 i = 0; i < 8; i++) {
+                printf("%02X", salt.block[i]);
+            }
+            printf("\n");
             Des64 prf = des_pbkdf2_generate(str("test"), &salt);
             for (u64 i = 0; i < 8; i++) {
                 printf("%02X", prf.block[i]);
