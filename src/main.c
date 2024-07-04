@@ -28,6 +28,32 @@ parse_option_hex(const char* s, const char* name) {
     return value;
 }
 
+static int
+get_infile_fd(const char* filename) {
+    int fd = -1;
+    if (filename) {
+        fd = open(filename, O_RDONLY);
+        if (fd < 0) print_error_and_quit();
+    } else {
+        fd = STDIN_FILENO;
+    }
+
+    return fd;
+}
+
+static int
+get_outfile_fd(const char* filename) {
+    int fd = -1;
+    if (filename) {
+        fd = open(filename, O_WRONLY | O_CREAT | O_TRUNC, S_IRWXU | S_IRGRP | S_IROTH);
+        if (fd < 0) print_error_and_quit();
+    } else {
+        fd = STDOUT_FILENO;
+    }
+
+    return fd;
+}
+
 int
 main(int in_argc, const char* const* in_argv) {
     argc = in_argc;
@@ -69,25 +95,8 @@ main(int in_argc, const char* const* in_argv) {
             }
             if (!options.decode && !options.encode) options.encode = true;
 
-            int in_fd = -1;
-            if (options.input_file) {
-                in_fd = open(options.input_file, O_RDONLY);
-                if (in_fd < 0) print_error_and_quit();
-            } else {
-                in_fd = STDIN_FILENO;
-            }
-
-            int out_fd = -1;
-            if (options.output_file) {
-                out_fd = open(
-                    options.output_file,
-                    O_WRONLY | O_CREAT | O_TRUNC,
-                    S_IRWXU | S_IRGRP | S_IROTH
-                );
-                if (out_fd < 0) print_error_and_quit();
-            } else {
-                out_fd = STDOUT_FILENO;
-            }
+            int in_fd = get_infile_fd(options.input_file);
+            int out_fd = get_outfile_fd(options.output_file);
 
             Buffer input = read_all_fd(in_fd);
             if (options.input_file) close(in_fd);
@@ -126,29 +135,37 @@ main(int in_argc, const char* const* in_argv) {
             }
             if (!options.decrypt && !options.encrypt) options.encrypt = true;
 
-            int in_fd = -1;
-            if (options.input_file) {
-                in_fd = open(options.input_file, O_RDONLY);
-                if (in_fd < 0) print_error_and_quit();
-            } else {
-                in_fd = STDIN_FILENO;
-            }
-
-            int out_fd = -1;
-            if (options.output_file) {
-                out_fd = open(
-                    options.output_file,
-                    O_WRONLY | O_CREAT | O_TRUNC,
-                    S_IRWXU | S_IRGRP | S_IROTH
-                );
-                if (out_fd < 0) print_error_and_quit();
-            } else {
-                out_fd = STDOUT_FILENO;
-            }
+            int in_fd = get_infile_fd(options.input_file);
+            int out_fd = get_outfile_fd(options.output_file);
 
             DesKey key = { .raw = parse_option_hex(options.hex_key, "key") };
             Des64 salt = { .raw = parse_option_hex(options.hex_salt, "salt") };
             Des64 iv = { .raw = parse_option_hex(options.hex_iv, "iv") };
+
+            if (!options.hex_key) {
+                if (!options.password) {
+                    char password[64] = { 0 };
+                    char verify[64] = { 0 };
+                    const char* pass_ptr =
+                        readpassphrase("enter password: ", password, sizeof(password), 0);
+                    const char* verify_ptr =
+                        readpassphrase("reenter password: ", verify, sizeof(verify), 0);
+
+                    if (!pass_ptr || !verify_ptr) {
+                        dprintf(STDERR_FILENO, "%s: error reading password\n", progname);
+                        exit(EXIT_FAILURE);
+                    }
+
+                    if (!ft_memcmp(str(pass_ptr), str(verify_ptr))) {
+                        dprintf(STDERR_FILENO, "%s: passwords don't match\n", progname);
+                        exit(EXIT_FAILURE);
+                    }
+
+                    key = des_pbkdf2_generate(str(pass_ptr), salt);
+                } else {
+                    key = des_pbkdf2_generate(str(options.password), salt);
+                }
+            }
 
             printf("key: ");
             print_hex(key.raw);
@@ -157,27 +174,65 @@ main(int in_argc, const char* const* in_argv) {
             printf("iv: ");
             print_hex(iv.raw);
 
-            if (!options.hex_key) {
-                if (!options.password) {
-                    char password[64] = { 0 };
-                    char verify[64] = { 0 };
-                    readpassphrase("enter password: ", password, sizeof(password), 0);
-                    readpassphrase("reenter password: ", verify, sizeof(verify), 0);
-                } else {
-                    key = des_pbkdf2_generate(str(options.password), salt);
+            Buffer input = read_all_fd(in_fd);
+            if (options.input_file) close(in_fd);
+            if (!input.ptr) print_error_and_quit();
+
+            if (options.decrypt && options.use_base64) {
+                Buffer tmp = base64_decode(input);
+                if (!tmp.ptr) {
+                    dprintf(STDERR_FILENO, "%s: invalid base64 input\n", progname);
+                    exit(EXIT_FAILURE);
                 }
+                free(input.ptr);
+                input = tmp;
             }
 
-            Buffer cipher = des_ecb_encrypt(str("one deep secret\n"), key);
+            Buffer res;
+            switch (cmd) {
+                case Command_DesEcb: {
+                    if (options.encrypt) {
+                        res = des_ecb_encrypt(input, key);
+                    } else {
+                        res = des_ecb_decrypt(input, key);
+                    }
+                } break;
+                case Command_Des:
+                case Command_DesCbc: {
+                    if (!options.hex_iv) {
+                        dprintf(
+                            STDERR_FILENO,
+                            "%s: initialization vector is required for cbc mode\n",
+                            progname
+                        );
+                        exit(EXIT_FAILURE);
+                    }
 
-            Buffer b64 = base64_encode(cipher);
-            write(1, b64.ptr, b64.len);
-            printf("\n");
-
-            Buffer original = des_ecb_decrypt(cipher, key);
-            for (u64 i = 0; i < original.len; i++) {
-                dprintf(1, "%c", original.ptr[i]);
+                    if (options.encrypt) {
+                        res = des_cbc_encrypt(input, key, iv);
+                    } else {
+                        res = des_cbc_decrypt(input, key, iv);
+                    }
+                } break;
+                default: {
+                    dprintf(STDERR_FILENO, "unreachable code\n");
+                    exit(EXIT_FAILURE);
+                } break;
             }
+
+            if (options.encrypt && options.use_base64) {
+                Buffer tmp = base64_encode(res);
+                if (!tmp.ptr) {
+                    dprintf(STDERR_FILENO, "%s: out of memory\n", progname);
+                    exit(EXIT_FAILURE);
+                }
+                free(res.ptr);
+                res = tmp;
+            }
+
+            write(out_fd, res.ptr, res.len);
+            if (options.encrypt && options.use_base64) write(out_fd, "\n", 1);
+            if (options.output_file) close(out_fd);
 
         } break;
         case Command_None: {
