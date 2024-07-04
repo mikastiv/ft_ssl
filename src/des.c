@@ -404,7 +404,7 @@ des_pbkdf2_hmac_sha256_f(Buffer password, Des64 salt, u64 iter, u32 block_num) {
 }
 
 DesKey
-des_pbkdf2_generate(Buffer password, Des64* salt) {
+des_pbkdf2_generate(Buffer password, Des64 salt) {
     // OpenSSL's default iterations is 10000 and SHA256 is the default hasher
-    return des_pbkdf2_hmac_sha256_f(password, *salt, 10000, 1);
+    return des_pbkdf2_hmac_sha256_f(password, salt, 10000, 1);
 }

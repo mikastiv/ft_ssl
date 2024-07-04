@@ -4,6 +4,7 @@
 #include "types.h"
 #include "utils.h"
 
+#include <bsd/readpassphrase.h>
 #include <fcntl.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -156,6 +157,17 @@ main(int in_argc, const char* const* in_argv) {
             printf("iv: ");
             print_hex(iv.raw);
 
+            if (!options.hex_key) {
+                if (!options.password) {
+                    char password[64] = { 0 };
+                    char verify[64] = { 0 };
+                    readpassphrase("enter password: ", password, sizeof(password), 0);
+                    readpassphrase("reenter password: ", verify, sizeof(verify), 0);
+                } else {
+                    key = des_pbkdf2_generate(str(options.password), salt);
+                }
+            }
+
             Buffer cipher = des_ecb_encrypt(str("one deep secret\n"), key);
 
             Buffer b64 = base64_encode(cipher);
@@ -167,11 +179,6 @@ main(int in_argc, const char* const* in_argv) {
                 dprintf(1, "%c", original.ptr[i]);
             }
 
-            Des64 prf = des_pbkdf2_generate(str("test"), &salt);
-            for (u64 i = 0; i < 8; i++) {
-                printf("%02X", prf.block[i]);
-            }
-            printf("\n");
         } break;
         case Command_None: {
             dprintf(STDERR_FILENO, "Unreachable\n");
