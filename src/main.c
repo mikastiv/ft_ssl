@@ -186,12 +186,18 @@ main(int in_argc, const char* const* in_argv) {
 
             if (!options.hex_key) {
                 if (!options.hex_salt) {
+                    if (options.decrypt) {
+                        dprintf(STDERR_FILENO, "%s: provide salt when decrypting\n", progname);
+                        goto des_err;
+                    }
+
                     bool success = get_random_bytes(buffer_create(salt.block, sizeof(salt.block)));
                     if (!success) {
                         dprintf(STDERR_FILENO, "%s: error generating salt\n", progname);
                         goto des_err;
                     }
                 }
+
                 if (!options.password) {
                     char password[64] = { 0 };
                     char verify[64] = { 0 };
