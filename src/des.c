@@ -348,8 +348,20 @@ des_ecb_decrypt(Buffer cipher, DesKey key) {
     return des_decrypt(cipher, key, 0);
 }
 
+static void
+des3_get_keys(Des3Key key, DesKey* key1, DesKey* key2, DesKey* key3) {
+    for (u64 i = 0; i < 8; i++) {
+        key1->block[i] = key[i];
+        key2->block[i] = key[i + 8];
+        key3->block[i] = key[i + 16];
+    }
+}
+
 Buffer
-des3_ecb_encrypt(Buffer message, DesKey key1, DesKey key2, DesKey key3) {
+des3_ecb_encrypt(Buffer message, Des3Key key) {
+    DesKey key1, key2, key3;
+    des3_get_keys(key, &key1, &key2, &key3);
+
     Buffer tmp1 = des_encrypt(message, key1, 0);
     Buffer tmp2 = des_decrypt(tmp1, key2, 0);
     Buffer cipher = des_encrypt(tmp2, key3, 0);
@@ -361,7 +373,10 @@ des3_ecb_encrypt(Buffer message, DesKey key1, DesKey key2, DesKey key3) {
 }
 
 Buffer
-des3_ecb_decrypt(Buffer cipher, DesKey key1, DesKey key2, DesKey key3) {
+des3_ecb_decrypt(Buffer cipher, Des3Key key) {
+    DesKey key1, key2, key3;
+    des3_get_keys(key, &key1, &key2, &key3);
+
     Buffer tmp1 = des_decrypt(cipher, key3, 0);
     Buffer tmp2 = des_encrypt(tmp1, key2, 0);
     Buffer message = des_decrypt(tmp2, key1, 0);

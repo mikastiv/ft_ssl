@@ -8,6 +8,8 @@ typedef union {
 } Des64;
 
 typedef Des64 DesKey;
+typedef u8 Des192[192];
+typedef Des192 Des3Key;
 
 Buffer
 base64_encode(Buffer input);
@@ -28,10 +30,10 @@ Buffer
 des_cbc_decrypt(Buffer cipher, DesKey key, Des64 iv);
 
 Buffer
-des3_ecb_encrypt(Buffer message, DesKey key1, DesKey key2, DesKey key3);
+des3_ecb_encrypt(Buffer message, Des3Key key);
 
 Buffer
-des3_ecb_decrypt(Buffer cipher, DesKey key1, DesKey key2, DesKey key3);
+des3_ecb_decrypt(Buffer cipher, Des3Key key);
 
 DesKey
 des_pbkdf2_generate(Buffer password, Des64 salt);
