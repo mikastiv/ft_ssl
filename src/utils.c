@@ -3,6 +3,7 @@
 
 #include <assert.h>
 #include <errno.h>
+#include <fcntl.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -275,9 +276,8 @@ read_u16_be(u8* buffer) {
 }
 
 void
-print_error_and_quit(void) {
+print_error(void) {
     dprintf(STDERR_FILENO, "%s: %s\n", progname, strerror(errno));
-    exit(EXIT_FAILURE);
 }
 
 bool
@@ -321,4 +321,18 @@ print_hex(u64 value) {
         value >>= 8;
     }
     printf("\n");
+}
+
+bool
+get_random_bytes(Buffer buffer) {
+    int fd = open("/dev/random", O_RDONLY);
+    if (fd < 0) return false;
+
+    ssize_t bytes = read(fd, buffer.ptr, buffer.len);
+    if (bytes < 0) {
+        close(fd);
+        return false;
+    }
+
+    return true;
 }

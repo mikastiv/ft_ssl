@@ -75,7 +75,7 @@ u32
 read_u16_be(u8* buffer);
 
 void
-print_error_and_quit(void);
+print_error(void);
 
 bool
 is_space(u8 c);
@@ -85,3 +85,6 @@ parse_hex_u64_be(Buffer str, u32* err);
 
 void
 print_hex(u64 value);
+
+bool
+get_random_bytes(Buffer buffer);

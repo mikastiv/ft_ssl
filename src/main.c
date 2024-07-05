@@ -15,14 +15,14 @@ const char* const* argv;
 const char* progname = 0;
 
 static u64
-parse_option_hex(const char* s, const char* name) {
+parse_option_hex(const char* s, const char* name, u32* err) {
     if (!s) return 0;
 
-    u32 err = 0;
-    u64 value = parse_hex_u64_be(str(s), &err);
-    if (err) {
+    *err = 0;
+    u64 value = parse_hex_u64_be(str(s), err);
+    if (*err) {
         dprintf(STDERR_FILENO, "%s: invalid hex character in %s\n", progname, name);
-        exit(EXIT_FAILURE);
+        return 0;
     }
 
     return value;
@@ -33,7 +33,6 @@ get_infile_fd(const char* filename) {
     int fd = -1;
     if (filename) {
         fd = open(filename, O_RDONLY);
-        if (fd < 0) print_error_and_quit();
     } else {
         fd = STDIN_FILENO;
     }
@@ -46,7 +45,6 @@ get_outfile_fd(const char* filename) {
     int fd = -1;
     if (filename) {
         fd = open(filename, O_WRONLY | O_CREAT | O_TRUNC, S_IRWXU | S_IRGRP | S_IROTH);
-        if (fd < 0) print_error_and_quit();
     } else {
         fd = STDOUT_FILENO;
     }
@@ -98,9 +96,16 @@ main(int in_argc, const char* const* in_argv) {
             int in_fd = get_infile_fd(options.input_file);
             int out_fd = get_outfile_fd(options.output_file);
 
+            if (in_fd == -1 || out_fd == -1) {
+                print_error();
+                goto base64_err;
+            }
+
             Buffer input = read_all_fd(in_fd);
-            if (options.input_file) close(in_fd);
-            if (!input.ptr) print_error_and_quit();
+            if (!input.ptr) {
+                print_error();
+                goto base64_err;
+            }
 
             Buffer res;
             if (options.decode) {
@@ -111,12 +116,22 @@ main(int in_argc, const char* const* in_argv) {
 
             if (!res.ptr) {
                 dprintf(STDERR_FILENO, "%s: invalid input\n", progname);
-                exit(EXIT_FAILURE);
+                goto base64_err;
             }
 
             write(out_fd, res.ptr, res.len);
             if (options.encode) write(out_fd, "\n", 1);
-            if (options.output_file) close(out_fd);
+            goto base64_cleanup;
+
+        base64_err:
+            if (options.output_file && out_fd != -1) close(out_fd);
+            if (options.input_file && in_fd != -1) close(in_fd);
+            exit(EXIT_FAILURE);
+
+        base64_cleanup:
+            if (options.output_file && out_fd != -1) close(out_fd);
+            if (options.input_file && in_fd != -1) close(in_fd);
+            free(res.ptr);
 
         } break;
         case Command_Des:
@@ -138,11 +153,41 @@ main(int in_argc, const char* const* in_argv) {
             int in_fd = get_infile_fd(options.input_file);
             int out_fd = get_outfile_fd(options.output_file);
 
-            DesKey key = { .raw = parse_option_hex(options.hex_key, "key") };
-            Des64 salt = { .raw = parse_option_hex(options.hex_salt, "salt") };
-            Des64 iv = { .raw = parse_option_hex(options.hex_iv, "iv") };
+            if (in_fd == -1 || out_fd == -1) {
+                print_error();
+                goto des_err;
+            }
+
+            if (cmd == Command_Des || cmd == Command_DesCbc) {
+                if (!options.hex_iv) {
+                    dprintf(
+                        STDERR_FILENO,
+                        "%s: initialization vector is required for cbc mode\n",
+                        progname
+                    );
+                    goto des_err;
+                }
+            }
+
+            u32 err1 = 0;
+            u32 err2 = 0;
+            u32 err3 = 0;
+            DesKey key = { .raw = parse_option_hex(options.hex_key, "key", &err1) };
+            Des64 salt = { .raw = parse_option_hex(options.hex_salt, "salt", &err2) };
+            Des64 iv = { .raw = parse_option_hex(options.hex_iv, "iv", &err3) };
+
+            if (err1 || err2 || err3) {
+                goto des_err;
+            }
 
             if (!options.hex_key) {
+                if (!options.hex_salt) {
+                    bool success = get_random_bytes(buffer_create(salt.block, sizeof(salt.block)));
+                    if (!success) {
+                        dprintf(STDERR_FILENO, "%s: error generating salt\n", progname);
+                        goto des_err;
+                    }
+                }
                 if (!options.password) {
                     char password[64] = { 0 };
                     char verify[64] = { 0 };
@@ -153,36 +198,37 @@ main(int in_argc, const char* const* in_argv) {
 
                     if (!pass_ptr || !verify_ptr) {
                         dprintf(STDERR_FILENO, "%s: error reading password\n", progname);
-                        exit(EXIT_FAILURE);
+                        goto des_err;
                     }
 
                     if (!ft_memcmp(str(pass_ptr), str(verify_ptr))) {
                         dprintf(STDERR_FILENO, "%s: passwords don't match\n", progname);
-                        exit(EXIT_FAILURE);
+                        goto des_err;
                     }
 
                     key = des_pbkdf2_generate(str(pass_ptr), salt);
                 } else {
                     key = des_pbkdf2_generate(str(options.password), salt);
                 }
+
+                printf("salt=");
+                print_hex(salt.raw);
+                printf("key=");
+                print_hex(key.raw);
             }
 
-            printf("key: ");
-            print_hex(key.raw);
-            printf("salt: ");
-            print_hex(salt.raw);
-            printf("iv: ");
-            print_hex(iv.raw);
-
             Buffer input = read_all_fd(in_fd);
-            if (options.input_file) close(in_fd);
-            if (!input.ptr) print_error_and_quit();
+            if (!input.ptr) {
+                print_error();
+                goto des_err;
+            }
 
             if (options.decrypt && options.use_base64) {
                 Buffer tmp = base64_decode(input);
                 if (!tmp.ptr) {
                     dprintf(STDERR_FILENO, "%s: invalid base64 input\n", progname);
-                    exit(EXIT_FAILURE);
+                    free(input.ptr);
+                    goto des_err;
                 }
                 free(input.ptr);
                 input = tmp;
@@ -199,15 +245,6 @@ main(int in_argc, const char* const* in_argv) {
                 } break;
                 case Command_Des:
                 case Command_DesCbc: {
-                    if (!options.hex_iv) {
-                        dprintf(
-                            STDERR_FILENO,
-                            "%s: initialization vector is required for cbc mode\n",
-                            progname
-                        );
-                        exit(EXIT_FAILURE);
-                    }
-
                     if (options.encrypt) {
                         res = des_cbc_encrypt(input, key, iv);
                     } else {
@@ -232,7 +269,17 @@ main(int in_argc, const char* const* in_argv) {
 
             write(out_fd, res.ptr, res.len);
             if (options.encrypt && options.use_base64) write(out_fd, "\n", 1);
-            if (options.output_file) close(out_fd);
+            goto des_cleanup;
+
+        des_err:
+            if (options.output_file && out_fd != -1) close(out_fd);
+            if (options.input_file && in_fd != -1) close(in_fd);
+            exit(EXIT_FAILURE);
+
+        des_cleanup:
+            if (options.output_file && out_fd != -1) close(out_fd);
+            if (options.input_file && in_fd != -1) close(in_fd);
+            free(res.ptr);
 
         } break;
         case Command_None: {
