@@ -136,7 +136,10 @@ main(int in_argc, const char* const* in_argv) {
         } break;
         case Command_Des:
         case Command_DesCbc:
-        case Command_DesEcb: {
+        case Command_DesEcb:
+        case Command_Des3:
+        case Command_Des3Cbc:
+        case Command_Des3Ecb: {
             DesOptions options = { 0 };
             first_input = parse_options(cmd, &options);
 
@@ -158,7 +161,8 @@ main(int in_argc, const char* const* in_argv) {
                 goto des_err;
             }
 
-            if (cmd == Command_Des || cmd == Command_DesCbc) {
+            if (cmd == Command_Des || cmd == Command_DesCbc || cmd == Command_Des3 ||
+                cmd == Command_Des3Cbc) {
                 if (!options.hex_iv) {
                     dprintf(
                         STDERR_FILENO,
@@ -251,17 +255,27 @@ main(int in_argc, const char* const* in_argv) {
                         res = des_cbc_decrypt(input, key, iv);
                     }
                 } break;
+                case Command_Des3Ecb: {
+                } break;
+                case Command_Des3:
+                case Command_Des3Cbc: {
+                } break;
                 default: {
                     dprintf(STDERR_FILENO, "unreachable code\n");
                     exit(EXIT_FAILURE);
                 } break;
             }
 
+            if (!res.ptr) {
+                print_error();
+                goto des_err;
+            }
+
             if (options.encrypt && options.use_base64) {
                 Buffer tmp = base64_encode(res);
                 if (!tmp.ptr) {
-                    dprintf(STDERR_FILENO, "%s: out of memory\n", progname);
-                    exit(EXIT_FAILURE);
+                    print_error();
+                    goto des_err;
                 }
                 free(res.ptr);
                 res = tmp;

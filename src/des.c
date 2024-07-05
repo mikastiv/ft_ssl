@@ -323,8 +323,8 @@ des_cbc_encrypt(Buffer message, DesKey key, Des64 iv) {
 }
 
 Buffer
-des_cbc_decrypt(Buffer message, DesKey key, Des64 iv) {
-    return des_decrypt(message, key, &iv);
+des_cbc_decrypt(Buffer cipher, DesKey key, Des64 iv) {
+    return des_decrypt(cipher, key, &iv);
 }
 
 Buffer
@@ -333,8 +333,32 @@ des_ecb_encrypt(Buffer message, DesKey key) {
 }
 
 Buffer
-des_ecb_decrypt(Buffer message, DesKey key) {
-    return des_decrypt(message, key, 0);
+des_ecb_decrypt(Buffer cipher, DesKey key) {
+    return des_decrypt(cipher, key, 0);
+}
+
+Buffer
+des3_ecb_encrypt(Buffer message, DesKey key1, DesKey key2, DesKey key3) {
+    Buffer tmp1 = des_encrypt(message, key1, 0);
+    Buffer tmp2 = des_decrypt(tmp1, key2, 0);
+    Buffer cipher = des_encrypt(tmp2, key3, 0);
+
+    free(tmp1.ptr);
+    free(tmp2.ptr);
+
+    return cipher;
+}
+
+Buffer
+des3_ecb_decrypt(Buffer cipher, DesKey key1, DesKey key2, DesKey key3) {
+    Buffer tmp1 = des_decrypt(cipher, key3, 0);
+    Buffer tmp2 = des_encrypt(tmp1, key2, 0);
+    Buffer message = des_decrypt(tmp2, key1, 0);
+
+    free(tmp1.ptr);
+    free(tmp2.ptr);
+
+    return message;
 }
 
 static void
@@ -367,8 +391,8 @@ hmac_sha256(Buffer password, Buffer data, Buffer out) {
     sha256_final(&sha, out);
 }
 
-static Des64
-des_pbkdf2_hmac_sha256_f(Buffer password, Des64 salt, u64 iter, u32 block_num) {
+static void
+pbkdf2_hmac_sha256_f(Buffer password, Des64 salt, u64 iter, u32 block_num, Buffer out) {
     u8 salt_block[sizeof(salt) + sizeof(block_num)];
 
     for (u64 i = 0; i < sizeof(salt); i++) {
@@ -395,16 +419,19 @@ des_pbkdf2_hmac_sha256_f(Buffer password, Des64 salt, u64 iter, u32 block_num) {
         }
     }
 
-    Des64 result;
-    for (u64 i = 0; i < sizeof(result.block); i++) {
-        result.block[i] = hmac_tmp1.ptr[i];
-    }
-
-    return result;
+    ft_memcpy(out, hmac_tmp1);
 }
 
 DesKey
 des_pbkdf2_generate(Buffer password, Des64 salt) {
     // OpenSSL's default iterations is 10000 and SHA256 is the default hasher
-    return des_pbkdf2_hmac_sha256_f(password, salt, 10000, 1);
+    u8 buffer[SHA256_DIGEST_SIZE];
+    pbkdf2_hmac_sha256_f(password, salt, 10000, 1, buffer_create(buffer, sizeof(buffer)));
+
+    DesKey result;
+    for (u64 i = 0; i < sizeof(result.block); i++) {
+        result.block[i] = buffer[i];
+    }
+
+    return result;
 }
