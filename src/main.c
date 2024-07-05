@@ -267,14 +267,13 @@ main(int in_argc, const char* const* in_argv) {
             }
 
             if (!res.ptr) {
-                print_error();
                 goto des_err;
             }
 
             if (options.encrypt && options.use_base64) {
                 Buffer tmp = base64_encode(res);
                 if (!tmp.ptr) {
-                    print_error();
+                    dprintf(STDERR_FILENO, "%s: failed to base64 encode\n", progname);
                     goto des_err;
                 }
                 free(res.ptr);

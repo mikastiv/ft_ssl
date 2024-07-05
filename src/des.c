@@ -1,9 +1,13 @@
 #include "cipher.h"
 #include "digest.h"
+#include "globals.h"
 #include "types.h"
 #include "utils.h"
+
 #include <assert.h>
+#include <stdio.h>
 #include <stdlib.h>
+#include <unistd.h>
 
 // Permuted choice 1
 const static u8 pc1[] = {
@@ -239,7 +243,10 @@ des_encrypt(Buffer message, DesKey key, const Des64* iv) {
     u8 padding = 8 - (message.len % 8);
     u64 len = message.len + padding;
     u8* buffer = malloc(len);
-    if (!buffer) return (Buffer){ 0 };
+    if (!buffer) {
+        dprintf(STDERR_FILENO, "%s: out of memory\n", progname);
+        return (Buffer){ 0 };
+    }
 
     Des64 prev_block = { .raw = 0 };
     if (iv) prev_block.raw = iv->raw;
@@ -290,7 +297,10 @@ des_decrypt(Buffer message, DesKey key, const Des64* iv) {
 
     u64 len = message.len;
     u8* buffer = malloc(len);
-    if (!buffer) return (Buffer){ 0 };
+    if (!buffer) {
+        dprintf(STDERR_FILENO, "%s: out of memory\n", progname);
+        return (Buffer){ 0 };
+    }
 
     Des64 prev_block = { .raw = 0 };
     if (iv) prev_block.raw = iv->raw;
@@ -309,6 +319,7 @@ des_decrypt(Buffer message, DesKey key, const Des64* iv) {
 
     u8 padding = buffer[len - 1];
     if (padding > len) {
+        dprintf(STDERR_FILENO, "%s: invalid ciphertext or key\n", progname);
         free(buffer);
         return (Buffer){ 0 };
     }
