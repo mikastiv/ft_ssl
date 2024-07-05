@@ -418,24 +418,24 @@ hmac_sha256(Buffer password, Buffer data, Buffer out) {
 }
 
 static void
-pbkdf2_hmac_sha256_f(Buffer password, Des64 salt, u64 iter, u32 block_num, Buffer out) {
-    u8 salt_block[sizeof(salt) + sizeof(block_num)];
+pbkdf2_hmac_sha256_f(Buffer password, Buffer salt, u64 iter, u32 block_num, Buffer out) {
+    u8 salt_block[64];
 
-    for (u64 i = 0; i < sizeof(salt); i++) {
-        salt_block[i] = salt.block[i];
+    for (u64 i = 0; i < salt.len; i++) {
+        salt_block[i] = salt.ptr[i];
     }
 
-    salt_block[sizeof(salt) + 0] = (u8)(block_num >> 24);
-    salt_block[sizeof(salt) + 1] = (u8)(block_num >> 16);
-    salt_block[sizeof(salt) + 2] = (u8)(block_num >> 8);
-    salt_block[sizeof(salt) + 3] = (u8)block_num;
+    salt_block[salt.len + 0] = (u8)(block_num >> 24);
+    salt_block[salt.len + 1] = (u8)(block_num >> 16);
+    salt_block[salt.len + 2] = (u8)(block_num >> 8);
+    salt_block[salt.len + 3] = (u8)block_num;
 
     u8 buffer1[SHA256_DIGEST_SIZE];
     u8 buffer2[SHA256_DIGEST_SIZE];
     Buffer hmac_tmp1 = buffer_create(buffer1, SHA256_DIGEST_SIZE);
     Buffer hmac_tmp2 = buffer_create(buffer2, SHA256_DIGEST_SIZE);
 
-    hmac_sha256(password, buffer_create(salt_block, sizeof(salt_block)), hmac_tmp1);
+    hmac_sha256(password, buffer_create(salt_block, salt.len + 4), hmac_tmp1);
     ft_memcpy(hmac_tmp2, hmac_tmp1);
 
     for (u64 i = 1; i < iter; i++) {
@@ -452,7 +452,13 @@ DesKey
 des_pbkdf2_generate(Buffer password, Des64 salt) {
     // OpenSSL's default iterations is 10000 and SHA256 is the default hasher
     u8 buffer[SHA256_DIGEST_SIZE];
-    pbkdf2_hmac_sha256_f(password, salt, 10000, 1, buffer_create(buffer, sizeof(buffer)));
+    pbkdf2_hmac_sha256_f(
+        password,
+        buffer_create((u8*)&salt, sizeof(salt)),
+        10000,
+        1,
+        buffer_create(buffer, sizeof(buffer))
+    );
 
     DesKey result;
     for (u64 i = 0; i < sizeof(result.block); i++) {
@@ -460,4 +466,20 @@ des_pbkdf2_generate(Buffer password, Des64 salt) {
     }
 
     return result;
+}
+
+void
+des3_pbkdf2_generate(Buffer password, Des192 salt, Des3Key out) {
+    // only 1 block since out key size < SHA256_DIGEST_SIZE
+
+    u8 buffer[SHA256_DIGEST_SIZE];
+    pbkdf2_hmac_sha256_f(
+        password,
+        buffer_create(salt, sizeof(Des192)),
+        10000,
+        1,
+        buffer_create(buffer, SHA256_DIGEST_SIZE)
+    );
+
+    ft_memcpy(buffer_create(out, sizeof(Des3Key)), buffer_create(buffer, sizeof(Des3Key)));
 }
