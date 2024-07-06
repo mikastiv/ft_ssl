@@ -34,6 +34,58 @@
                 "E146B18C4229AD585FFD05C42BF4793ADE016DE2D3B158B5"
             ],
             "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug 1",
+            "program": "${workspaceFolder}/ft_ssl",
+            "args": [
+                "des-ecb",
+                "-s",
+                "E146B18C4229AD585FFD05C42BF4793ADE016DE2D3B158B5",
+                "-a",
+                "-o",
+                "testdes",
+                "-p",
+                "12345"
+            ],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug 3",
+            "program": "${workspaceFolder}/ft_ssl",
+            "args": [
+                "des3-ecb",
+                "-s",
+                "E146B18C4229AD585FFD05C42BF4793ADE016DE2D3B158B5",
+                "-a",
+                "-o",
+                "testdes3",
+                "-p",
+                "12345"
+            ],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug 4",
+            "program": "${workspaceFolder}/ft_ssl",
+            "args": [
+                "des3-ecb",
+                "-s",
+                "E146B18C4229AD585FFD05C42BF4793ADE016DE2D3B158B5",
+                "-d",
+                "-a",
+                "-i",
+                "testdes3",
+                "-p",
+                "12345"
+            ],
+            "cwd": "${workspaceFolder}"
         }
     ]
 }

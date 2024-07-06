@@ -300,9 +300,20 @@ main(int in_argc, const char* const* in_argv) {
                     }
                 } break;
                 case Command_Des3Ecb: {
+                    assert(params_len == 24);
+
+                    Des3Key des_key;
+                    ft_memcpy(buf(des_key, params_len), buf(key, params_len));
+
+                    if (options.encrypt) {
+                        res = des3_ecb_encrypt(input, des_key);
+                    } else {
+                        res = des3_ecb_decrypt(input, des_key);
+                    }
                 } break;
                 case Command_Des3:
                 case Command_Des3Cbc: {
+                    assert(params_len == 24);
                 } break;
                 default: {
                     dprintf(STDERR_FILENO, "unreachable code\n");
