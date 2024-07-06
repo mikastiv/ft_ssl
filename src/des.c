@@ -237,20 +237,16 @@ process_block(Des64 block, Subkeys subkeys) {
 typedef void (*BlockCipherModeFn)(void*, Des64, Subkeys, Buffer);
 
 typedef struct {
-    i32 unused;
-} EcbCtx;
+    Des64 iv;
+} IvCtx;
 
 static void
 des_ecb_process_block(void* ptr, Des64 block, Subkeys subkeys, Buffer out) {
     (void)ptr;
 
     Des64 pblock = process_block(block, subkeys);
-    ft_memcpy(out, buf(pblock.block, 8));
+    ft_memcpy(out, buf(pblock.block, DES_BLOCK_SIZE));
 }
-
-typedef struct {
-    Des64 iv;
-} IvCtx;
 
 static void
 des_cbc_process_block_encrypt(void* ptr, Des64 block, Subkeys subkeys, Buffer out) {
@@ -259,7 +255,7 @@ des_cbc_process_block_encrypt(void* ptr, Des64 block, Subkeys subkeys, Buffer ou
     block.raw ^= ctx->iv.raw;
     Des64 ciphertext = process_block(block, subkeys);
     ctx->iv = ciphertext;
-    ft_memcpy(out, buf(ciphertext.block, 8));
+    ft_memcpy(out, buf(ciphertext.block, DES_BLOCK_SIZE));
 }
 
 static void
@@ -269,7 +265,7 @@ des_cbc_process_block_decrypt(void* ptr, Des64 block, Subkeys subkeys, Buffer ou
     Des64 decoded = process_block(block, subkeys);
     decoded.raw ^= ctx->iv.raw;
     ctx->iv = block;
-    ft_memcpy(out, buf(decoded.block, 8));
+    ft_memcpy(out, buf(decoded.block, DES_BLOCK_SIZE));
 }
 
 static void
@@ -279,7 +275,7 @@ des_ofb_process_block(void* ptr, Des64 block, Subkeys subkeys, Buffer out) {
     Des64 pblock = process_block(ctx->iv, subkeys);
     ctx->iv = pblock;
     pblock.raw ^= block.raw;
-    ft_memcpy(out, buf(pblock.block, 8));
+    ft_memcpy(out, buf(pblock.block, DES_BLOCK_SIZE));
 }
 
 static void
@@ -289,7 +285,7 @@ des_cfb_process_block_encrypt(void* ptr, Des64 block, Subkeys subkeys, Buffer ou
     Des64 ciphertext = process_block(ctx->iv, subkeys);
     ciphertext.raw ^= block.raw;
     ctx->iv = ciphertext;
-    ft_memcpy(out, buf(ciphertext.block, 8));
+    ft_memcpy(out, buf(ciphertext.block, DES_BLOCK_SIZE));
 }
 
 static void
@@ -299,7 +295,7 @@ des_cfb_process_block_decrypt(void* ptr, Des64 block, Subkeys subkeys, Buffer ou
     Des64 message = process_block(ctx->iv, subkeys);
     message.raw ^= block.raw;
     ctx->iv = block;
-    ft_memcpy(out, buf(message.block, 8));
+    ft_memcpy(out, buf(message.block, DES_BLOCK_SIZE));
 }
 
 static void
@@ -309,7 +305,7 @@ des_pcbc_process_block_encrypt(void* ptr, Des64 block, Subkeys subkeys, Buffer o
     Des64 ciphertext = { .raw = block.raw ^ ctx->iv.raw };
     ciphertext = process_block(ciphertext, subkeys);
     ctx->iv.raw = block.raw ^ ciphertext.raw;
-    ft_memcpy(out, buf(ciphertext.block, 8));
+    ft_memcpy(out, buf(ciphertext.block, DES_BLOCK_SIZE));
 }
 
 static void
@@ -319,7 +315,7 @@ des_pcbc_process_block_decrypt(void* ptr, Des64 block, Subkeys subkeys, Buffer o
     Des64 message = process_block(block, subkeys);
     message.raw ^= ctx->iv.raw;
     ctx->iv.raw = message.raw ^ block.raw;
-    ft_memcpy(out, buf(message.block, 8));
+    ft_memcpy(out, buf(message.block, DES_BLOCK_SIZE));
 }
 
 static Buffer
@@ -327,7 +323,7 @@ des_encrypt(Buffer message, DesKey key, void* ctx, BlockCipherModeFn mode_fn, bo
     Subkeys subkeys;
     generate_subkeys(key, subkeys);
 
-    u8 padding = 8 - (message.len % 8);
+    u8 padding = DES_BLOCK_SIZE - (message.len % DES_BLOCK_SIZE);
     if (skip_padding) padding = 0;
 
     u64 len = message.len + padding;
@@ -338,9 +334,9 @@ des_encrypt(Buffer message, DesKey key, void* ctx, BlockCipherModeFn mode_fn, bo
     }
 
     u64 i;
-    for (i = 0; i + 7 < message.len; i += 8) {
+    for (i = 0; i + (DES_BLOCK_SIZE - 1) < message.len; i += DES_BLOCK_SIZE) {
         Des64 block = { .raw = read_u64(&message.ptr[i]) };
-        mode_fn(ctx, block, subkeys, buf(buffer + i, 8));
+        mode_fn(ctx, block, subkeys, buf(buffer + i, DES_BLOCK_SIZE));
     }
     if (i < len) {
         Des64 block;
@@ -350,7 +346,7 @@ des_encrypt(Buffer message, DesKey key, void* ctx, BlockCipherModeFn mode_fn, bo
             block.block[j] = message.ptr[i + j];
         }
 
-        mode_fn(ctx, block, subkeys, buf(buffer + i, 8));
+        mode_fn(ctx, block, subkeys, buf(buffer + i, DES_BLOCK_SIZE));
     }
 
     return buf(buffer, len);
@@ -370,7 +366,7 @@ remove_padding(Buffer buffer) {
 
 static Buffer
 des_decrypt(Buffer message, DesKey key, void* ctx, BlockCipherModeFn mode_fn, bool skip_padding) {
-    if (message.len % 8 != 0) return (Buffer){ 0 };
+    if (message.len % DES_BLOCK_SIZE != 0) return (Buffer){ 0 };
 
     Subkeys subkeys;
     generate_subkeys(key, subkeys);
@@ -388,9 +384,9 @@ des_decrypt(Buffer message, DesKey key, void* ctx, BlockCipherModeFn mode_fn, bo
         return (Buffer){ 0 };
     }
 
-    for (u64 i = 0; i + 7 < message.len; i += 8) {
+    for (u64 i = 0; i + 7 < message.len; i += DES_BLOCK_SIZE) {
         Des64 block = { .raw = read_u64(&message.ptr[i]) };
-        mode_fn(ctx, block, subkeys, buf(buffer + i, 8));
+        mode_fn(ctx, block, subkeys, buf(buffer + i, DES_BLOCK_SIZE));
     }
 
     Buffer result = buf(buffer, len);
@@ -416,14 +412,18 @@ des_cbc_decrypt(Buffer ciphertext, DesKey key, Des64 iv) {
 }
 
 Buffer
-des_ecb_encrypt(Buffer message, DesKey key) {
-    EcbCtx ctx;
+des_ecb_encrypt(Buffer message, DesKey key, Des64 iv) {
+    (void)iv;
+
+    IvCtx ctx;
     return des_encrypt(message, key, &ctx, &des_ecb_process_block, false);
 }
 
 Buffer
-des_ecb_decrypt(Buffer ciphertext, DesKey key) {
-    EcbCtx ctx;
+des_ecb_decrypt(Buffer ciphertext, DesKey key, Des64 iv) {
+    (void)iv;
+
+    IvCtx ctx;
     return des_decrypt(ciphertext, key, &ctx, &des_ecb_process_block, false);
 }
 
@@ -479,10 +479,10 @@ des_pcbc_decrypt(Buffer ciphertext, DesKey key, Des64 iv) {
 
 static void
 des3_get_keys(Des3Key key, DesKey* key1, DesKey* key2, DesKey* key3) {
-    for (u64 i = 0; i < 8; i++) {
+    for (u64 i = 0; i < DES_BLOCK_SIZE; i++) {
         key1->block[i] = key[i];
-        key2->block[i] = key[i + 8];
-        key3->block[i] = key[i + 16];
+        key2->block[i] = key[i + DES_BLOCK_SIZE];
+        key3->block[i] = key[i + DES_BLOCK_SIZE * 2];
     }
 }
 
@@ -491,7 +491,7 @@ des3_ecb_encrypt(Buffer message, Des3Key key) {
     DesKey key1, key2, key3;
     des3_get_keys(key, &key1, &key2, &key3);
 
-    EcbCtx ctx;
+    IvCtx ctx;
     Buffer tmp1 = des_encrypt(message, key1, &ctx, &des_ecb_process_block, false);
     Buffer tmp2 = des_decrypt(tmp1, key2, &ctx, &des_ecb_process_block, true);
     Buffer cipher = des_encrypt(tmp2, key3, &ctx, &des_ecb_process_block, true);
@@ -507,7 +507,7 @@ des3_ecb_decrypt(Buffer cipher, Des3Key key) {
     DesKey key1, key2, key3;
     des3_get_keys(key, &key1, &key2, &key3);
 
-    EcbCtx ctx;
+    IvCtx ctx;
     Buffer tmp1 = des_decrypt(cipher, key3, &ctx, &des_ecb_process_block, true);
     Buffer tmp2 = des_encrypt(tmp1, key2, &ctx, &des_ecb_process_block, true);
     Buffer message = des_decrypt(tmp2, key1, &ctx, &des_ecb_process_block, false);

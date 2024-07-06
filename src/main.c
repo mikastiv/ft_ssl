@@ -11,6 +11,8 @@
 #include <stdlib.h>
 #include <unistd.h>
 
+#define MAX_PASSWORD_SIZE 128
+
 u32 argc;
 const char* const* argv;
 const char* progname = 0;
@@ -51,10 +53,16 @@ get_outfile_fd(const char* filename) {
     return fd;
 }
 
-static DesIvFunc
-fetch_des_iv_func(bool encrypt, Command mode) {
-    DesIvFunc result = 0;
-    switch (mode) {
+static DesFunc
+fetch_des_func(bool encrypt, Command cmd) {
+    DesFunc result = 0;
+    switch (cmd) {
+        case Command_DesEcb: {
+            if (encrypt)
+                result = &des_ecb_encrypt;
+            else
+                result = &des_ecb_decrypt;
+        } break;
         case Command_Des:
         case Command_DesCbc: {
             if (encrypt)
@@ -86,6 +94,56 @@ fetch_des_iv_func(bool encrypt, Command mode) {
     }
 
     return result;
+}
+
+static bool
+des_requires_iv(Command cmd) {
+    return cmd != Command_DesEcb && cmd != Command_Des3Ecb;
+}
+
+static u64
+get_params_length(Command cmd) {
+    u64 params_len = 0;
+    switch (cmd) {
+        case Command_Des:
+        case Command_DesCbc:
+        case Command_DesOfb:
+        case Command_DesCfb:
+        case Command_DesPcbc:
+        case Command_DesEcb: {
+            params_len = DES_BLOCK_SIZE;
+        } break;
+        case Command_Des3:
+        case Command_Des3Cbc:
+        case Command_Des3Ecb: {
+            params_len = DES_BLOCK_SIZE * 3;
+        } break;
+        default:
+            break;
+    }
+
+    return params_len;
+}
+
+static bool
+read_password(Buffer buffer) {
+    char verify[MAX_PASSWORD_SIZE] = { 0 };
+
+    const char* pass_ptr =
+        readpassphrase("enter password: ", (char*)buffer.ptr, sizeof(buffer.len), 0);
+    const char* verify_ptr = readpassphrase("reenter password: ", verify, sizeof(verify), 0);
+
+    if (!pass_ptr || !verify_ptr) {
+        dprintf(STDERR_FILENO, "%s: error reading password\n", progname);
+        return false;
+    }
+
+    if (!ft_memcmp(str(pass_ptr), str(verify_ptr))) {
+        dprintf(STDERR_FILENO, "%s: passwords don't match\n", progname);
+        return false;
+    }
+
+    return true;
 }
 
 int
@@ -197,45 +255,16 @@ main(int in_argc, const char* const* in_argv) {
                 goto des_err;
             }
 
-            switch (cmd) {
-                case Command_Des:
-                case Command_DesCbc:
-                case Command_DesOfb:
-                case Command_DesCfb:
-                case Command_DesPcbc:
-                case Command_Des3:
-                case Command_Des3Cbc: {
-                    if (!options.hex_iv) {
-                        dprintf(
-                            STDERR_FILENO,
-                            "%s: initialization vector is required for cbc mode\n",
-                            progname
-                        );
-                        goto des_err;
-                    }
-                } break;
-                default:
-                    break;
+            if (des_requires_iv(cmd) && !options.hex_iv) {
+                dprintf(
+                    STDERR_FILENO,
+                    "%s: initialization vector is required for cbc mode\n",
+                    progname
+                );
+                goto des_err;
             }
 
-            u64 params_len = 0;
-            switch (cmd) {
-                case Command_Des:
-                case Command_DesCbc:
-                case Command_DesOfb:
-                case Command_DesCfb:
-                case Command_DesPcbc:
-                case Command_DesEcb: {
-                    params_len = 8;
-                } break;
-                case Command_Des3:
-                case Command_Des3Cbc:
-                case Command_Des3Ecb: {
-                    params_len = 24;
-                } break;
-                default:
-                    break;
-            }
+            u64 params_len = get_params_length(cmd);
 
             u32 err1 = 0;
             u32 err2 = 0;
@@ -265,32 +294,16 @@ main(int in_argc, const char* const* in_argv) {
                     }
                 }
 
+                char password[MAX_PASSWORD_SIZE];
                 if (!options.password) {
-                    char password[64] = { 0 };
-                    char verify[64] = { 0 };
-                    const char* pass_ptr =
-                        readpassphrase("enter password: ", password, sizeof(password), 0);
-                    const char* verify_ptr =
-                        readpassphrase("reenter password: ", verify, sizeof(verify), 0);
-
-                    if (!pass_ptr || !verify_ptr) {
-                        dprintf(STDERR_FILENO, "%s: error reading password\n", progname);
+                    if (!read_password(buf((u8*)password, MAX_PASSWORD_SIZE))) {
                         goto des_err;
                     }
 
-                    if (!ft_memcmp(str(pass_ptr), str(verify_ptr))) {
-                        dprintf(STDERR_FILENO, "%s: passwords don't match\n", progname);
-                        goto des_err;
-                    }
-
-                    pbkdf2_generate(str(pass_ptr), buf(salt, params_len), buf(key, params_len));
-                } else {
-                    pbkdf2_generate(
-                        str(options.password),
-                        buf(salt, params_len),
-                        buf(key, params_len)
-                    );
+                    options.password = password;
                 }
+
+                pbkdf2_generate(str(options.password), buf(salt, params_len), buf(key, params_len));
 
                 printf("salt=");
                 print_hex(buf(salt, params_len));
@@ -317,24 +330,13 @@ main(int in_argc, const char* const* in_argv) {
 
             Buffer res;
             switch (cmd) {
-                case Command_DesEcb: {
-                    assert(params_len == 8);
-
-                    DesKey des_key;
-                    ft_memcpy(buf(des_key.block, params_len), buf(key, params_len));
-
-                    if (options.encrypt) {
-                        res = des_ecb_encrypt(input, des_key);
-                    } else {
-                        res = des_ecb_decrypt(input, des_key);
-                    }
-                } break;
                 case Command_Des:
+                case Command_DesEcb:
                 case Command_DesOfb:
                 case Command_DesCfb:
                 case Command_DesPcbc:
                 case Command_DesCbc: {
-                    assert(params_len == 8);
+                    assert(params_len == DES_BLOCK_SIZE);
 
                     DesKey des_key;
                     ft_memcpy(buf(des_key.block, params_len), buf(key, params_len));
@@ -342,11 +344,11 @@ main(int in_argc, const char* const* in_argv) {
                     Des64 des_iv;
                     ft_memcpy(buf(des_iv.block, params_len), buf(iv, params_len));
 
-                    DesIvFunc func = fetch_des_iv_func(options.encrypt, cmd);
+                    DesFunc func = fetch_des_func(options.encrypt, cmd);
                     res = func(input, des_key, des_iv);
                 } break;
                 case Command_Des3Ecb: {
-                    assert(params_len == 24);
+                    assert(params_len == DES_BLOCK_SIZE * 3);
 
                     Des3Key des_key;
                     ft_memcpy(buf(des_key, params_len), buf(key, params_len));
@@ -359,7 +361,7 @@ main(int in_argc, const char* const* in_argv) {
                 } break;
                 case Command_Des3:
                 case Command_Des3Cbc: {
-                    assert(params_len == 24);
+                    assert(params_len == DES_BLOCK_SIZE * 3);
                 } break;
                 default: {
                     dprintf(STDERR_FILENO, "unreachable code\n");

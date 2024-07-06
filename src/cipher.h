@@ -7,6 +7,8 @@ typedef union {
     u64 raw;
 } Des64;
 
+#define DES_BLOCK_SIZE 8
+
 typedef Des64 DesKey;
 typedef u8 Des192[192];
 typedef Des192 Des3Key;
@@ -17,13 +19,13 @@ base64_encode(Buffer input);
 Buffer
 base64_decode(Buffer input);
 
-typedef Buffer(*DesIvFunc)(Buffer, DesKey, Des64);
+typedef Buffer(*DesFunc)(Buffer, DesKey, Des64);
 
 Buffer
-des_ecb_encrypt(Buffer message, DesKey key);
+des_ecb_encrypt(Buffer message, DesKey key, Des64 iv);
 
 Buffer
-des_ecb_decrypt(Buffer ciphertext, DesKey key);
+des_ecb_decrypt(Buffer ciphertext, DesKey key, Des64 iv);
 
 Buffer
 des_cbc_encrypt(Buffer message, DesKey key, Des64 iv);
