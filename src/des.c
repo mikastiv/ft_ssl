@@ -283,7 +283,7 @@ des_encrypt(Buffer message, DesKey key, const Des64* iv) {
 }
 
 static Buffer
-des_decrypt(Buffer message, DesKey key, const Des64* iv) {
+des_decrypt(Buffer message, DesKey key, const Des64* iv, bool skip_padding) {
     if (message.len % 8 != 0) return (Buffer){ 0 };
 
     Subkeys subkeys;
@@ -317,13 +317,15 @@ des_decrypt(Buffer message, DesKey key, const Des64* iv) {
         }
     }
 
-    u8 padding = buffer[len - 1];
-    if (padding > len) {
-        dprintf(STDERR_FILENO, "%s: invalid ciphertext or key\n", progname);
-        free(buffer);
-        return (Buffer){ 0 };
+    if (!skip_padding) {
+        u8 padding = buffer[len - 1];
+        if (padding > len) {
+            dprintf(STDERR_FILENO, "%s: invalid ciphertext or key\n", progname);
+            free(buffer);
+            return (Buffer){ 0 };
+        }
+        len -= padding;
     }
-    len -= padding;
 
     return buf(buffer, len);
 }
@@ -335,7 +337,7 @@ des_cbc_encrypt(Buffer message, DesKey key, Des64 iv) {
 
 Buffer
 des_cbc_decrypt(Buffer cipher, DesKey key, Des64 iv) {
-    return des_decrypt(cipher, key, &iv);
+    return des_decrypt(cipher, key, &iv, false);
 }
 
 Buffer
@@ -345,7 +347,7 @@ des_ecb_encrypt(Buffer message, DesKey key) {
 
 Buffer
 des_ecb_decrypt(Buffer cipher, DesKey key) {
-    return des_decrypt(cipher, key, 0);
+    return des_decrypt(cipher, key, 0, false);
 }
 
 static void
@@ -363,7 +365,7 @@ des3_ecb_encrypt(Buffer message, Des3Key key) {
     des3_get_keys(key, &key1, &key2, &key3);
 
     Buffer tmp1 = des_encrypt(message, key1, 0);
-    Buffer tmp2 = des_decrypt(tmp1, key2, 0);
+    Buffer tmp2 = des_decrypt(tmp1, key2, 0, true);
     Buffer cipher = des_encrypt(tmp2, key3, 0);
 
     free(tmp1.ptr);
@@ -377,9 +379,9 @@ des3_ecb_decrypt(Buffer cipher, Des3Key key) {
     DesKey key1, key2, key3;
     des3_get_keys(key, &key1, &key2, &key3);
 
-    Buffer tmp1 = des_decrypt(cipher, key3, 0);
+    Buffer tmp1 = des_decrypt(cipher, key3, 0, true);
     Buffer tmp2 = des_encrypt(tmp1, key2, 0);
-    Buffer message = des_decrypt(tmp2, key1, 0);
+    Buffer message = des_decrypt(tmp2, key1, 0, false);
 
     free(tmp1.ptr);
     free(tmp2.ptr);
