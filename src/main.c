@@ -120,18 +120,15 @@ main(int in_argc, const char* const* in_argv) {
 
             write(out_fd, res.ptr, res.len);
             if (options.encode) write(out_fd, "\n", 1);
-            goto base64_cleanup;
+            if (options.output_file && out_fd != -1) close(out_fd);
+            if (options.input_file && in_fd != -1) close(in_fd);
+            free(res.ptr);
+            return EXIT_SUCCESS;
 
         base64_err:
             if (options.output_file && out_fd != -1) close(out_fd);
             if (options.input_file && in_fd != -1) close(in_fd);
-            exit(EXIT_FAILURE);
-
-        base64_cleanup:
-            if (options.output_file && out_fd != -1) close(out_fd);
-            if (options.input_file && in_fd != -1) close(in_fd);
-            free(res.ptr);
-
+            return EXIT_FAILURE;
         } break;
         case Command_Des:
         case Command_DesCbc:
@@ -329,18 +326,15 @@ main(int in_argc, const char* const* in_argv) {
 
             write(out_fd, res.ptr, res.len);
             if (options.encrypt && options.use_base64) write(out_fd, "\n", 1);
-            goto des_cleanup;
+            if (options.output_file && out_fd != -1) close(out_fd);
+            if (options.input_file && in_fd != -1) close(in_fd);
+            free(res.ptr);
+            return EXIT_SUCCESS;
 
         des_err:
             if (options.output_file && out_fd != -1) close(out_fd);
             if (options.input_file && in_fd != -1) close(in_fd);
-            exit(EXIT_FAILURE);
-
-        des_cleanup:
-            if (options.output_file && out_fd != -1) close(out_fd);
-            if (options.input_file && in_fd != -1) close(in_fd);
-            free(res.ptr);
-
+            return EXIT_FAILURE;
         } break;
         case Command_None: {
             dprintf(STDERR_FILENO, "Unreachable\n");
