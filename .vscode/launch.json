@@ -22,6 +22,18 @@
                 "test"
             ],
             "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug 2",
+            "program": "${workspaceFolder}/ft_ssl",
+            "args": [
+                "des3-ecb",
+                "-s",
+                "E146B18C4229AD585FFD05C42BF4793ADE016DE2D3B158B5"
+            ],
+            "cwd": "${workspaceFolder}"
         }
     ]
 }
