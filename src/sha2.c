@@ -100,8 +100,8 @@ sha2x32_update(Sha2x32* sha, Buffer buffer) {
         u32 remaining = SHA2X32_BLOCK_SIZE - sha->buffer_len;
         u32 len = (buffer.len > remaining) ? remaining : buffer.len;
 
-        Buffer dst = buffer_create(sha->buffer + sha->buffer_len, len);
-        Buffer src = buffer_create(buffer.ptr, len);
+        Buffer dst = buf(sha->buffer + sha->buffer_len, len);
+        Buffer src = buf(buffer.ptr, len);
         ft_memcpy(dst, src);
 
         sha->buffer_len += len;
@@ -114,7 +114,7 @@ sha2x32_update(Sha2x32* sha, Buffer buffer) {
     }
 
     while (buffer.len - index >= SHA2X32_BLOCK_SIZE) {
-        Buffer src = buffer_create(buffer.ptr + index, SHA2X32_BLOCK_SIZE);
+        Buffer src = buf(buffer.ptr + index, SHA2X32_BLOCK_SIZE);
         ft_memcpy(sha2x32_buffer(sha), src);
         sha2x32_round(sha);
         index += SHA2X32_BLOCK_SIZE;
@@ -122,8 +122,8 @@ sha2x32_update(Sha2x32* sha, Buffer buffer) {
 
     if (index < buffer.len) {
         u32 len = buffer.len - index;
-        Buffer dst = buffer_create(sha->buffer, len);
-        Buffer src = buffer_create(buffer.ptr + index, len);
+        Buffer dst = buf(sha->buffer, len);
+        Buffer src = buf(buffer.ptr + index, len);
         ft_memcpy(dst, src);
         sha->buffer_len = len;
     }
@@ -133,8 +133,7 @@ static void
 sha2x32_final(Sha2x32* sha, Buffer out, u32 digest_size) {
     assert(out.len == digest_size);
 
-    Buffer padding =
-        buffer_create(sha->buffer + sha->buffer_len, SHA2X32_BLOCK_SIZE - sha->buffer_len);
+    Buffer padding = buf(sha->buffer + sha->buffer_len, SHA2X32_BLOCK_SIZE - sha->buffer_len);
     ft_memset(padding, 0);
 
     sha->buffer[sha->buffer_len++] = 0x80;
@@ -314,8 +313,8 @@ sha2x64_update(Sha2x64* sha, Buffer buffer) {
         u32 remaining = SHA2X64_BLOCK_SIZE - sha->buffer_len;
         u32 len = (buffer.len > remaining) ? remaining : buffer.len;
 
-        Buffer dst = buffer_create(sha->buffer + sha->buffer_len, len);
-        Buffer src = buffer_create(buffer.ptr, len);
+        Buffer dst = buf(sha->buffer + sha->buffer_len, len);
+        Buffer src = buf(buffer.ptr, len);
         ft_memcpy(dst, src);
 
         sha->buffer_len += len;
@@ -328,7 +327,7 @@ sha2x64_update(Sha2x64* sha, Buffer buffer) {
     }
 
     while (buffer.len - index >= SHA2X64_BLOCK_SIZE) {
-        Buffer src = buffer_create(buffer.ptr + index, SHA2X64_BLOCK_SIZE);
+        Buffer src = buf(buffer.ptr + index, SHA2X64_BLOCK_SIZE);
         ft_memcpy(sha2x64_buffer(sha), src);
         sha2x64_round(sha);
         index += SHA2X64_BLOCK_SIZE;
@@ -336,8 +335,8 @@ sha2x64_update(Sha2x64* sha, Buffer buffer) {
 
     if (index < buffer.len) {
         u32 len = buffer.len - index;
-        Buffer dst = buffer_create(sha->buffer, len);
-        Buffer src = buffer_create(buffer.ptr + index, len);
+        Buffer dst = buf(sha->buffer, len);
+        Buffer src = buf(buffer.ptr + index, len);
         ft_memcpy(dst, src);
         sha->buffer_len = len;
     }
@@ -347,8 +346,7 @@ static void
 sha2x64_final(Sha2x64* sha, Buffer out, u32 digest_size) {
     assert(out.len == digest_size);
 
-    Buffer padding =
-        buffer_create(sha->buffer + sha->buffer_len, SHA2X64_BLOCK_SIZE - sha->buffer_len);
+    Buffer padding = buf(sha->buffer + sha->buffer_len, SHA2X64_BLOCK_SIZE - sha->buffer_len);
     ft_memset(padding, 0);
 
     sha->buffer[sha->buffer_len++] = 0x80;

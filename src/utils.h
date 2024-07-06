@@ -48,7 +48,7 @@ Buffer
 str(const char* s);
 
 Buffer
-buffer_create(u8* ptr, u64 len);
+buf(u8* ptr, u64 len);
 
 Buffer
 read_all_fd(int fd);

@@ -200,9 +200,9 @@ main(int in_argc, const char* const* in_argv) {
             u8 salt[64] = { 0 };
             u8 key[64] = { 0 };
             u8 iv[64] = { 0 };
-            parse_option_hex(options.hex_salt, "salt", buffer_create(salt, params_len), &err1);
-            parse_option_hex(options.hex_key, "key", buffer_create(key, params_len), &err2);
-            parse_option_hex(options.hex_iv, "iv", buffer_create(iv, params_len), &err3);
+            parse_option_hex(options.hex_salt, "salt", buf(salt, params_len), &err1);
+            parse_option_hex(options.hex_key, "key", buf(key, params_len), &err2);
+            parse_option_hex(options.hex_iv, "iv", buf(iv, params_len), &err3);
 
             if (err1 || err2 || err3) {
                 goto des_err;
@@ -215,7 +215,7 @@ main(int in_argc, const char* const* in_argv) {
                         goto des_err;
                     }
 
-                    bool success = get_random_bytes(buffer_create(salt, params_len));
+                    bool success = get_random_bytes(buf(salt, params_len));
                     if (!success) {
                         dprintf(STDERR_FILENO, "%s: error generating salt\n", progname);
                         goto des_err;
@@ -240,23 +240,19 @@ main(int in_argc, const char* const* in_argv) {
                         goto des_err;
                     }
 
-                    pbkdf2_generate(
-                        str(pass_ptr),
-                        buffer_create(salt, params_len),
-                        buffer_create(key, params_len)
-                    );
+                    pbkdf2_generate(str(pass_ptr), buf(salt, params_len), buf(key, params_len));
                 } else {
                     pbkdf2_generate(
                         str(options.password),
-                        buffer_create(salt, params_len),
-                        buffer_create(key, params_len)
+                        buf(salt, params_len),
+                        buf(key, params_len)
                     );
                 }
 
                 printf("salt=");
-                print_hex(buffer_create(salt, params_len));
+                print_hex(buf(salt, params_len));
                 printf("key=");
-                print_hex(buffer_create(key, params_len));
+                print_hex(buf(key, params_len));
             }
 
             Buffer input = read_all_fd(in_fd);
@@ -282,10 +278,7 @@ main(int in_argc, const char* const* in_argv) {
                     assert(params_len == 8);
 
                     DesKey des_key;
-                    ft_memcpy(
-                        buffer_create(des_key.block, params_len),
-                        buffer_create(key, params_len)
-                    );
+                    ft_memcpy(buf(des_key.block, params_len), buf(key, params_len));
 
                     if (options.encrypt) {
                         res = des_ecb_encrypt(input, des_key);
@@ -298,16 +291,10 @@ main(int in_argc, const char* const* in_argv) {
                     assert(params_len == 8);
 
                     DesKey des_key;
-                    ft_memcpy(
-                        buffer_create(des_key.block, params_len),
-                        buffer_create(key, params_len)
-                    );
+                    ft_memcpy(buf(des_key.block, params_len), buf(key, params_len));
 
                     Des64 des_iv;
-                    ft_memcpy(
-                        buffer_create(des_iv.block, params_len),
-                        buffer_create(iv, params_len)
-                    );
+                    ft_memcpy(buf(des_iv.block, params_len), buf(iv, params_len));
 
                     if (options.encrypt) {
                         res = des_cbc_encrypt(input, des_key, des_iv);

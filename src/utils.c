@@ -67,8 +67,7 @@ ft_lower(char c) {
 u64
 ft_hextol(const char* value) {
     u64 i = 0;
-    if (ft_memcmp(str("0x"), buffer_create((u8*)value, 2)) ||
-        ft_memcmp(str("0X"), buffer_create((u8*)value, 2))) {
+    if (ft_memcmp(str("0x"), buf((u8*)value, 2)) || ft_memcmp(str("0X"), buf((u8*)value, 2))) {
         i += 2;
     }
 
@@ -145,7 +144,7 @@ str(const char* s) {
 }
 
 Buffer
-buffer_create(u8* ptr, u64 len) {
+buf(u8* ptr, u64 len) {
     return (Buffer){ .ptr = ptr, .len = len };
 }
 
@@ -170,12 +169,12 @@ read_all_fd(int fd) {
             u8* ptr = malloc(capacity + 1);
             if (!ptr) return (Buffer){ 0 };
 
-            ft_memcpy(buffer_create(ptr, str.len), str);
+            ft_memcpy(buf(ptr, str.len), str);
             free(str.ptr);
             str.ptr = ptr;
         }
 
-        ft_memcpy(buffer_create(str.ptr + str.len, bytes), buffer_create(buffer, bytes));
+        ft_memcpy(buf(str.ptr + str.len, bytes), buf(buffer, bytes));
         str.len += bytes;
     }
 

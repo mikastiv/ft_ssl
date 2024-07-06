@@ -629,8 +629,8 @@ whirlpool_update(Whirlpool* whrl, Buffer buffer) {
         u32 remaining = WHIRLPOOL_BLOCK_SIZE - whrl->buffer_len;
         u32 len = (buffer.len > remaining) ? remaining : buffer.len;
 
-        Buffer dst = buffer_create(whrl->buffer + whrl->buffer_len, len);
-        Buffer src = buffer_create(buffer.ptr, len);
+        Buffer dst = buf(whrl->buffer + whrl->buffer_len, len);
+        Buffer src = buf(buffer.ptr, len);
         ft_memcpy(dst, src);
 
         whrl->buffer_len += len;
@@ -643,7 +643,7 @@ whirlpool_update(Whirlpool* whrl, Buffer buffer) {
     }
 
     while (buffer.len - index >= WHIRLPOOL_BLOCK_SIZE) {
-        Buffer src = buffer_create(buffer.ptr + index, WHIRLPOOL_BLOCK_SIZE);
+        Buffer src = buf(buffer.ptr + index, WHIRLPOOL_BLOCK_SIZE);
         ft_memcpy(whirlpool_buffer(whrl), src);
         whirlpool_round(whrl);
         index += WHIRLPOOL_BLOCK_SIZE;
@@ -651,8 +651,8 @@ whirlpool_update(Whirlpool* whrl, Buffer buffer) {
 
     if (index < buffer.len) {
         u32 len = buffer.len - index;
-        Buffer dst = buffer_create(whrl->buffer, len);
-        Buffer src = buffer_create(buffer.ptr + index, len);
+        Buffer dst = buf(whrl->buffer, len);
+        Buffer src = buf(buffer.ptr + index, len);
         ft_memcpy(dst, src);
         whrl->buffer_len = len;
     }
@@ -662,8 +662,7 @@ void
 whirlpool_final(Whirlpool* whrl, Buffer out) {
     assert(out.len == WHIRLPOOL_DIGEST_SIZE);
 
-    Buffer padding =
-        buffer_create(whrl->buffer + whrl->buffer_len, WHIRLPOOL_BLOCK_SIZE - whrl->buffer_len);
+    Buffer padding = buf(whrl->buffer + whrl->buffer_len, WHIRLPOOL_BLOCK_SIZE - whrl->buffer_len);
     ft_memset(padding, 0);
 
     whrl->buffer[whrl->buffer_len++] = 0x80;

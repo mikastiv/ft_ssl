@@ -24,7 +24,7 @@ base64_encode(Buffer input) {
     u64 extra = input.len % 3;
 
     u64 size = chunks * 4 + (extra > 0 ? 4 : 0);
-    Buffer buffer = buffer_create(malloc(size), size);
+    Buffer buffer = buf(malloc(size), size);
     if (!buffer.ptr) return (Buffer){ 0 };
     ft_memset(buffer, 0);
 
@@ -64,7 +64,7 @@ remove_whitespace(Buffer input) {
     for (u64 j = 0; j < input.len; j++) {
         if (!is_space(input.ptr[j])) input.ptr[i++] = input.ptr[j];
     }
-    return buffer_create(input.ptr, i);
+    return buf(input.ptr, i);
 }
 
 Buffer
@@ -74,7 +74,7 @@ base64_decode(Buffer input) {
     if (input.len % 4 != 0) return (Buffer){ 0 };
 
     u64 output_size = chunks * 3;
-    Buffer buffer = buffer_create(malloc(output_size), output_size);
+    Buffer buffer = buf(malloc(output_size), output_size);
     if (!buffer.ptr) return (Buffer){ 0 };
     ft_memset(buffer, 0);
 
