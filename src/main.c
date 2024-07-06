@@ -51,6 +51,43 @@ get_outfile_fd(const char* filename) {
     return fd;
 }
 
+static DesIvFunc
+fetch_des_iv_func(bool encrypt, Command mode) {
+    DesIvFunc result = 0;
+    switch (mode) {
+        case Command_Des:
+        case Command_DesCbc: {
+            if (encrypt)
+                result = &des_cbc_encrypt;
+            else
+                result = &des_cbc_decrypt;
+        } break;
+        case Command_DesOfb: {
+            if (encrypt)
+                result = &des_ofb_encrypt;
+            else
+                result = &des_ofb_decrypt;
+        } break;
+        case Command_DesCfb: {
+            if (encrypt)
+                result = &des_cfb_encrypt;
+            else
+                result = &des_cfb_decrypt;
+        } break;
+        case Command_DesPcbc: {
+            if (encrypt)
+                result = &des_pcbc_encrypt;
+            else
+                result = &des_pcbc_decrypt;
+        } break;
+        default:
+            assert(false && "unreachable code");
+            break;
+    }
+
+    return result;
+}
+
 int
 main(int in_argc, const char* const* in_argv) {
     argc = in_argc;
@@ -293,6 +330,9 @@ main(int in_argc, const char* const* in_argv) {
                     }
                 } break;
                 case Command_Des:
+                case Command_DesOfb:
+                case Command_DesCfb:
+                case Command_DesPcbc:
                 case Command_DesCbc: {
                     assert(params_len == 8);
 
@@ -302,56 +342,8 @@ main(int in_argc, const char* const* in_argv) {
                     Des64 des_iv;
                     ft_memcpy(buf(des_iv.block, params_len), buf(iv, params_len));
 
-                    if (options.encrypt) {
-                        res = des_cbc_encrypt(input, des_key, des_iv);
-                    } else {
-                        res = des_cbc_decrypt(input, des_key, des_iv);
-                    }
-                } break;
-                case Command_DesOfb: {
-                    assert(params_len == 8);
-
-                    DesKey des_key;
-                    ft_memcpy(buf(des_key.block, params_len), buf(key, params_len));
-
-                    Des64 des_iv;
-                    ft_memcpy(buf(des_iv.block, params_len), buf(iv, params_len));
-
-                    if (options.encrypt) {
-                        res = des_ofb_encrypt(input, des_key, des_iv);
-                    } else {
-                        res = des_ofb_decrypt(input, des_key, des_iv);
-                    }
-                } break;
-                case Command_DesCfb: {
-                    assert(params_len == 8);
-
-                    DesKey des_key;
-                    ft_memcpy(buf(des_key.block, params_len), buf(key, params_len));
-
-                    Des64 des_iv;
-                    ft_memcpy(buf(des_iv.block, params_len), buf(iv, params_len));
-
-                    if (options.encrypt) {
-                        res = des_cfb_encrypt(input, des_key, des_iv);
-                    } else {
-                        res = des_cfb_decrypt(input, des_key, des_iv);
-                    }
-                } break;
-                case Command_DesPcbc: {
-                    assert(params_len == 8);
-
-                    DesKey des_key;
-                    ft_memcpy(buf(des_key.block, params_len), buf(key, params_len));
-
-                    Des64 des_iv;
-                    ft_memcpy(buf(des_iv.block, params_len), buf(iv, params_len));
-
-                    if (options.encrypt) {
-                        res = des_pcbc_encrypt(input, des_key, des_iv);
-                    } else {
-                        res = des_pcbc_decrypt(input, des_key, des_iv);
-                    }
+                    DesIvFunc func = fetch_des_iv_func(options.encrypt, cmd);
+                    res = func(input, des_key, des_iv);
                 } break;
                 case Command_Des3Ecb: {
                     assert(params_len == 24);

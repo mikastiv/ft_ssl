@@ -17,6 +17,8 @@ base64_encode(Buffer input);
 Buffer
 base64_decode(Buffer input);
 
+typedef Buffer(*DesIvFunc)(Buffer, DesKey, Des64);
+
 Buffer
 des_ecb_encrypt(Buffer message, DesKey key);
 
