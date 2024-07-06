@@ -205,7 +205,10 @@ parse_options(Command cmd, void* out_options) {
             } break;
             case Command_Des:
             case Command_DesEcb:
-            case Command_DesCbc: {
+            case Command_DesCbc:
+            case Command_Des3:
+            case Command_Des3Ecb:
+            case Command_Des3Cbc: {
                 DesOptions* options = out_options;
                 const Option des_options[] = {
                     {
