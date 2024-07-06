@@ -21,19 +21,19 @@ Buffer
 des_ecb_encrypt(Buffer message, DesKey key);
 
 Buffer
-des_ecb_decrypt(Buffer cipher, DesKey key);
+des_ecb_decrypt(Buffer ciphertext, DesKey key);
 
 Buffer
 des_cbc_encrypt(Buffer message, DesKey key, Des64 iv);
 
 Buffer
-des_cbc_decrypt(Buffer cipher, DesKey key, Des64 iv);
+des_cbc_decrypt(Buffer ciphertext, DesKey key, Des64 iv);
 
 Buffer
 des3_ecb_encrypt(Buffer message, Des3Key key);
 
 Buffer
-des3_ecb_decrypt(Buffer cipher, Des3Key key);
+des3_ecb_decrypt(Buffer ciphertext, Des3Key key);
 
 void
 pbkdf2_generate(Buffer password, Buffer salt, Buffer out);
