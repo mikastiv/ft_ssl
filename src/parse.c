@@ -50,6 +50,8 @@ print_flag(char f, const char* desc) {
 void
 print_help(void) {
     usage();
+    dprintf(STDERR_FILENO, "\nGeneral flags:\n");
+    print_flag('h', "print help");
 
     dprintf(STDERR_FILENO, "\nStandard commands:\n");
 
@@ -57,18 +59,28 @@ print_help(void) {
     for (u64 i = Command_None + 1; i <= Command_LastDigest; i++) {
         dprintf(STDERR_FILENO, "    %s\n", cmd_names[i]);
     }
+    dprintf(STDERR_FILENO, "\nMessage Digest flags:\n");
+    print_flag('p', "echo STDIN to STDOUT and append the checksum to STDOUT");
+    print_flag('q', "quiet mode");
+    print_flag('r', "reverse the format of the output");
+    print_flag('s', "print the sum of the given string");
 
     dprintf(STDERR_FILENO, "\nCipher commands:\n");
     for (u64 i = Command_LastDigest + 1; i < array_len(cmd_names); i++) {
         dprintf(STDERR_FILENO, "    %s\n", cmd_names[i]);
     }
-
-    dprintf(STDERR_FILENO, "\nFlags:\n");
-    print_flag('h', "print help");
-    print_flag('p', "echo STDIN to STDOUT and append the checksum to STDOUT");
-    print_flag('q', "quiet mode");
-    print_flag('r', "reverse the format of the output");
-    print_flag('s', "print the sum of the given string");
+    dprintf(STDERR_FILENO, "\nCipher flags:\n");
+    dprintf(STDERR_FILENO, "  All mode:\n");
+    print_flag('d', "decrypt/decode mode");
+    print_flag('e', " encrypt/encode mode (default)");
+    print_flag('i', " input file for message");
+    print_flag('o', " output file for message");
+    dprintf(STDERR_FILENO, "  All modes except base64:\n");
+    print_flag('a', "decode/encode the input/output in base64");
+    print_flag('k', "key in hex");
+    print_flag('s', "salt in hex");
+    print_flag('v', "initialization vector in hex");
+    print_flag('p', "password");
 }
 
 static void
