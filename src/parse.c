@@ -9,12 +9,12 @@
 #include "globals.h"
 
 static const char* cmd_names[] = {
-    [Command_None] = "none",           [Command_Md5] = "md5",        [Command_Sha256] = "sha256",
-    [Command_Sha224] = "sha224",       [Command_Sha512] = "sha512",  [Command_Sha384] = "sha384",
-    [Command_Whirlpool] = "whirlpool", [Command_Base64] = "base64",  [Command_Des] = "des",
-    [Command_DesEcb] = "des-ecb",      [Command_DesCbc] = "des-cbc", [Command_DesOfb] = "des-ofb",
-    [Command_DesCfb] = "des-cfb",      [Command_Des3] = "des3",      [Command_Des3Ecb] = "des3-ecb",
-    [Command_Des3Cbc] = "des3-cbc"
+    [Command_None] = "none",           [Command_Md5] = "md5",          [Command_Sha256] = "sha256",
+    [Command_Sha224] = "sha224",       [Command_Sha512] = "sha512",    [Command_Sha384] = "sha384",
+    [Command_Whirlpool] = "whirlpool", [Command_Base64] = "base64",    [Command_Des] = "des",
+    [Command_DesEcb] = "des-ecb",      [Command_DesCbc] = "des-cbc",   [Command_DesOfb] = "des-ofb",
+    [Command_DesCfb] = "des-cfb",      [Command_DesPcbc] = "des-pcbc", [Command_Des3] = "des3",
+    [Command_Des3Ecb] = "des3-ecb",    [Command_Des3Cbc] = "des3-cbc"
 };
 
 typedef enum {
@@ -221,6 +221,7 @@ parse_options(Command cmd, void* out_options) {
             case Command_DesCbc:
             case Command_DesOfb:
             case Command_DesCfb:
+            case Command_DesPcbc:
             case Command_Des3:
             case Command_Des3Ecb:
             case Command_Des3Cbc: {

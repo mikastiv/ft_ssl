@@ -302,6 +302,26 @@ des_cfb_process_block_decrypt(void* ptr, Des64 block, Subkeys subkeys, Buffer ou
     ft_memcpy(out, buf(message.block, 8));
 }
 
+static void
+des_pcbc_process_block_encrypt(void* ptr, Des64 block, Subkeys subkeys, Buffer out) {
+    IvCtx* ctx = ptr;
+
+    Des64 ciphertext = { .raw = block.raw ^ ctx->iv.raw };
+    ciphertext = process_block(ciphertext, subkeys);
+    ctx->iv.raw = block.raw ^ ciphertext.raw;
+    ft_memcpy(out, buf(ciphertext.block, 8));
+}
+
+static void
+des_pcbc_process_block_decrypt(void* ptr, Des64 block, Subkeys subkeys, Buffer out) {
+    IvCtx* ctx = ptr;
+
+    Des64 message = process_block(block, subkeys);
+    message.raw ^= ctx->iv.raw;
+    ctx->iv.raw = message.raw ^ block.raw;
+    ft_memcpy(out, buf(message.block, 8));
+}
+
 static Buffer
 des_encrypt(Buffer message, DesKey key, void* ctx, BlockCipherModeFn mode_fn, bool skip_padding) {
     Subkeys subkeys;
@@ -443,6 +463,18 @@ des_cfb_decrypt(Buffer ciphertext, DesKey key, Des64 iv) {
     }
 
     return result;
+}
+
+Buffer
+des_pcbc_encrypt(Buffer message, DesKey key, Des64 iv) {
+    IvCtx ctx = { .iv = iv };
+    return des_encrypt(message, key, &ctx, &des_pcbc_process_block_encrypt, false);
+}
+
+Buffer
+des_pcbc_decrypt(Buffer ciphertext, DesKey key, Des64 iv) {
+    IvCtx ctx = { .iv = iv };
+    return des_decrypt(ciphertext, key, &ctx, &des_pcbc_process_block_decrypt, false);
 }
 
 static void
