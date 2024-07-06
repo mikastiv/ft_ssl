@@ -245,8 +245,8 @@ static void
 des_ecb_process_block(void* ptr, Des64 block, Subkeys subkeys, Buffer out) {
     (void)ptr;
 
-    Des64 ciphertext = process_block(block, subkeys);
-    ft_memcpy(out, buf(ciphertext.block, 8));
+    Des64 pblock = process_block(block, subkeys);
+    ft_memcpy(out, buf(pblock.block, 8));
 }
 
 typedef struct {
@@ -271,6 +271,20 @@ des_cbc_process_block_decrypt(void* ptr, Des64 block, Subkeys subkeys, Buffer ou
     decoded.raw ^= ctx->iv.raw;
     ctx->iv = block;
     ft_memcpy(out, buf(decoded.block, 8));
+}
+
+typedef struct {
+    Des64 iv;
+} OfbCtx;
+
+static void
+des_ofb_process_block(void* ptr, Des64 block, Subkeys subkeys, Buffer out) {
+    OfbCtx* ctx = ptr;
+
+    Des64 pblock = process_block(ctx->iv, subkeys);
+    ctx->iv = pblock;
+    pblock.raw ^= block.raw;
+    ft_memcpy(out, buf(pblock.block, 8));
 }
 
 static Buffer
@@ -308,6 +322,18 @@ des_encrypt(Buffer message, DesKey key, void* ctx, BlockCipherModeFn mode_fn, bo
 }
 
 static Buffer
+remove_padding(Buffer buffer) {
+    u8 padding = buffer.ptr[buffer.len - 1];
+    if (padding > buffer.len) {
+        dprintf(STDERR_FILENO, "%s: invalid ciphertext or key\n", progname);
+        return (Buffer){ 0 };
+    }
+    buffer.len -= padding;
+
+    return buffer;
+}
+
+static Buffer
 des_decrypt(Buffer message, DesKey key, void* ctx, BlockCipherModeFn mode_fn, bool skip_padding) {
     if (message.len % 8 != 0) return (Buffer){ 0 };
 
@@ -332,17 +358,14 @@ des_decrypt(Buffer message, DesKey key, void* ctx, BlockCipherModeFn mode_fn, bo
         mode_fn(ctx, block, subkeys, buf(buffer + i, 8));
     }
 
+    Buffer result = buf(buffer, len);
     if (!skip_padding) {
-        u8 padding = buffer[len - 1];
-        if (padding > len) {
-            dprintf(STDERR_FILENO, "%s: invalid ciphertext or key\n", progname);
-            free(buffer);
-            return (Buffer){ 0 };
-        }
-        len -= padding;
+        Buffer tmp = remove_padding(result);
+        if (!tmp.ptr) free(result.ptr);
+        result = tmp;
     }
 
-    return buf(buffer, len);
+    return result;
 }
 
 Buffer
@@ -367,6 +390,25 @@ Buffer
 des_ecb_decrypt(Buffer ciphertext, DesKey key) {
     EcbCtx ctx;
     return des_decrypt(ciphertext, key, &ctx, &des_ecb_process_block, false);
+}
+
+Buffer
+des_ofb_encrypt(Buffer message, DesKey key, Des64 iv) {
+    OfbCtx ctx = { .iv = iv };
+    return des_encrypt(message, key, &ctx, &des_ofb_process_block, false);
+}
+
+Buffer
+des_ofb_decrypt(Buffer ciphertext, DesKey key, Des64 iv) {
+    OfbCtx ctx = { .iv = iv };
+    Buffer message = des_encrypt(ciphertext, key, &ctx, &des_ofb_process_block, true);
+    Buffer result = remove_padding(message);
+    if (!result.ptr) {
+        free(message.ptr);
+        return (Buffer){ 0 };
+    }
+
+    return result;
 }
 
 static void

@@ -133,6 +133,7 @@ main(int in_argc, const char* const* in_argv) {
         case Command_Des:
         case Command_DesCbc:
         case Command_DesEcb:
+        case Command_DesOfb:
         case Command_Des3:
         case Command_Des3Cbc:
         case Command_Des3Ecb: {
@@ -160,6 +161,7 @@ main(int in_argc, const char* const* in_argv) {
             switch (cmd) {
                 case Command_Des:
                 case Command_DesCbc:
+                case Command_DesOfb:
                 case Command_Des3:
                 case Command_Des3Cbc: {
                     if (!options.hex_iv) {
@@ -179,6 +181,7 @@ main(int in_argc, const char* const* in_argv) {
             switch (cmd) {
                 case Command_Des:
                 case Command_DesCbc:
+                case Command_DesOfb:
                 case Command_DesEcb: {
                     params_len = 8;
                 } break;
@@ -297,6 +300,21 @@ main(int in_argc, const char* const* in_argv) {
                         res = des_cbc_encrypt(input, des_key, des_iv);
                     } else {
                         res = des_cbc_decrypt(input, des_key, des_iv);
+                    }
+                } break;
+                case Command_DesOfb: {
+                    assert(params_len == 8);
+
+                    DesKey des_key;
+                    ft_memcpy(buf(des_key.block, params_len), buf(key, params_len));
+
+                    Des64 des_iv;
+                    ft_memcpy(buf(des_iv.block, params_len), buf(iv, params_len));
+
+                    if (options.encrypt) {
+                        res = des_ofb_encrypt(input, des_key, des_iv);
+                    } else {
+                        res = des_ofb_decrypt(input, des_key, des_iv);
                     }
                 } break;
                 case Command_Des3Ecb: {

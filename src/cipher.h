@@ -30,6 +30,12 @@ Buffer
 des_cbc_decrypt(Buffer ciphertext, DesKey key, Des64 iv);
 
 Buffer
+des_ofb_encrypt(Buffer message, DesKey key, Des64 iv);
+
+Buffer
+des_ofb_decrypt(Buffer ciphertext, DesKey key, Des64 iv);
+
+Buffer
 des3_ecb_encrypt(Buffer message, Des3Key key);
 
 Buffer
