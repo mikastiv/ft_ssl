@@ -293,32 +293,28 @@ from_hex(u8 c) {
     return 0xFF;
 }
 
-u64
-parse_hex_u64_be(Buffer str, u32* err) {
-    u64 len = str.len < 16 ? str.len : 16;
-    u64 result = 0;
+void
+parse_hex(Buffer str, Buffer out, u32* err) {
+    u64 len = str.len < out.len * 2 ? str.len : out.len * 2;
+    ft_memset(out, 0);
 
     for (u64 i = 0; i < len; i += 2) {
-        u64 hi = from_hex(str.ptr[i]);
-        u64 lo = from_hex(i + 1 < len ? str.ptr[i + 1] : '0');
+        u8 hi = from_hex(str.ptr[i]);
+        u8 lo = from_hex(i + 1 < len ? str.ptr[i + 1] : '0');
 
         if (hi == 0xFF || lo == 0xFF) {
             *err = 1;
-            return 0;
+            return;
         }
 
-        u64 byte = (hi << 4) | lo;
-        result |= byte << (i * 4);
+        out.ptr[i / 2] = (hi << 4) | lo;
     }
-
-    return result;
 }
 
 void
-print_hex(u64 value) {
-    for (u64 i = 0; i < 8; i++) {
-        printf("%02X", (u8)value);
-        value >>= 8;
+print_hex(Buffer str) {
+    for (u64 i = 0; i < str.len; i++) {
+        printf("%02X", str.ptr[i]);
     }
     printf("\n");
 }

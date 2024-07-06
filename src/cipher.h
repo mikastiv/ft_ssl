@@ -35,8 +35,5 @@ des3_ecb_encrypt(Buffer message, Des3Key key);
 Buffer
 des3_ecb_decrypt(Buffer cipher, Des3Key key);
 
-DesKey
-des_pbkdf2_generate(Buffer password, Des64 salt);
-
 void
-des3_pbkdf2_generate(Buffer password, Des192 salt, Des3Key out);
+pbkdf2_generate(Buffer password, Buffer salt, Buffer out);

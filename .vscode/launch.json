@@ -11,6 +11,15 @@
             "program": "${workspaceFolder}/ft_ssl",
             "args": [
                 "des",
+                "-a",
+                "-o",
+                "test",
+                "-v",
+                "fed807821",
+                "-s",
+                "123",
+                "-p",
+                "test"
             ],
             "cwd": "${workspaceFolder}"
         }

@@ -4,6 +4,7 @@
 #include "types.h"
 #include "utils.h"
 
+#include <assert.h>
 #include <bsd/readpassphrase.h>
 #include <fcntl.h>
 #include <stdio.h>
@@ -14,18 +15,16 @@ u32 argc;
 const char* const* argv;
 const char* progname = 0;
 
-static u64
-parse_option_hex(const char* s, const char* name, u32* err) {
-    if (!s) return 0;
+static void
+parse_option_hex(const char* s, const char* name, Buffer out, u32* err) {
+    if (!s) return;
 
     *err = 0;
-    u64 value = parse_hex_u64_be(str(s), err);
+    parse_hex(str(s), out, err);
     if (*err) {
         dprintf(STDERR_FILENO, "%s: invalid hex character in %s\n", progname, name);
-        return 0;
+        return;
     }
-
-    return value;
 }
 
 static int
@@ -161,24 +160,49 @@ main(int in_argc, const char* const* in_argv) {
                 goto des_err;
             }
 
-            if (cmd == Command_Des || cmd == Command_DesCbc || cmd == Command_Des3 ||
-                cmd == Command_Des3Cbc) {
-                if (!options.hex_iv) {
-                    dprintf(
-                        STDERR_FILENO,
-                        "%s: initialization vector is required for cbc mode\n",
-                        progname
-                    );
-                    goto des_err;
-                }
+            switch (cmd) {
+                case Command_Des:
+                case Command_DesCbc:
+                case Command_Des3:
+                case Command_Des3Cbc: {
+                    if (!options.hex_iv) {
+                        dprintf(
+                            STDERR_FILENO,
+                            "%s: initialization vector is required for cbc mode\n",
+                            progname
+                        );
+                        goto des_err;
+                    }
+                } break;
+                default:
+                    break;
+            }
+
+            u64 params_len = 0;
+            switch (cmd) {
+                case Command_Des:
+                case Command_DesCbc:
+                case Command_DesEcb: {
+                    params_len = 8;
+                } break;
+                case Command_Des3:
+                case Command_Des3Cbc:
+                case Command_Des3Ecb: {
+                    params_len = 24;
+                } break;
+                default:
+                    break;
             }
 
             u32 err1 = 0;
             u32 err2 = 0;
             u32 err3 = 0;
-            DesKey key = { .raw = parse_option_hex(options.hex_key, "key", &err1) };
-            Des64 salt = { .raw = parse_option_hex(options.hex_salt, "salt", &err2) };
-            Des64 iv = { .raw = parse_option_hex(options.hex_iv, "iv", &err3) };
+            u8 salt[64] = { 0 };
+            u8 key[64] = { 0 };
+            u8 iv[64] = { 0 };
+            parse_option_hex(options.hex_salt, "salt", buffer_create(salt, params_len), &err1);
+            parse_option_hex(options.hex_key, "key", buffer_create(key, params_len), &err2);
+            parse_option_hex(options.hex_iv, "iv", buffer_create(iv, params_len), &err3);
 
             if (err1 || err2 || err3) {
                 goto des_err;
@@ -191,7 +215,7 @@ main(int in_argc, const char* const* in_argv) {
                         goto des_err;
                     }
 
-                    bool success = get_random_bytes(buffer_create(salt.block, sizeof(salt.block)));
+                    bool success = get_random_bytes(buffer_create(salt, params_len));
                     if (!success) {
                         dprintf(STDERR_FILENO, "%s: error generating salt\n", progname);
                         goto des_err;
@@ -216,15 +240,23 @@ main(int in_argc, const char* const* in_argv) {
                         goto des_err;
                     }
 
-                    key = des_pbkdf2_generate(str(pass_ptr), salt);
+                    pbkdf2_generate(
+                        str(pass_ptr),
+                        buffer_create(salt, params_len),
+                        buffer_create(key, params_len)
+                    );
                 } else {
-                    key = des_pbkdf2_generate(str(options.password), salt);
+                    pbkdf2_generate(
+                        str(options.password),
+                        buffer_create(salt, params_len),
+                        buffer_create(key, params_len)
+                    );
                 }
 
                 printf("salt=");
-                print_hex(salt.raw);
+                print_hex(buffer_create(salt, params_len));
                 printf("key=");
-                print_hex(key.raw);
+                print_hex(buffer_create(key, params_len));
             }
 
             Buffer input = read_all_fd(in_fd);
@@ -247,18 +279,40 @@ main(int in_argc, const char* const* in_argv) {
             Buffer res;
             switch (cmd) {
                 case Command_DesEcb: {
+                    assert(params_len == 8);
+
+                    DesKey des_key;
+                    ft_memcpy(
+                        buffer_create(des_key.block, params_len),
+                        buffer_create(key, params_len)
+                    );
+
                     if (options.encrypt) {
-                        res = des_ecb_encrypt(input, key);
+                        res = des_ecb_encrypt(input, des_key);
                     } else {
-                        res = des_ecb_decrypt(input, key);
+                        res = des_ecb_decrypt(input, des_key);
                     }
                 } break;
                 case Command_Des:
                 case Command_DesCbc: {
+                    assert(params_len == 8);
+
+                    DesKey des_key;
+                    ft_memcpy(
+                        buffer_create(des_key.block, params_len),
+                        buffer_create(key, params_len)
+                    );
+
+                    Des64 des_iv;
+                    ft_memcpy(
+                        buffer_create(des_iv.block, params_len),
+                        buffer_create(iv, params_len)
+                    );
+
                     if (options.encrypt) {
-                        res = des_cbc_encrypt(input, key, iv);
+                        res = des_cbc_encrypt(input, des_key, des_iv);
                     } else {
-                        res = des_cbc_decrypt(input, key, iv);
+                        res = des_cbc_decrypt(input, des_key, des_iv);
                     }
                 } break;
                 case Command_Des3Ecb: {

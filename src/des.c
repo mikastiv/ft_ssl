@@ -448,38 +448,24 @@ pbkdf2_hmac_sha256_f(Buffer password, Buffer salt, u64 iter, u32 block_num, Buff
     ft_memcpy(out, hmac_tmp1);
 }
 
-DesKey
-des_pbkdf2_generate(Buffer password, Des64 salt) {
-    // OpenSSL's default iterations is 10000 and SHA256 is the default hasher
-    u8 buffer[SHA256_DIGEST_SIZE];
-    pbkdf2_hmac_sha256_f(
-        password,
-        buffer_create((u8*)&salt, sizeof(salt)),
-        10000,
-        1,
-        buffer_create(buffer, sizeof(buffer))
-    );
-
-    DesKey result;
-    for (u64 i = 0; i < sizeof(result.block); i++) {
-        result.block[i] = buffer[i];
-    }
-
-    return result;
-}
-
 void
-des3_pbkdf2_generate(Buffer password, Des192 salt, Des3Key out) {
-    // only 1 block since out key size < SHA256_DIGEST_SIZE
+pbkdf2_generate(Buffer password, Buffer salt, Buffer out) {
+    // OpenSSL's default iterations is 10000 and SHA256 is the default hasher
 
-    u8 buffer[SHA256_DIGEST_SIZE];
-    pbkdf2_hmac_sha256_f(
-        password,
-        buffer_create(salt, sizeof(Des192)),
-        10000,
-        1,
-        buffer_create(buffer, SHA256_DIGEST_SIZE)
-    );
+    u64 block_count = (out.len + (SHA256_DIGEST_SIZE - 1)) / SHA256_DIGEST_SIZE;
 
-    ft_memcpy(buffer_create(out, sizeof(Des3Key)), buffer_create(buffer, sizeof(Des3Key)));
+    for (u64 i = 0; i < block_count; i++) {
+        u8 buffer[SHA256_DIGEST_SIZE];
+        pbkdf2_hmac_sha256_f(
+            password,
+            salt,
+            10000,
+            i + 1,
+            buffer_create(buffer, SHA256_DIGEST_SIZE)
+        );
+
+        u64 offset = SHA256_DIGEST_SIZE * i;
+        u64 len = out.len - offset;
+        ft_memcpy(buffer_create(out.ptr + offset, len), buffer_create(buffer, len));
+    }
 }

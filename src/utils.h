@@ -80,11 +80,11 @@ print_error(void);
 bool
 is_space(u8 c);
 
-u64
-parse_hex_u64_be(Buffer str, u32* err);
+void
+parse_hex(Buffer str, Buffer out, u32* err);
 
 void
-print_hex(u64 value);
+print_hex(Buffer str);
 
 bool
 get_random_bytes(Buffer buffer);
