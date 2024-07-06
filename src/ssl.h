@@ -56,6 +56,7 @@ typedef enum {
     Command_DesEcb,
     Command_DesCbc,
     Command_DesOfb,
+    Command_DesCfb,
     Command_Des3,
     Command_Des3Ecb,
     Command_Des3Cbc,
