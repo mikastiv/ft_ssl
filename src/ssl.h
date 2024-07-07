@@ -61,6 +61,9 @@ typedef enum {
     Command_Des3,
     Command_Des3Ecb,
     Command_Des3Cbc,
+    Command_Des3Ofb,
+    Command_Des3Cfb,
+    Command_Des3Pcbc,
 } Command;
 
 bool

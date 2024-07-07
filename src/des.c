@@ -49,7 +49,7 @@ const static u8 e[] = {
 
 // Substitution boxes
 const static u8 s[][64] = {
-    // clang-format off
+  // clang-format off
     {
         14, 4,  13, 1, 2,  15, 11, 8, 3, 10, 6, 12, 5,  9,  0,  7,  0,  15, 7,  4,  14, 2,
         13, 1,  10, 6, 12, 11, 9,  5, 3, 8,  4, 1,  14, 8,  13, 6,  2,  11, 15, 12, 9,  7,
@@ -90,7 +90,7 @@ const static u8 s[][64] = {
         7,  4, 12, 5, 6, 11, 0,  14, 9,  2,  7, 11, 4,  1,  9,  12, 14, 2,  0,  6, 10, 13,
         15, 3, 5,  8, 2, 1,  14, 7,  4,  10, 8, 13, 15, 12, 9,  0,  3,  5,  6,  11,
     }
-    // clang-format on
+  // clang-format on
 };
 
 const static u8 shift[] = { 1, 1, 2, 2, 2, 2, 2, 2, 1, 2, 2, 2, 2, 2, 2, 1 };
@@ -252,6 +252,20 @@ typedef struct {
     Subkeys inversed_subkeys3;
 } Des3Ctx;
 
+static Des64
+encrypt_block_des3(Des64 block, Des3Ctx* ctx) {
+    Des64 tmp1 = process_block(block, ctx->subkeys1);
+    Des64 tmp2 = process_block(tmp1, ctx->inversed_subkeys2);
+    return process_block(tmp2, ctx->subkeys3);
+}
+
+static Des64
+decrypt_block_des3(Des64 block, Des3Ctx* ctx) {
+    Des64 tmp1 = process_block(block, ctx->inversed_subkeys3);
+    Des64 tmp2 = process_block(tmp1, ctx->subkeys2);
+    return process_block(tmp2, ctx->inversed_subkeys1);
+}
+
 static void
 inverse_subkeys(Subkeys subkeys) {
     Subkeys t;
@@ -400,9 +414,7 @@ static void
 des3_ecb_process_block_encrypt(void* ptr, Des64 block, Buffer out) {
     Des3Ctx* ctx = ptr;
 
-    Des64 tmp1 = process_block(block, ctx->subkeys1);
-    Des64 tmp2 = process_block(tmp1, ctx->inversed_subkeys2);
-    Des64 ciphertext = process_block(tmp2, ctx->subkeys3);
+    Des64 ciphertext = encrypt_block_des3(block, ctx);
     ft_memcpy(out, buf(ciphertext.block, DES_BLOCK_SIZE));
 }
 
@@ -410,9 +422,7 @@ static void
 des3_ecb_process_block_decrypt(void* ptr, Des64 block, Buffer out) {
     Des3Ctx* ctx = ptr;
 
-    Des64 tmp1 = process_block(block, ctx->inversed_subkeys3);
-    Des64 tmp2 = process_block(tmp1, ctx->subkeys2);
-    Des64 message = process_block(tmp2, ctx->inversed_subkeys1);
+    Des64 message = decrypt_block_des3(block, ctx);
     ft_memcpy(out, buf(message.block, DES_BLOCK_SIZE));
 }
 
@@ -421,9 +431,7 @@ des3_cbc_process_block_encrypt(void* ptr, Des64 block, Buffer out) {
     Des3Ctx* ctx = ptr;
 
     block.raw ^= ctx->iv.raw;
-    Des64 tmp1 = process_block(block, ctx->subkeys1);
-    Des64 tmp2 = process_block(tmp1, ctx->inversed_subkeys2);
-    Des64 ciphertext = process_block(tmp2, ctx->subkeys3);
+    Des64 ciphertext = encrypt_block_des3(block, ctx);
     ctx->iv = ciphertext;
     ft_memcpy(out, buf(ciphertext.block, DES_BLOCK_SIZE));
 }
@@ -432,11 +440,59 @@ static void
 des3_cbc_process_block_decrypt(void* ptr, Des64 block, Buffer out) {
     Des3Ctx* ctx = ptr;
 
-    Des64 tmp1 = process_block(block, ctx->inversed_subkeys3);
-    Des64 tmp2 = process_block(tmp1, ctx->subkeys2);
-    Des64 message = process_block(tmp2, ctx->inversed_subkeys1);
+    Des64 message = decrypt_block_des3(block, ctx);
     message.raw ^= ctx->iv.raw;
     ctx->iv = block;
+    ft_memcpy(out, buf(message.block, DES_BLOCK_SIZE));
+}
+
+static void
+des3_ofb_process_block(void* ptr, Des64 block, Buffer out) {
+    Des3Ctx* ctx = ptr;
+
+    Des64 pblock = encrypt_block_des3(ctx->iv, ctx);
+    ctx->iv = pblock;
+    pblock.raw ^= block.raw;
+    ft_memcpy(out, buf(pblock.block, DES_BLOCK_SIZE));
+}
+
+static void
+des3_cfb_process_block_encrypt(void* ptr, Des64 block, Buffer out) {
+    Des3Ctx* ctx = ptr;
+
+    Des64 ciphertext = encrypt_block_des3(ctx->iv, ctx);
+    ciphertext.raw ^= block.raw;
+    ctx->iv = ciphertext;
+    ft_memcpy(out, buf(ciphertext.block, DES_BLOCK_SIZE));
+}
+
+static void
+des3_cfb_process_block_decrypt(void* ptr, Des64 block, Buffer out) {
+    Des3Ctx* ctx = ptr;
+
+    Des64 message = encrypt_block_des3(ctx->iv, ctx);
+    message.raw ^= block.raw;
+    ctx->iv = block;
+    ft_memcpy(out, buf(message.block, DES_BLOCK_SIZE));
+}
+
+static void
+des3_pcbc_process_block_encrypt(void* ptr, Des64 block, Buffer out) {
+    Des3Ctx* ctx = ptr;
+
+    Des64 ciphertext = { .raw = block.raw ^ ctx->iv.raw };
+    ciphertext = encrypt_block_des3(ciphertext, ctx);
+    ctx->iv.raw = block.raw ^ ciphertext.raw;
+    ft_memcpy(out, buf(ciphertext.block, DES_BLOCK_SIZE));
+}
+
+static void
+des3_pcbc_process_block_decrypt(void* ptr, Des64 block, Buffer out) {
+    Des3Ctx* ctx = ptr;
+
+    Des64 message = decrypt_block_des3(block, ctx);
+    message.raw ^= ctx->iv.raw;
+    ctx->iv.raw = message.raw ^ block.raw;
     ft_memcpy(out, buf(message.block, DES_BLOCK_SIZE));
 }
 
@@ -621,4 +677,60 @@ des3_cbc_decrypt(Buffer cipher, Des3Key key, Des64 iv) {
     des3_init_ctx(&ctx, key, iv);
 
     return des_decrypt(cipher, &ctx, &des3_cbc_process_block_decrypt);
+}
+
+Buffer
+des3_ofb_encrypt(Buffer message, Des3Key key, Des64 iv) {
+    Des3Ctx ctx;
+    des3_init_ctx(&ctx, key, iv);
+    return des_encrypt(message, &ctx, &des3_ofb_process_block, false);
+}
+
+Buffer
+des3_ofb_decrypt(Buffer ciphertext, Des3Key key, Des64 iv) {
+    Des3Ctx ctx;
+    des3_init_ctx(&ctx, key, iv);
+    Buffer message = des_encrypt(ciphertext, &ctx, &des3_ofb_process_block, true);
+    Buffer result = remove_padding(message);
+    if (!result.ptr) {
+        free(message.ptr);
+        return (Buffer){ 0 };
+    }
+
+    return result;
+}
+
+Buffer
+des3_cfb_encrypt(Buffer message, Des3Key key, Des64 iv) {
+    Des3Ctx ctx;
+    des3_init_ctx(&ctx, key, iv);
+    return des_encrypt(message, &ctx, &des3_cfb_process_block_encrypt, false);
+}
+
+Buffer
+des3_cfb_decrypt(Buffer ciphertext, Des3Key key, Des64 iv) {
+    Des3Ctx ctx;
+    des3_init_ctx(&ctx, key, iv);
+    Buffer message = des_encrypt(ciphertext, &ctx, &des3_cfb_process_block_decrypt, true);
+    Buffer result = remove_padding(message);
+    if (!result.ptr) {
+        free(message.ptr);
+        return (Buffer){ 0 };
+    }
+
+    return result;
+}
+
+Buffer
+des3_pcbc_encrypt(Buffer message, Des3Key key, Des64 iv) {
+    Des3Ctx ctx;
+    des3_init_ctx(&ctx, key, iv);
+    return des_encrypt(message, &ctx, &des3_pcbc_process_block_decrypt, false);
+}
+
+Buffer
+des3_pcbc_decrypt(Buffer ciphertext, Des3Key key, Des64 iv) {
+    Des3Ctx ctx;
+    des3_init_ctx(&ctx, key, iv);
+    return des_decrypt(ciphertext, &ctx, &des3_pcbc_process_block_encrypt);
 }

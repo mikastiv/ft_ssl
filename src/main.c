@@ -113,6 +113,24 @@ fetch_des3_func(bool encrypt, Command cmd) {
             else
                 result = &des3_cbc_decrypt;
         } break;
+        case Command_Des3Ofb: {
+            if (encrypt)
+                result = &des3_ofb_encrypt;
+            else
+                result = &des3_ofb_decrypt;
+        } break;
+        case Command_Des3Cfb: {
+            if (encrypt)
+                result = &des3_cfb_encrypt;
+            else
+                result = &des3_cfb_decrypt;
+        } break;
+        case Command_Des3Pcbc: {
+            if (encrypt)
+                result = &des3_pcbc_encrypt;
+            else
+                result = &des3_pcbc_decrypt;
+        } break;
         default:
             assert(false && "unreachable code");
             break;
@@ -140,6 +158,9 @@ get_params_length(Command cmd) {
         } break;
         case Command_Des3:
         case Command_Des3Cbc:
+        case Command_Des3Ofb:
+        case Command_Des3Cfb:
+        case Command_Des3Pcbc:
         case Command_Des3Ecb: {
             params_len = DES_BLOCK_SIZE * 3;
         } break;
@@ -258,6 +279,9 @@ main(int in_argc, const char* const* in_argv) {
         case Command_DesPcbc:
         case Command_Des3:
         case Command_Des3Cbc:
+        case Command_Des3Ofb:
+        case Command_Des3Cfb:
+        case Command_Des3Pcbc:
         case Command_Des3Ecb: {
             DesOptions options = { 0 };
             first_input = parse_options(cmd, &options);
@@ -374,6 +398,9 @@ main(int in_argc, const char* const* in_argv) {
                 } break;
                 case Command_Des3:
                 case Command_Des3Cbc:
+                case Command_Des3Ofb:
+                case Command_Des3Cfb:
+                case Command_Des3Pcbc:
                 case Command_Des3Ecb: {
                     assert(params_len == DES_BLOCK_SIZE * 3);
 
