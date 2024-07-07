@@ -96,6 +96,31 @@ fetch_des_func(bool encrypt, Command cmd) {
     return result;
 }
 
+static Des3Func
+fetch_des3_func(bool encrypt, Command cmd) {
+    Des3Func result = 0;
+    switch (cmd) {
+        case Command_Des3Ecb: {
+            if (encrypt)
+                result = &des3_ecb_encrypt;
+            else
+                result = &des3_ecb_decrypt;
+        } break;
+        case Command_Des3:
+        case Command_Des3Cbc: {
+            if (encrypt)
+                result = &des3_cbc_encrypt;
+            else
+                result = &des3_cbc_decrypt;
+        } break;
+        default:
+            assert(false && "unreachable code");
+            break;
+    }
+
+    return result;
+}
+
 static bool
 des_requires_iv(Command cmd) {
     return cmd != Command_DesEcb && cmd != Command_Des3Ecb;
@@ -271,10 +296,10 @@ main(int in_argc, const char* const* in_argv) {
             u32 err3 = 0;
             u8 salt[64] = { 0 };
             u8 key[64] = { 0 };
-            u8 iv[64] = { 0 };
+            u8 iv[DES_BLOCK_SIZE] = { 0 };
             parse_option_hex(options.hex_salt, "salt", buf(salt, params_len), &err1);
             parse_option_hex(options.hex_key, "key", buf(key, params_len), &err2);
-            parse_option_hex(options.hex_iv, "iv", buf(iv, params_len), &err3);
+            parse_option_hex(options.hex_iv, "iv", buf(iv, DES_BLOCK_SIZE), &err3);
 
             if (err1 || err2 || err3) {
                 goto des_err;
@@ -342,26 +367,24 @@ main(int in_argc, const char* const* in_argv) {
                     ft_memcpy(buf(des_key.block, params_len), buf(key, params_len));
 
                     Des64 des_iv;
-                    ft_memcpy(buf(des_iv.block, params_len), buf(iv, params_len));
+                    ft_memcpy(buf(des_iv.block, DES_BLOCK_SIZE), buf(iv, DES_BLOCK_SIZE));
 
                     DesFunc func = fetch_des_func(options.encrypt, cmd);
                     res = func(input, des_key, des_iv);
                 } break;
+                case Command_Des3:
+                case Command_Des3Cbc:
                 case Command_Des3Ecb: {
                     assert(params_len == DES_BLOCK_SIZE * 3);
 
                     Des3Key des_key;
                     ft_memcpy(buf(des_key, params_len), buf(key, params_len));
 
-                    if (options.encrypt) {
-                        res = des3_ecb_encrypt(input, des_key);
-                    } else {
-                        res = des3_ecb_decrypt(input, des_key);
-                    }
-                } break;
-                case Command_Des3:
-                case Command_Des3Cbc: {
-                    assert(params_len == DES_BLOCK_SIZE * 3);
+                    Des64 des_iv;
+                    ft_memcpy(buf(des_iv.block, DES_BLOCK_SIZE), buf(iv, DES_BLOCK_SIZE));
+
+                    Des3Func func = fetch_des3_func(options.encrypt, cmd);
+                    res = func(input, des_key, des_iv);
                 } break;
                 default: {
                     dprintf(STDERR_FILENO, "unreachable code\n");

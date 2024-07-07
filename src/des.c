@@ -364,6 +364,18 @@ remove_padding(Buffer buffer) {
     return buffer;
 }
 
+static void
+inverse_subkeys(Subkeys subkeys) {
+    Subkeys t;
+    (void)t;
+
+    for (u64 i = 0; i < array_len(t) / 2; i++) {
+        Subkey tmp = subkeys[i];
+        subkeys[i] = subkeys[array_len(t) - i - 1];
+        subkeys[array_len(t) - i - 1] = tmp;
+    }
+}
+
 static Buffer
 des_decrypt(Buffer message, DesKey key, void* ctx, BlockCipherModeFn mode_fn, bool skip_padding) {
     if (message.len % DES_BLOCK_SIZE != 0) return (Buffer){ 0 };
@@ -371,11 +383,7 @@ des_decrypt(Buffer message, DesKey key, void* ctx, BlockCipherModeFn mode_fn, bo
     Subkeys subkeys;
     generate_subkeys(key, subkeys);
 
-    for (u64 i = 0; i < array_len(subkeys) / 2; i++) {
-        Subkey tmp = subkeys[i];
-        subkeys[i] = subkeys[array_len(subkeys) - i - 1];
-        subkeys[array_len(subkeys) - i - 1] = tmp;
-    }
+    inverse_subkeys(subkeys);
 
     u64 len = message.len;
     u8* buffer = malloc(len);
@@ -487,7 +495,9 @@ des3_get_keys(Des3Key key, DesKey* key1, DesKey* key2, DesKey* key3) {
 }
 
 Buffer
-des3_ecb_encrypt(Buffer message, Des3Key key) {
+des3_ecb_encrypt(Buffer message, Des3Key key, Des64 iv) {
+    (void)iv;
+
     DesKey key1, key2, key3;
     des3_get_keys(key, &key1, &key2, &key3);
 
@@ -503,7 +513,43 @@ des3_ecb_encrypt(Buffer message, Des3Key key) {
 }
 
 Buffer
-des3_ecb_decrypt(Buffer cipher, Des3Key key) {
+des3_ecb_decrypt(Buffer cipher, Des3Key key, Des64 iv) {
+    (void)iv;
+
+    DesKey key1, key2, key3;
+    des3_get_keys(key, &key1, &key2, &key3);
+
+    IvCtx ctx;
+    Buffer tmp1 = des_decrypt(cipher, key3, &ctx, &des_ecb_process_block, true);
+    Buffer tmp2 = des_encrypt(tmp1, key2, &ctx, &des_ecb_process_block, true);
+    Buffer message = des_decrypt(tmp2, key1, &ctx, &des_ecb_process_block, false);
+
+    free(tmp1.ptr);
+    free(tmp2.ptr);
+
+    return message;
+}
+
+Buffer
+des3_cbc_encrypt(Buffer message, Des3Key key, Des64 iv) {
+    DesKey key1, key2, key3;
+    des3_get_keys(key, &key1, &key2, &key3);
+
+    IvCtx ctx = { .iv = iv };
+    Buffer tmp1 = des_encrypt(message, key1, &ctx, &des_ecb_process_block, false);
+    Buffer tmp2 = des_decrypt(tmp1, key2, &ctx, &des_ecb_process_block, true);
+    Buffer cipher = des_encrypt(tmp2, key3, &ctx, &des_ecb_process_block, true);
+
+    free(tmp1.ptr);
+    free(tmp2.ptr);
+
+    return cipher;
+}
+
+Buffer
+des3_cbc_decrypt(Buffer cipher, Des3Key key, Des64 iv) {
+    (void)iv;
+
     DesKey key1, key2, key3;
     des3_get_keys(key, &key1, &key2, &key3);
 

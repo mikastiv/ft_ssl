@@ -20,6 +20,7 @@ Buffer
 base64_decode(Buffer input);
 
 typedef Buffer(*DesFunc)(Buffer, DesKey, Des64);
+typedef Buffer(*Des3Func)(Buffer, Des3Key, Des64);
 
 Buffer
 des_ecb_encrypt(Buffer message, DesKey key, Des64 iv);
@@ -52,10 +53,16 @@ Buffer
 des_pcbc_decrypt(Buffer ciphertext, DesKey key, Des64 iv);
 
 Buffer
-des3_ecb_encrypt(Buffer message, Des3Key key);
+des3_ecb_encrypt(Buffer message, Des3Key key, Des64 iv);
 
 Buffer
-des3_ecb_decrypt(Buffer ciphertext, Des3Key key);
+des3_ecb_decrypt(Buffer ciphertext, Des3Key key, Des64 iv);
+
+Buffer
+des3_cbc_encrypt(Buffer message, Des3Key key, Des64 iv);
+
+Buffer
+des3_cbc_decrypt(Buffer ciphertext, Des3Key key, Des64 iv);
 
 void
 pbkdf2_generate(Buffer password, Buffer salt, Buffer out);
