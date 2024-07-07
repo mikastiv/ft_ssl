@@ -13,6 +13,8 @@ typedef Des64 DesKey;
 typedef u8 Des192[192];
 typedef Des192 Des3Key;
 
+#define DES_KEY_SIZE 8
+
 Buffer
 base64_encode(Buffer input);
 
