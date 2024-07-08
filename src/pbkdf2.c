@@ -1,6 +1,9 @@
+#include "cipher.h"
 #include "digest.h"
 #include "types.h"
 #include "utils.h"
+
+#include <assert.h>
 
 static void
 hmac_sha256(Buffer password, Buffer data, Buffer out) {
@@ -34,23 +37,25 @@ hmac_sha256(Buffer password, Buffer data, Buffer out) {
 
 static void
 pbkdf2_hmac_sha256_f(Buffer password, Buffer salt, u64 iter, u32 block_num, Buffer out) {
-    u8 salt_block[64];
+    assert(salt.len >= PBKDF2_SALT_SIZE);
+    // salt is 8 bytes
+    u8 salt_block[PBKDF2_SALT_SIZE + sizeof(block_num)];
 
-    for (u64 i = 0; i < salt.len; i++) {
+    for (u64 i = 0; i < PBKDF2_SALT_SIZE; i++) {
         salt_block[i] = salt.ptr[i];
     }
 
-    salt_block[salt.len + 0] = (u8)(block_num >> 24);
-    salt_block[salt.len + 1] = (u8)(block_num >> 16);
-    salt_block[salt.len + 2] = (u8)(block_num >> 8);
-    salt_block[salt.len + 3] = (u8)block_num;
+    salt_block[PBKDF2_SALT_SIZE + 0] = (u8)(block_num >> 24);
+    salt_block[PBKDF2_SALT_SIZE + 1] = (u8)(block_num >> 16);
+    salt_block[PBKDF2_SALT_SIZE + 2] = (u8)(block_num >> 8);
+    salt_block[PBKDF2_SALT_SIZE + 3] = (u8)block_num;
 
     u8 buffer1[SHA256_DIGEST_SIZE];
     u8 buffer2[SHA256_DIGEST_SIZE];
     Buffer hmac_tmp1 = buf(buffer1, SHA256_DIGEST_SIZE);
     Buffer hmac_tmp2 = buf(buffer2, SHA256_DIGEST_SIZE);
 
-    hmac_sha256(password, buf(salt_block, salt.len + 4), hmac_tmp1);
+    hmac_sha256(password, buf(salt_block, PBKDF2_SALT_SIZE  + sizeof(block_num)), hmac_tmp1);
     ft_memcpy(hmac_tmp2, hmac_tmp1);
 
     for (u64 i = 1; i < iter; i++) {

@@ -16,6 +16,8 @@ typedef Des64 DesKey;
 typedef u8 Des192[192];
 
 #define DES_KEY_SIZE 8
+#define PBKDF2_SALT_SIZE 8
+#define PBKDF2_MAX_KEY_SIZE 512
 
 Buffer
 base64_encode(Buffer input);

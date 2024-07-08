@@ -101,8 +101,8 @@ des_requires_iv(Command cmd) {
 }
 
 static u64
-get_params_length(Command cmd) {
-    u64 params_len = 0;
+get_key_length(Command cmd) {
+    u64 key_len = 0;
     switch (cmd) {
         case Command_Des:
         case Command_DesCbc:
@@ -110,7 +110,7 @@ get_params_length(Command cmd) {
         case Command_DesCfb:
         case Command_DesPcbc:
         case Command_DesEcb: {
-            params_len = DES_BLOCK_SIZE;
+            key_len = DES_BLOCK_SIZE;
         } break;
         case Command_Des3:
         case Command_Des3Cbc:
@@ -118,13 +118,13 @@ get_params_length(Command cmd) {
         case Command_Des3Cfb:
         case Command_Des3Pcbc:
         case Command_Des3Ecb: {
-            params_len = DES_BLOCK_SIZE * 3;
+            key_len = DES_BLOCK_SIZE * 3;
         } break;
         default:
             break;
     }
 
-    return params_len;
+    return key_len;
 }
 
 bool
@@ -148,15 +148,15 @@ cipher(Command cmd, DesOptions* options) {
         goto des_err;
     }
 
-    u64 params_len = get_params_length(cmd);
+    u64 params_len = get_key_length(cmd);
 
     u32 err1 = 0;
     u32 err2 = 0;
     u32 err3 = 0;
-    u8 salt[64] = { 0 };
-    u8 key[64] = { 0 };
+    u8 salt[PBKDF2_SALT_SIZE] = { 0 };
+    u8 key[PBKDF2_MAX_KEY_SIZE] = { 0 };
     u8 iv[DES_BLOCK_SIZE] = { 0 };
-    parse_option_hex(options->hex_salt, "salt", buf(salt, params_len), &err1);
+    parse_option_hex(options->hex_salt, "salt", buf(salt, PBKDF2_SALT_SIZE), &err1);
     parse_option_hex(options->hex_key, "key", buf(key, params_len), &err2);
     parse_option_hex(options->hex_iv, "iv", buf(iv, DES_BLOCK_SIZE), &err3);
 
@@ -190,7 +190,7 @@ cipher(Command cmd, DesOptions* options) {
         pbkdf2_generate(str(options->password), buf(salt, params_len), buf(key, params_len));
 
         printf("salt=");
-        print_hex(buf(salt, params_len));
+        print_hex(buf(salt, PBKDF2_SALT_SIZE));
         printf("key=");
         print_hex(buf(key, params_len));
     }
@@ -212,7 +212,7 @@ cipher(Command cmd, DesOptions* options) {
         input = tmp;
     }
 
-    assert(params_len == get_params_length(cmd));
+    assert(params_len == get_key_length(cmd));
 
     Des64 des_iv;
     ft_memcpy(buf(des_iv.block, DES_BLOCK_SIZE), buf(iv, DES_BLOCK_SIZE));
