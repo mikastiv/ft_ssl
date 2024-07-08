@@ -2,6 +2,7 @@
 #include "parse.h"
 #include "ssl.h"
 #include "types.h"
+#include "utils.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -18,14 +19,16 @@ main(int in_argc, const char* const* in_argv) {
 
     if (argc > 0) progname = argv[0];
     if (argc < 2) {
-        usage();
+        usage(0);
         return EXIT_FAILURE;
     }
 
     Command cmd = parse_command(argv[1]);
     if (cmd == Command_None) {
-        dprintf(STDERR_FILENO, "%s: unknown command: '%s'\n", progname, argv[1]);
-        print_help();
+        if (ft_strcmp(argv[1], "-h") != 0) {
+            dprintf(STDERR_FILENO, "%s: unknown command: '%s'\n", progname, argv[1]);
+        }
+        print_help(cmd);
         return EXIT_FAILURE;
     }
 

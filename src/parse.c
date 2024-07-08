@@ -53,8 +53,8 @@ parse_command(const char* str) {
 }
 
 void
-usage(void) {
-    dprintf(STDERR_FILENO, "usage: %s command [flags] [file/string]\n", progname);
+usage(const char* command) {
+    dprintf(STDERR_FILENO, "usage: %s %s [flags] [file/string]\n", progname, command ? command : "command");
 }
 
 static void
@@ -63,39 +63,75 @@ print_flag(char f, const char* desc) {
 }
 
 void
-print_help(void) {
-    usage();
-    dprintf(STDERR_FILENO, "\nGeneral flags:\n");
-    print_flag('h', "print help");
+print_help(Command cmd) {
 
-    dprintf(STDERR_FILENO, "\nStandard commands:\n");
+    switch (cmd) {
+        case Command_None:
+            usage(0);
+            dprintf(STDERR_FILENO, "\nGeneral flags:\n");
+            print_flag('h', "print help");
 
-    dprintf(STDERR_FILENO, "\nMessage Digest commands:\n");
-    for (u64 i = Command_None + 1; i <= Command_LastDigest; i++) {
-        dprintf(STDERR_FILENO, "    %s\n", cmd_names[i]);
+            dprintf(STDERR_FILENO, "\nStandard commands:\n");
+
+            dprintf(STDERR_FILENO, "\nMessage Digest commands:\n");
+            for (u64 i = Command_None + 1; i <= Command_LastDigest; i++) {
+                dprintf(STDERR_FILENO, "    %s\n", cmd_names[i]);
+            }
+            dprintf(STDERR_FILENO, "\nCipher commands:\n");
+            for (u64 i = Command_LastDigest + 1; i < array_len(cmd_names); i++) {
+                dprintf(STDERR_FILENO, "    %s\n", cmd_names[i]);
+            }
+            break;
+        case Command_Md5:
+        case Command_Sha256:
+        case Command_Sha224:
+        case Command_Sha512:
+        case Command_Sha384:
+        case Command_Whirlpool:
+            usage(cmd_names[cmd]);
+
+            dprintf(STDERR_FILENO, "\nFlags:\n");
+            print_flag('h', "print help");
+            print_flag('p', "echo STDIN to STDOUT and append the checksum to STDOUT");
+            print_flag('q', "quiet mode");
+            print_flag('r', "reverse the format of the output");
+            print_flag('s', "print the sum of the given string");
+            break;
+        case Command_Base64:
+            usage(cmd_names[cmd]);
+
+            dprintf(STDERR_FILENO, "\nFlags:\n");
+            print_flag('d', "decode mode");
+            print_flag('e', "encode mode (default)");
+            print_flag('i', "input file for message");
+            print_flag('o', "output file for message");
+            break;
+        case Command_Des:
+        case Command_DesEcb:
+        case Command_DesCbc:
+        case Command_DesOfb:
+        case Command_DesCfb:
+        case Command_DesPcbc:
+        case Command_Des3:
+        case Command_Des3Ecb:
+        case Command_Des3Cbc:
+        case Command_Des3Ofb:
+        case Command_Des3Cfb:
+        case Command_Des3Pcbc:
+            usage(cmd_names[cmd]);
+
+            dprintf(STDERR_FILENO, "\nFlags:\n");
+            print_flag('d', "decrypt mode");
+            print_flag('e', "encrypt mode (default)");
+            print_flag('i', "input file for message");
+            print_flag('o', "output file for message");
+            print_flag('a', "decode/encode the input/output in base64");
+            print_flag('k', "key in hex");
+            print_flag('s', "salt in hex");
+            print_flag('v', "initialization vector in hex");
+            print_flag('p', "password");
+            break;
     }
-    dprintf(STDERR_FILENO, "\nMessage Digest flags:\n");
-    print_flag('p', "echo STDIN to STDOUT and append the checksum to STDOUT");
-    print_flag('q', "quiet mode");
-    print_flag('r', "reverse the format of the output");
-    print_flag('s', "print the sum of the given string");
-
-    dprintf(STDERR_FILENO, "\nCipher commands:\n");
-    for (u64 i = Command_LastDigest + 1; i < array_len(cmd_names); i++) {
-        dprintf(STDERR_FILENO, "    %s\n", cmd_names[i]);
-    }
-    dprintf(STDERR_FILENO, "\nCipher flags:\n");
-    dprintf(STDERR_FILENO, "  All mode:\n");
-    print_flag('d', "decrypt/decode mode");
-    print_flag('e', "encrypt/encode mode (default)");
-    print_flag('i', "input file for message");
-    print_flag('o', "output file for message");
-    dprintf(STDERR_FILENO, "  All modes except base64:\n");
-    print_flag('a', "decode/encode the input/output in base64");
-    print_flag('k', "key in hex");
-    print_flag('s', "salt in hex");
-    print_flag('v', "initialization vector in hex");
-    print_flag('p', "password");
 }
 
 static void
@@ -152,7 +188,7 @@ parse_options(Command cmd, void* out_options) {
 
         const char flag = argv[i][1];
         if (flag == 'h') {
-            print_help();
+            print_help(cmd);
             exit(EXIT_FAILURE);
         }
 
