@@ -2,11 +2,7 @@
 #include "parse.h"
 #include "ssl.h"
 #include "types.h"
-#include "utils.h"
 
-#include <assert.h>
-#include <bsd/readpassphrase.h>
-#include <fcntl.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
