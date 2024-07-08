@@ -11,13 +11,20 @@ SRC = $(addprefix $(SRCDIR)/, $(CFILES))
 INC = $(addprefix $(SRCDIR)/, $(HFILES))
 OBJ = $(addprefix $(OBJDIR)/, $(CFILES:.c=.o))
 
+OS := $(shell uname)
+ifeq ($(OS), Darwin)
+LIB =
+else
+LIB = -lbsd
+endif
+
 $(OBJDIR)/%.o: $(SRCDIR)/%.c
 	$(CC) $(CFLAGS) -I$(SRCDIR) -c $< -o $@
 
 all: $(NAME)
 
 $(NAME): $(OBJDIR) $(OBJ)
-	$(CC) $(OBJ) -lbsd -o $(NAME)
+	$(CC) $(OBJ) $(LIB) -o $(NAME)
 
 $(OBJDIR):
 	mkdir -p $(OBJDIR)

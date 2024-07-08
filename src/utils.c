@@ -2,7 +2,11 @@
 #include "globals.h"
 
 #include <assert.h>
+#ifdef __APPLE__
+#include <readpassphrase.h>
+#elif 
 #include <bsd/readpassphrase.h>
+#endif
 #include <errno.h>
 #include <fcntl.h>
 #include <stdio.h>
