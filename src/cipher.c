@@ -131,7 +131,7 @@ bool
 cipher(Command cmd, DesOptions* options) {
     if (options->decrypt && options->encrypt) {
         dprintf(STDERR_FILENO, "%s: cannot encrypt and decrypt at the same time\n", progname);
-        exit(EXIT_FAILURE);
+        return false;
     }
     if (!options->decrypt && !options->encrypt) options->encrypt = true;
 
@@ -239,10 +239,10 @@ cipher(Command cmd, DesOptions* options) {
     if (options->output_file && out_fd != -1) close(out_fd);
     if (options->input_file && in_fd != -1) close(in_fd);
     free(res.ptr);
-    return EXIT_SUCCESS;
+    return true;
 
 des_err:
     if (options->output_file && out_fd != -1) close(out_fd);
     if (options->input_file && in_fd != -1) close(in_fd);
-    return EXIT_FAILURE;
+    return false;
 }

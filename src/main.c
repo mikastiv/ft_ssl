@@ -66,7 +66,7 @@ main(int in_argc, const char* const* in_argv) {
             first_input = parse_options(cmd, &options);
 
             bool success = cipher(cmd, &options);
-            if (!success) return false;
+            if (!success) return EXIT_FAILURE;
         } break;
         case Command_None: {
             dprintf(STDERR_FILENO, "Unreachable\n");

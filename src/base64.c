@@ -116,7 +116,7 @@ bool
 base64(Base64Options* options) {
     if (options->decode && options->encode) {
         dprintf(STDERR_FILENO, "%s: cannot encode and decode at the same time\n", progname);
-        exit(EXIT_FAILURE);
+        return false;
     }
     if (!options->decode && !options->encode) options->encode = true;
 
@@ -151,10 +151,10 @@ base64(Base64Options* options) {
     if (options->output_file && out_fd != -1) close(out_fd);
     if (options->input_file && in_fd != -1) close(in_fd);
     free(res.ptr);
-    return EXIT_SUCCESS;
+    return true;
 
 base64_err:
     if (options->output_file && out_fd != -1) close(out_fd);
     if (options->input_file && in_fd != -1) close(in_fd);
-    return EXIT_FAILURE;
+    return false;
 }
