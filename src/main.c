@@ -32,7 +32,6 @@ main(int in_argc, const char* const* in_argv) {
         return EXIT_FAILURE;
     }
 
-    u32 first_input = 2;
     switch (cmd) {
         case Command_Md5:
         case Command_Sha256:
@@ -41,14 +40,14 @@ main(int in_argc, const char* const* in_argv) {
         case Command_Sha384:
         case Command_Whirlpool: {
             DigestOptions options = { 0 };
-            first_input = parse_options(cmd, &options);
+            u32 first_input = parse_options(cmd, &options);
 
             bool success = digest(first_input, cmd, options);
             if (!success) return EXIT_FAILURE;
         } break;
         case Command_Base64: {
             Base64Options options = { 0 };
-            first_input = parse_options(cmd, &options);
+            parse_options(cmd, &options);
 
             bool success = base64(&options);
             if (!success) return EXIT_FAILURE;
@@ -66,7 +65,7 @@ main(int in_argc, const char* const* in_argv) {
         case Command_Des3Pcbc:
         case Command_Des3Ecb: {
             DesOptions options = { 0 };
-            first_input = parse_options(cmd, &options);
+            parse_options(cmd, &options);
 
             bool success = cipher(cmd, &options);
             if (!success) return EXIT_FAILURE;
