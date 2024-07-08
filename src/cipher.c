@@ -56,18 +56,6 @@ fetch_des_func(bool encrypt, Command cmd) {
             else
                 result = &des_pcbc_decrypt;
         } break;
-        default:
-            assert(false && "unreachable code");
-            break;
-    }
-
-    return result;
-}
-
-static Des3Func
-fetch_des3_func(bool encrypt, Command cmd) {
-    Des3Func result = 0;
-    switch (cmd) {
         case Command_Des3Ecb: {
             if (encrypt)
                 result = &des3_ecb_encrypt;
@@ -224,47 +212,13 @@ cipher(Command cmd, DesOptions* options) {
         input = tmp;
     }
 
-    Buffer res;
-    switch (cmd) {
-        case Command_Des:
-        case Command_DesEcb:
-        case Command_DesOfb:
-        case Command_DesCfb:
-        case Command_DesPcbc:
-        case Command_DesCbc: {
-            assert(params_len == DES_BLOCK_SIZE);
+    assert(params_len == get_params_length(cmd));
 
-            DesKey des_key;
-            ft_memcpy(buf(des_key.block, params_len), buf(key, params_len));
+    Des64 des_iv;
+    ft_memcpy(buf(des_iv.block, DES_BLOCK_SIZE), buf(iv, DES_BLOCK_SIZE));
 
-            Des64 des_iv;
-            ft_memcpy(buf(des_iv.block, DES_BLOCK_SIZE), buf(iv, DES_BLOCK_SIZE));
-
-            DesFunc func = fetch_des_func(options->encrypt, cmd);
-            res = func(input, des_key, des_iv);
-        } break;
-        case Command_Des3:
-        case Command_Des3Cbc:
-        case Command_Des3Ofb:
-        case Command_Des3Cfb:
-        case Command_Des3Pcbc:
-        case Command_Des3Ecb: {
-            assert(params_len == DES_BLOCK_SIZE * 3);
-
-            Des3Key des_key;
-            ft_memcpy(buf(des_key, params_len), buf(key, params_len));
-
-            Des64 des_iv;
-            ft_memcpy(buf(des_iv.block, DES_BLOCK_SIZE), buf(iv, DES_BLOCK_SIZE));
-
-            Des3Func func = fetch_des3_func(options->encrypt, cmd);
-            res = func(input, des_key, des_iv);
-        } break;
-        default: {
-            dprintf(STDERR_FILENO, "unreachable code\n");
-            exit(EXIT_FAILURE);
-        } break;
-    }
+    DesFunc func = fetch_des_func(options->encrypt, cmd);
+    Buffer res = func(input, buf(key, params_len), des_iv);
 
     if (!res.ptr) {
         goto des_err;

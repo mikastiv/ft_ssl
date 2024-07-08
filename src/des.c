@@ -49,7 +49,7 @@ const static u8 e[] = {
 
 // Substitution boxes
 const static u8 s[][64] = {
-  // clang-format off
+    // clang-format off
     {
         14, 4,  13, 1, 2,  15, 11, 8, 3, 10, 6, 12, 5,  9,  0,  7,  0,  15, 7,  4,  14, 2,
         13, 1,  10, 6, 12, 11, 9,  5, 3, 8,  4, 1,  14, 8,  13, 6,  2,  11, 15, 12, 9,  7,
@@ -90,7 +90,7 @@ const static u8 s[][64] = {
         7,  4, 12, 5, 6, 11, 0,  14, 9,  2,  7, 11, 4,  1,  9,  12, 14, 2,  0,  6, 10, 13,
         15, 3, 5,  8, 2, 1,  14, 7,  4,  10, 8, 13, 15, 12, 9,  0,  3,  5,  6,  11,
     }
-  // clang-format on
+    // clang-format on
 };
 
 const static u8 shift[] = { 1, 1, 2, 2, 2, 2, 2, 2, 1, 2, 2, 2, 2, 2, 2, 1 };
@@ -279,8 +279,13 @@ inverse_subkeys(Subkeys subkeys) {
 }
 
 static void
-des_init_ctx(DesCtx* ctx, DesKey key, Des64 iv) {
-    generate_subkeys(key, ctx->subkeys);
+des_init_ctx(DesCtx* ctx, Buffer key, Des64 iv) {
+    assert(key.len == DES_KEY_SIZE);
+
+    DesKey des_key;
+    ft_memcpy(buf((u8*)&des_key, DES_KEY_SIZE), key);
+
+    generate_subkeys(des_key, ctx->subkeys);
     ft_memcpy(
         buf((u8*)ctx->inversed_subkeys, DES_KEY_SIZE * 16),
         buf((u8*)ctx->subkeys, DES_KEY_SIZE * 16)
@@ -290,18 +295,13 @@ des_init_ctx(DesCtx* ctx, DesKey key, Des64 iv) {
 }
 
 static void
-des3_get_keys(Des3Key key, DesKey* key1, DesKey* key2, DesKey* key3) {
-    for (u64 i = 0; i < DES_BLOCK_SIZE; i++) {
-        key1->block[i] = key[i];
-        key2->block[i] = key[i + DES_BLOCK_SIZE];
-        key3->block[i] = key[i + DES_BLOCK_SIZE * 2];
-    }
-}
-
-static void
-des3_init_ctx(Des3Ctx* ctx, Des3Key key, Des64 iv) {
+des3_init_ctx(Des3Ctx* ctx, Buffer key, Des64 iv) {
     DesKey key1, key2, key3;
-    des3_get_keys(key, &key1, &key2, &key3);
+    for (u64 i = 0; i < DES_KEY_SIZE; i++) {
+        key1.block[i] = key.ptr[i];
+        key2.block[i] = key.ptr[i + DES_KEY_SIZE];
+        key3.block[i] = key.ptr[i + DES_KEY_SIZE * 2];
+    }
 
     generate_subkeys(key1, ctx->subkeys1);
     generate_subkeys(key2, ctx->subkeys2);
@@ -564,42 +564,42 @@ des_decrypt(Buffer message, void* ctx, BlockCipherModeFn mode_fn) {
 }
 
 Buffer
-des_cbc_encrypt(Buffer message, DesKey key, Des64 iv) {
+des_cbc_encrypt(Buffer message, Buffer key, Des64 iv) {
     DesCtx ctx;
     des_init_ctx(&ctx, key, iv);
     return des_encrypt(message, &ctx, &des_cbc_process_block_encrypt, false);
 }
 
 Buffer
-des_cbc_decrypt(Buffer ciphertext, DesKey key, Des64 iv) {
+des_cbc_decrypt(Buffer ciphertext, Buffer key, Des64 iv) {
     DesCtx ctx;
     des_init_ctx(&ctx, key, iv);
     return des_decrypt(ciphertext, &ctx, &des_cbc_process_block_decrypt);
 }
 
 Buffer
-des_ecb_encrypt(Buffer message, DesKey key, Des64 iv) {
+des_ecb_encrypt(Buffer message, Buffer key, Des64 iv) {
     DesCtx ctx;
     des_init_ctx(&ctx, key, iv);
     return des_encrypt(message, &ctx, &des_ecb_process_block_encrypt, false);
 }
 
 Buffer
-des_ecb_decrypt(Buffer ciphertext, DesKey key, Des64 iv) {
+des_ecb_decrypt(Buffer ciphertext, Buffer key, Des64 iv) {
     DesCtx ctx;
     des_init_ctx(&ctx, key, iv);
     return des_decrypt(ciphertext, &ctx, &des_ecb_process_block_decrypt);
 }
 
 Buffer
-des_ofb_encrypt(Buffer message, DesKey key, Des64 iv) {
+des_ofb_encrypt(Buffer message, Buffer key, Des64 iv) {
     DesCtx ctx;
     des_init_ctx(&ctx, key, iv);
     return des_encrypt(message, &ctx, &des_ofb_process_block, false);
 }
 
 Buffer
-des_ofb_decrypt(Buffer ciphertext, DesKey key, Des64 iv) {
+des_ofb_decrypt(Buffer ciphertext, Buffer key, Des64 iv) {
     DesCtx ctx;
     des_init_ctx(&ctx, key, iv);
     Buffer message = des_encrypt(ciphertext, &ctx, &des_ofb_process_block, true);
@@ -613,14 +613,14 @@ des_ofb_decrypt(Buffer ciphertext, DesKey key, Des64 iv) {
 }
 
 Buffer
-des_cfb_encrypt(Buffer message, DesKey key, Des64 iv) {
+des_cfb_encrypt(Buffer message, Buffer key, Des64 iv) {
     DesCtx ctx;
     des_init_ctx(&ctx, key, iv);
     return des_encrypt(message, &ctx, &des_cfb_process_block_encrypt, false);
 }
 
 Buffer
-des_cfb_decrypt(Buffer ciphertext, DesKey key, Des64 iv) {
+des_cfb_decrypt(Buffer ciphertext, Buffer key, Des64 iv) {
     DesCtx ctx;
     des_init_ctx(&ctx, key, iv);
     Buffer message = des_encrypt(ciphertext, &ctx, &des_cfb_process_block_decrypt, true);
@@ -634,21 +634,21 @@ des_cfb_decrypt(Buffer ciphertext, DesKey key, Des64 iv) {
 }
 
 Buffer
-des_pcbc_encrypt(Buffer message, DesKey key, Des64 iv) {
+des_pcbc_encrypt(Buffer message, Buffer key, Des64 iv) {
     DesCtx ctx;
     des_init_ctx(&ctx, key, iv);
     return des_encrypt(message, &ctx, &des_pcbc_process_block_encrypt, false);
 }
 
 Buffer
-des_pcbc_decrypt(Buffer ciphertext, DesKey key, Des64 iv) {
+des_pcbc_decrypt(Buffer ciphertext, Buffer key, Des64 iv) {
     DesCtx ctx;
     des_init_ctx(&ctx, key, iv);
     return des_decrypt(ciphertext, &ctx, &des_pcbc_process_block_decrypt);
 }
 
 Buffer
-des3_ecb_encrypt(Buffer message, Des3Key key, Des64 iv) {
+des3_ecb_encrypt(Buffer message, Buffer key, Des64 iv) {
     Des3Ctx ctx;
     des3_init_ctx(&ctx, key, iv);
 
@@ -656,7 +656,7 @@ des3_ecb_encrypt(Buffer message, Des3Key key, Des64 iv) {
 }
 
 Buffer
-des3_ecb_decrypt(Buffer cipher, Des3Key key, Des64 iv) {
+des3_ecb_decrypt(Buffer cipher, Buffer key, Des64 iv) {
     Des3Ctx ctx;
     des3_init_ctx(&ctx, key, iv);
 
@@ -664,7 +664,7 @@ des3_ecb_decrypt(Buffer cipher, Des3Key key, Des64 iv) {
 }
 
 Buffer
-des3_cbc_encrypt(Buffer message, Des3Key key, Des64 iv) {
+des3_cbc_encrypt(Buffer message, Buffer key, Des64 iv) {
     Des3Ctx ctx;
     des3_init_ctx(&ctx, key, iv);
 
@@ -672,7 +672,7 @@ des3_cbc_encrypt(Buffer message, Des3Key key, Des64 iv) {
 }
 
 Buffer
-des3_cbc_decrypt(Buffer cipher, Des3Key key, Des64 iv) {
+des3_cbc_decrypt(Buffer cipher, Buffer key, Des64 iv) {
     Des3Ctx ctx;
     des3_init_ctx(&ctx, key, iv);
 
@@ -680,14 +680,14 @@ des3_cbc_decrypt(Buffer cipher, Des3Key key, Des64 iv) {
 }
 
 Buffer
-des3_ofb_encrypt(Buffer message, Des3Key key, Des64 iv) {
+des3_ofb_encrypt(Buffer message, Buffer key, Des64 iv) {
     Des3Ctx ctx;
     des3_init_ctx(&ctx, key, iv);
     return des_encrypt(message, &ctx, &des3_ofb_process_block, false);
 }
 
 Buffer
-des3_ofb_decrypt(Buffer ciphertext, Des3Key key, Des64 iv) {
+des3_ofb_decrypt(Buffer ciphertext, Buffer key, Des64 iv) {
     Des3Ctx ctx;
     des3_init_ctx(&ctx, key, iv);
     Buffer message = des_encrypt(ciphertext, &ctx, &des3_ofb_process_block, true);
@@ -701,14 +701,14 @@ des3_ofb_decrypt(Buffer ciphertext, Des3Key key, Des64 iv) {
 }
 
 Buffer
-des3_cfb_encrypt(Buffer message, Des3Key key, Des64 iv) {
+des3_cfb_encrypt(Buffer message, Buffer key, Des64 iv) {
     Des3Ctx ctx;
     des3_init_ctx(&ctx, key, iv);
     return des_encrypt(message, &ctx, &des3_cfb_process_block_encrypt, false);
 }
 
 Buffer
-des3_cfb_decrypt(Buffer ciphertext, Des3Key key, Des64 iv) {
+des3_cfb_decrypt(Buffer ciphertext, Buffer key, Des64 iv) {
     Des3Ctx ctx;
     des3_init_ctx(&ctx, key, iv);
     Buffer message = des_encrypt(ciphertext, &ctx, &des3_cfb_process_block_decrypt, true);
@@ -722,14 +722,14 @@ des3_cfb_decrypt(Buffer ciphertext, Des3Key key, Des64 iv) {
 }
 
 Buffer
-des3_pcbc_encrypt(Buffer message, Des3Key key, Des64 iv) {
+des3_pcbc_encrypt(Buffer message, Buffer key, Des64 iv) {
     Des3Ctx ctx;
     des3_init_ctx(&ctx, key, iv);
     return des_encrypt(message, &ctx, &des3_pcbc_process_block_decrypt, false);
 }
 
 Buffer
-des3_pcbc_decrypt(Buffer ciphertext, Des3Key key, Des64 iv) {
+des3_pcbc_decrypt(Buffer ciphertext, Buffer key, Des64 iv) {
     Des3Ctx ctx;
     des3_init_ctx(&ctx, key, iv);
     return des_decrypt(ciphertext, &ctx, &des3_pcbc_process_block_encrypt);
