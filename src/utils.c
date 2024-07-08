@@ -2,6 +2,7 @@
 #include "globals.h"
 
 #include <assert.h>
+#include <bsd/readpassphrase.h>
 #include <errno.h>
 #include <fcntl.h>
 #include <stdio.h>
@@ -330,4 +331,49 @@ get_random_bytes(Buffer buffer) {
     }
 
     return true;
+}
+
+bool
+read_password(Buffer buffer) {
+    char verify[MAX_PASSWORD_SIZE] = { 0 };
+
+    const char* pass_ptr =
+        readpassphrase("enter password: ", (char*)buffer.ptr, sizeof(buffer.len), 0);
+    const char* verify_ptr = readpassphrase("reenter password: ", verify, sizeof(verify), 0);
+
+    if (!pass_ptr || !verify_ptr) {
+        dprintf(STDERR_FILENO, "%s: error reading password\n", progname);
+        return false;
+    }
+
+    if (!ft_memcmp(str(pass_ptr), str(verify_ptr))) {
+        dprintf(STDERR_FILENO, "%s: passwords don't match\n", progname);
+        return false;
+    }
+
+    return true;
+}
+
+int
+get_infile_fd(const char* filename) {
+    int fd = -1;
+    if (filename) {
+        fd = open(filename, O_RDONLY);
+    } else {
+        fd = STDIN_FILENO;
+    }
+
+    return fd;
+}
+
+int
+get_outfile_fd(const char* filename) {
+    int fd = -1;
+    if (filename) {
+        fd = open(filename, O_WRONLY | O_CREAT | O_TRUNC, S_IRWXU | S_IRGRP | S_IROTH);
+    } else {
+        fd = STDOUT_FILENO;
+    }
+
+    return fd;
 }

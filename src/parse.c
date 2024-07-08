@@ -87,9 +87,9 @@ print_help(void) {
     dprintf(STDERR_FILENO, "\nCipher flags:\n");
     dprintf(STDERR_FILENO, "  All mode:\n");
     print_flag('d', "decrypt/decode mode");
-    print_flag('e', " encrypt/encode mode (default)");
-    print_flag('i', " input file for message");
-    print_flag('o', " output file for message");
+    print_flag('e', "encrypt/encode mode (default)");
+    print_flag('i', "input file for message");
+    print_flag('o', "output file for message");
     dprintf(STDERR_FILENO, "  All modes except base64:\n");
     print_flag('a', "decode/encode the input/output in base64");
     print_flag('k', "key in hex");

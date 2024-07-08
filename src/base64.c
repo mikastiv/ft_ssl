@@ -1,10 +1,15 @@
 #include "cipher.h"
+#include "globals.h"
+#include "ssl.h"
 #include "utils.h"
 
 #include <assert.h>
+#include <stdio.h>
 #include <stdlib.h>
+#include <unistd.h>
 
-static const char* base64 = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
+static const char* base64_alpha =
+    "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
 static const char padding = '=';
 
 static u32
@@ -32,24 +37,24 @@ base64_encode(Buffer input) {
     u64 j = 0;
     for (; i + 2 < input.len; i += 3, j += 4) {
         u32 bytes = read_u24_be(&input.ptr[i]);
-        buffer.ptr[j + 0] = base64[(bytes >> 18) & 0x3F];
-        buffer.ptr[j + 1] = base64[(bytes >> 12) & 0x3F];
-        buffer.ptr[j + 2] = base64[(bytes >> 6) & 0x3F];
-        buffer.ptr[j + 3] = base64[(bytes >> 0) & 0x3F];
+        buffer.ptr[j + 0] = base64_alpha[(bytes >> 18) & 0x3F];
+        buffer.ptr[j + 1] = base64_alpha[(bytes >> 12) & 0x3F];
+        buffer.ptr[j + 2] = base64_alpha[(bytes >> 6) & 0x3F];
+        buffer.ptr[j + 3] = base64_alpha[(bytes >> 0) & 0x3F];
     }
 
     switch (extra) {
         case 2: {
             u32 bytes = read_u16_be(&input.ptr[i]);
-            buffer.ptr[j + 0] = base64[(bytes >> 10) & 0x3F];
-            buffer.ptr[j + 1] = base64[(bytes >> 4) & 0x3F];
-            buffer.ptr[j + 2] = base64[(bytes & 0xF) << 2];
+            buffer.ptr[j + 0] = base64_alpha[(bytes >> 10) & 0x3F];
+            buffer.ptr[j + 1] = base64_alpha[(bytes >> 4) & 0x3F];
+            buffer.ptr[j + 2] = base64_alpha[(bytes & 0xF) << 2];
             buffer.ptr[j + 3] = padding;
         } break;
         case 1: {
             u32 bytes = input.ptr[i];
-            buffer.ptr[j + 0] = base64[(bytes >> 2) & 0x3F];
-            buffer.ptr[j + 1] = base64[(bytes & 0x3) << 4];
+            buffer.ptr[j + 0] = base64_alpha[(bytes >> 2) & 0x3F];
+            buffer.ptr[j + 1] = base64_alpha[(bytes & 0x3) << 4];
             buffer.ptr[j + 2] = padding;
             buffer.ptr[j + 3] = padding;
         } break;
@@ -105,4 +110,51 @@ base64_decode(Buffer input) {
 error:
     free(buffer.ptr);
     return (Buffer){ 0 };
+}
+
+bool
+base64(Base64Options* options) {
+    if (options->decode && options->encode) {
+        dprintf(STDERR_FILENO, "%s: cannot encode and decode at the same time\n", progname);
+        exit(EXIT_FAILURE);
+    }
+    if (!options->decode && !options->encode) options->encode = true;
+
+    int in_fd = get_infile_fd(options->input_file);
+    int out_fd = get_outfile_fd(options->output_file);
+
+    if (in_fd == -1 || out_fd == -1) {
+        print_error();
+        goto base64_err;
+    }
+
+    Buffer input = read_all_fd(in_fd);
+    if (!input.ptr) {
+        print_error();
+        goto base64_err;
+    }
+
+    Buffer res;
+    if (options->decode) {
+        res = base64_decode(input);
+    } else {
+        res = base64_encode(input);
+    }
+
+    if (!res.ptr) {
+        dprintf(STDERR_FILENO, "%s: invalid input\n", progname);
+        goto base64_err;
+    }
+
+    write(out_fd, res.ptr, res.len);
+    if (options->encode) write(out_fd, "\n", 1);
+    if (options->output_file && out_fd != -1) close(out_fd);
+    if (options->input_file && in_fd != -1) close(in_fd);
+    free(res.ptr);
+    return EXIT_SUCCESS;
+
+base64_err:
+    if (options->output_file && out_fd != -1) close(out_fd);
+    if (options->input_file && in_fd != -1) close(in_fd);
+    return EXIT_FAILURE;
 }

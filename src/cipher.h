@@ -1,6 +1,9 @@
 #pragma once
 
 #include "types.h"
+#include "ssl.h"
+
+#include <stdbool.h>
 
 typedef union {
     u8 block[8];
@@ -20,6 +23,10 @@ base64_encode(Buffer input);
 
 Buffer
 base64_decode(Buffer input);
+
+
+bool
+base64(Base64Options* options);
 
 typedef Buffer (*DesFunc)(Buffer, DesKey, Des64);
 typedef Buffer (*Des3Func)(Buffer, Des3Key, Des64);
@@ -86,3 +93,6 @@ des3_pcbc_decrypt(Buffer ciphertext, Des3Key key, Des64 iv);
 
 void
 pbkdf2_generate(Buffer password, Buffer salt, Buffer out);
+
+bool
+cipher(Command cmd, DesOptions* options);
