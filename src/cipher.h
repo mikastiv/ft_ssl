@@ -1,7 +1,7 @@
 #pragma once
 
-#include "types.h"
 #include "ssl.h"
+#include "types.h"
 
 #include <stdbool.h>
 
@@ -24,7 +24,6 @@ base64_encode(Buffer input);
 
 Buffer
 base64_decode(Buffer input);
-
 
 bool
 base64(Base64Options* options);

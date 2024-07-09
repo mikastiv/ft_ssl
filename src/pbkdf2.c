@@ -55,7 +55,7 @@ pbkdf2_hmac_sha256_f(Buffer password, Buffer salt, u64 iter, u32 block_num, Buff
     Buffer hmac_tmp1 = buf(buffer1, SHA256_DIGEST_SIZE);
     Buffer hmac_tmp2 = buf(buffer2, SHA256_DIGEST_SIZE);
 
-    hmac_sha256(password, buf(salt_block, PBKDF2_SALT_SIZE  + sizeof(block_num)), hmac_tmp1);
+    hmac_sha256(password, buf(salt_block, PBKDF2_SALT_SIZE + sizeof(block_num)), hmac_tmp1);
     ft_memcpy(hmac_tmp2, hmac_tmp1);
 
     for (u64 i = 1; i < iter; i++) {
