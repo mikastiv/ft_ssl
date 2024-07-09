@@ -54,7 +54,12 @@ parse_command(const char* str) {
 
 void
 usage(const char* command) {
-    dprintf(STDERR_FILENO, "usage: %s %s [flags] [file/string]\n", progname, command ? command : "command");
+    dprintf(
+        STDERR_FILENO,
+        "usage: %s %s [flags] [file/string]\n",
+        progname,
+        command ? command : "command"
+    );
 }
 
 static void
@@ -101,6 +106,7 @@ print_help(Command cmd) {
             usage(cmd_names[cmd]);
 
             dprintf(STDERR_FILENO, "\nFlags:\n");
+            print_flag('h', "print help");
             print_flag('d', "decode mode");
             print_flag('e', "encode mode (default)");
             print_flag('i', "input file for message");
@@ -121,6 +127,7 @@ print_help(Command cmd) {
             usage(cmd_names[cmd]);
 
             dprintf(STDERR_FILENO, "\nFlags:\n");
+            print_flag('h', "print help");
             print_flag('d', "decrypt mode");
             print_flag('e', "encrypt mode (default)");
             print_flag('i', "input file for message");
