@@ -63,8 +63,8 @@ usage(const char* command) {
 }
 
 static void
-print_flag(char f, const char* desc) {
-    dprintf(STDERR_FILENO, "    -%c: %s\n", f, desc);
+print_flag(const char* flag, const char* desc) {
+    dprintf(STDERR_FILENO, "    -%-14s %s\n", flag, desc);
 }
 
 void
@@ -74,7 +74,7 @@ print_help(Command cmd) {
         case Command_None:
             usage(0);
             dprintf(STDERR_FILENO, "\nGeneral flags:\n");
-            print_flag('h', "print help");
+            print_flag("h", "print help");
 
             dprintf(STDERR_FILENO, "\nStandard commands:\n");
 
@@ -96,21 +96,21 @@ print_help(Command cmd) {
             usage(cmd_names[cmd]);
 
             dprintf(STDERR_FILENO, "\nFlags:\n");
-            print_flag('h', "print help");
-            print_flag('p', "echo STDIN to STDOUT and append the checksum to STDOUT");
-            print_flag('q', "quiet mode");
-            print_flag('r', "reverse the format of the output");
-            print_flag('s', "print the sum of the given string");
+            print_flag("h", "print help");
+            print_flag("p", "echo STDIN to STDOUT and append the checksum to STDOUT");
+            print_flag("q", "quiet mode");
+            print_flag("r", "reverse the format of the output");
+            print_flag("s <string>", "print the sum of the given string");
             break;
         case Command_Base64:
             usage(cmd_names[cmd]);
 
             dprintf(STDERR_FILENO, "\nFlags:\n");
-            print_flag('h', "print help");
-            print_flag('d', "decode mode");
-            print_flag('e', "encode mode (default)");
-            print_flag('i', "input file for message");
-            print_flag('o', "output file for message");
+            print_flag("h", "print help");
+            print_flag("d", "decode mode");
+            print_flag("e", "encode mode (default)");
+            print_flag("i <filename>", "input file for message");
+            print_flag("o <filename>", "output file for message");
             break;
         case Command_Des:
         case Command_DesEcb:
@@ -127,16 +127,16 @@ print_help(Command cmd) {
             usage(cmd_names[cmd]);
 
             dprintf(STDERR_FILENO, "\nFlags:\n");
-            print_flag('h', "print help");
-            print_flag('d', "decrypt mode");
-            print_flag('e', "encrypt mode (default)");
-            print_flag('i', "input file for message");
-            print_flag('o', "output file for message");
-            print_flag('a', "decode/encode the input/output in base64");
-            print_flag('k', "key in hex");
-            print_flag('s', "salt in hex");
-            print_flag('v', "initialization vector in hex");
-            print_flag('p', "password");
+            print_flag("h", "print help");
+            print_flag("d", "decrypt mode");
+            print_flag("e", "encrypt mode (default)");
+            print_flag("i <filename>", "input file for message");
+            print_flag("o <filename>", "output file for message");
+            print_flag("a", "decode/encode the input/output in base64");
+            print_flag("k <hex key>", "key in hex");
+            print_flag("s <hex salt>", "salt in hex");
+            print_flag("v <hex iv>", "initialization vector in hex");
+            print_flag("p <password>", "password");
             break;
     }
 }
