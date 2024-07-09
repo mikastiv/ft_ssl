@@ -339,19 +339,21 @@ get_random_bytes(Buffer buffer) {
 }
 
 bool
-read_password(Buffer buffer) {
-    char verify[MAX_PASSWORD_SIZE] = { 0 };
+read_password(Buffer buffer, bool verify) {
+    char verify_buf[MAX_PASSWORD_SIZE] = { 0 };
+    u64 len = buffer.len > MAX_PASSWORD_SIZE ? MAX_PASSWORD_SIZE : buffer.len;
 
-    const char* pass_ptr =
-        readpassphrase("enter password: ", (char*)buffer.ptr, sizeof(buffer.len), 0);
-    const char* verify_ptr = readpassphrase("reenter password: ", verify, sizeof(verify), 0);
+    const char* pass_ptr = readpassphrase("enter password: ", (char*)buffer.ptr, sizeof(len), 0);
 
-    if (!pass_ptr || !verify_ptr) {
+    const char* verify_ptr = 0;
+    if (verify) verify_ptr = readpassphrase("reenter password: ", verify_buf, sizeof(len), 0);
+
+    if (!pass_ptr || (verify && !verify_ptr)) {
         dprintf(STDERR_FILENO, "%s: error reading password\n", progname);
         return false;
     }
 
-    if (!ft_memcmp(str(pass_ptr), str(verify_ptr))) {
+    if (verify && !ft_memcmp(str(pass_ptr), str(verify_ptr))) {
         dprintf(STDERR_FILENO, "%s: passwords don't match\n", progname);
         return false;
     }

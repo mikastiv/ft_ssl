@@ -221,7 +221,7 @@ cipher(Command cmd, DesOptions* options) {
 
         char password[MAX_PASSWORD_SIZE];
         if (!options->password) {
-            if (!read_password(buf((u8*)password, MAX_PASSWORD_SIZE))) {
+            if (!read_password(buf((u8*)password, MAX_PASSWORD_SIZE), options->encrypt)) {
                 goto des_err;
             }
 
@@ -230,10 +230,12 @@ cipher(Command cmd, DesOptions* options) {
 
         pbkdf2_generate(str(options->password), buf(salt, PBKDF2_SALT_SIZE), buf(key, keylen));
 
-        printf("salt=");
-        print_hex(buf(salt, PBKDF2_SALT_SIZE));
-        printf("key=");
-        print_hex(buf(key, keylen));
+        if (options->encrypt) {
+            printf("salt=");
+            print_hex(buf(salt, PBKDF2_SALT_SIZE));
+            printf("key=");
+            print_hex(buf(key, keylen));
+        }
     }
 
     Buffer input = read_all_fd(in_fd);

@@ -92,7 +92,7 @@ get_random_bytes(Buffer buffer);
 #define MAX_PASSWORD_SIZE 128
 
 bool
-read_password(Buffer buffer);
+read_password(Buffer buffer, bool verify);
 
 int
 get_infile_fd(const char* filename);
