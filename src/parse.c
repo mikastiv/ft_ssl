@@ -76,8 +76,6 @@ print_help(Command cmd) {
             dprintf(STDERR_FILENO, "\nGeneral flags:\n");
             print_flag("h", "print help");
 
-            dprintf(STDERR_FILENO, "\nStandard commands:\n");
-
             dprintf(STDERR_FILENO, "\nMessage Digest commands:\n");
             for (u64 i = Command_None + 1; i <= Command_LastDigest; i++) {
                 dprintf(STDERR_FILENO, "    %s\n", cmd_names[i]);
