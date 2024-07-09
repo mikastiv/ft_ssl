@@ -127,6 +127,41 @@ get_key_length(Command cmd) {
     return key_len;
 }
 
+static const char*
+get_cipher_mode_name(Command cmd) {
+    const char* mode = 0;
+
+    switch (cmd) {
+        case Command_Des:
+        case Command_DesCbc:
+        case Command_Des3:
+        case Command_Des3Cbc: {
+            mode = "cbc";
+        } break;
+        case Command_DesEcb:
+        case Command_Des3Ecb: {
+            mode = "ecb";
+        } break;
+        case Command_DesCfb:
+        case Command_Des3Cfb: {
+            mode = "cfb";
+        } break;
+        case Command_DesOfb:
+        case Command_Des3Ofb: {
+            mode = "ofb";
+        } break;
+        case Command_DesPcbc:
+        case Command_Des3Pcbc: {
+            mode = "pcbc";
+        } break;
+        default: {
+            assert(false && "unreachable code");
+        } break;
+    }
+
+    return mode;
+}
+
 bool
 cipher(Command cmd, DesOptions* options) {
     if (options->decrypt && options->encrypt) {
@@ -144,7 +179,13 @@ cipher(Command cmd, DesOptions* options) {
     }
 
     if (des_requires_iv(cmd) && !options->hex_iv) {
-        dprintf(STDERR_FILENO, "%s: initialization vector is required for cbc mode\n", progname);
+        const char* mode = get_cipher_mode_name(cmd);
+        dprintf(
+            STDERR_FILENO,
+            "%s: initialization vector is required for %s mode\n",
+            progname,
+            mode
+        );
         goto des_err;
     }
 
