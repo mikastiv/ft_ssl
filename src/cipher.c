@@ -148,7 +148,7 @@ cipher(Command cmd, DesOptions* options) {
         goto des_err;
     }
 
-    u64 params_len = get_key_length(cmd);
+    u64 keylen = get_key_length(cmd);
 
     u32 err1 = 0;
     u32 err2 = 0;
@@ -157,7 +157,7 @@ cipher(Command cmd, DesOptions* options) {
     u8 key[PBKDF2_MAX_KEY_SIZE] = { 0 };
     u8 iv[DES_BLOCK_SIZE] = { 0 };
     parse_option_hex(options->hex_salt, "salt", buf(salt, PBKDF2_SALT_SIZE), &err1);
-    parse_option_hex(options->hex_key, "key", buf(key, params_len), &err2);
+    parse_option_hex(options->hex_key, "key", buf(key, keylen), &err2);
     parse_option_hex(options->hex_iv, "iv", buf(iv, DES_BLOCK_SIZE), &err3);
 
     if (err1 || err2 || err3) {
@@ -171,7 +171,7 @@ cipher(Command cmd, DesOptions* options) {
                 goto des_err;
             }
 
-            bool success = get_random_bytes(buf(salt, params_len));
+            bool success = get_random_bytes(buf(salt, PBKDF2_SALT_SIZE));
             if (!success) {
                 dprintf(STDERR_FILENO, "%s: error generating salt\n", progname);
                 goto des_err;
@@ -187,12 +187,12 @@ cipher(Command cmd, DesOptions* options) {
             options->password = password;
         }
 
-        pbkdf2_generate(str(options->password), buf(salt, params_len), buf(key, params_len));
+        pbkdf2_generate(str(options->password), buf(salt, PBKDF2_SALT_SIZE), buf(key, keylen));
 
         printf("salt=");
         print_hex(buf(salt, PBKDF2_SALT_SIZE));
         printf("key=");
-        print_hex(buf(key, params_len));
+        print_hex(buf(key, keylen));
     }
 
     Buffer input = read_all_fd(in_fd);
@@ -212,13 +212,13 @@ cipher(Command cmd, DesOptions* options) {
         input = tmp;
     }
 
-    assert(params_len == get_key_length(cmd));
+    assert(keylen == get_key_length(cmd));
 
     Des64 des_iv;
     ft_memcpy(buf(des_iv.block, DES_BLOCK_SIZE), buf(iv, DES_BLOCK_SIZE));
 
     DesFunc func = fetch_des_func(options->encrypt, cmd);
-    Buffer res = func(input, buf(key, params_len), des_iv);
+    Buffer res = func(input, buf(key, keylen), des_iv);
 
     if (!res.ptr) {
         goto des_err;

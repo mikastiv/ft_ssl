@@ -10,13 +10,12 @@
             "name": "Debug",
             "program": "${workspaceFolder}/ft_ssl",
             "args": [
-                "des-ecb",
-                "-i",
-                "test",
-                "-s",
-                "0123456789",
+                "des3",
+                "-a",
                 "-p",
-                "test"
+                "12345",
+                "-v",
+                "12345"
             ],
             "cwd": "${workspaceFolder}"
         },
