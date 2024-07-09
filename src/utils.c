@@ -1,12 +1,13 @@
 #include "utils.h"
 #include "globals.h"
 
-#include <assert.h>
 #ifdef __APPLE__
 #include <readpassphrase.h>
-#elif 
+#else
 #include <bsd/readpassphrase.h>
 #endif
+
+#include <assert.h>
 #include <errno.h>
 #include <fcntl.h>
 #include <stdio.h>
