@@ -175,7 +175,7 @@ cipher(Command cmd, DesOptions* options) {
 
     if (in_fd == -1 || out_fd == -1) {
         print_error();
-        goto des_err;
+        goto cipher_err;
     }
 
     if (des_requires_iv(cmd) && !options->hex_iv) {
@@ -186,7 +186,7 @@ cipher(Command cmd, DesOptions* options) {
             progname,
             mode
         );
-        goto des_err;
+        goto cipher_err;
     }
 
     u64 keylen = get_key_length(cmd);
@@ -202,27 +202,27 @@ cipher(Command cmd, DesOptions* options) {
     parse_option_hex(options->hex_iv, "iv", buf(iv, DES_BLOCK_SIZE), &err3);
 
     if (err1 || err2 || err3) {
-        goto des_err;
+        goto cipher_err;
     }
 
     if (!options->hex_key) {
         if (!options->hex_salt) {
             if (options->decrypt) {
                 dprintf(STDERR_FILENO, "%s: provide salt when decrypting\n", progname);
-                goto des_err;
+                goto cipher_err;
             }
 
             bool success = get_random_bytes(buf(salt, PBKDF2_SALT_SIZE));
             if (!success) {
                 dprintf(STDERR_FILENO, "%s: error generating salt\n", progname);
-                goto des_err;
+                goto cipher_err;
             }
         }
 
         char password[MAX_PASSWORD_SIZE];
         if (!options->password) {
             if (!read_password(buf((u8*)password, MAX_PASSWORD_SIZE), options->encrypt)) {
-                goto des_err;
+                goto cipher_err;
             }
 
             options->password = password;
@@ -241,7 +241,7 @@ cipher(Command cmd, DesOptions* options) {
     Buffer input = read_all_fd(in_fd);
     if (!input.ptr) {
         print_error();
-        goto des_err;
+        goto cipher_err;
     }
 
     if (options->decrypt && options->use_base64) {
@@ -249,7 +249,7 @@ cipher(Command cmd, DesOptions* options) {
         if (!tmp.ptr) {
             dprintf(STDERR_FILENO, "%s: invalid base64 input\n", progname);
             free(input.ptr);
-            goto des_err;
+            goto cipher_err;
         }
         free(input.ptr);
         input = tmp;
@@ -264,14 +264,14 @@ cipher(Command cmd, DesOptions* options) {
     Buffer res = func(input, buf(key, keylen), des_iv);
 
     if (!res.ptr) {
-        goto des_err;
+        goto cipher_err;
     }
 
     if (options->encrypt && options->use_base64) {
         Buffer tmp = base64_encode(res);
         if (!tmp.ptr) {
             dprintf(STDERR_FILENO, "%s: failed to base64 encode\n", progname);
-            goto des_err;
+            goto cipher_err;
         }
         free(res.ptr);
         res = tmp;
@@ -284,7 +284,7 @@ cipher(Command cmd, DesOptions* options) {
     free(res.ptr);
     return true;
 
-des_err:
+cipher_err:
     if (options->output_file && out_fd != -1) close(out_fd);
     if (options->input_file && in_fd != -1) close(in_fd);
     return false;
