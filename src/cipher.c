@@ -10,10 +10,10 @@
 #include <unistd.h>
 
 static void
-parse_option_hex(const char* s, const char* name, Buffer out, u32* err) {
+parse_option_hex(const char* s, const char* name, Buffer out, bool* err) {
     if (!s) return;
 
-    *err = 0;
+    *err = false;
     parse_hex(str(s), out, err);
     if (*err) {
         dprintf(STDERR_FILENO, "%s: invalid hex character in %s\n", progname, name);
@@ -191,9 +191,9 @@ cipher(Command cmd, DesOptions* options) {
 
     u64 keylen = get_key_length(cmd);
 
-    u32 err1 = 0;
-    u32 err2 = 0;
-    u32 err3 = 0;
+    bool err1 = 0;
+    bool err2 = 0;
+    bool err3 = 0;
     u8 salt[PBKDF2_SALT_SIZE] = { 0 };
     u8 key[PBKDF2_MAX_KEY_SIZE] = { 0 };
     u8 iv[DES_BLOCK_SIZE] = { 0 };

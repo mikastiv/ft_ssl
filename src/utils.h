@@ -81,7 +81,7 @@ bool
 is_space(u8 c);
 
 void
-parse_hex(Buffer str, Buffer out, u32* err);
+parse_hex(Buffer str, Buffer out, bool* err);
 
 void
 print_hex(Buffer str);

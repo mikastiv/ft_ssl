@@ -299,7 +299,7 @@ from_hex(u8 c) {
 }
 
 void
-parse_hex(Buffer str, Buffer out, u32* err) {
+parse_hex(Buffer str, Buffer out, bool* err) {
     u64 len = str.len < out.len * 2 ? str.len : out.len * 2;
     ft_memset(out, 0);
 
@@ -308,7 +308,7 @@ parse_hex(Buffer str, Buffer out, u32* err) {
         u8 lo = from_hex(i + 1 < len ? str.ptr[i + 1] : '0');
 
         if (hi == 0xFF || lo == 0xFF) {
-            *err = 1;
+            *err = true;
             return;
         }
 
