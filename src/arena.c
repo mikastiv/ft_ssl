@@ -24,7 +24,8 @@ arena_alloc(Arena* arena, size_t size) {
     char* address = arena->block + arena->index;
     arena->index += size;
     if (arena->index >= arena->size) {
-        dprintf(STDERR_FILENO, "Out of memory\n");
+        arena_free(arena);
+        dprintf(STDERR_FILENO, "out of memory\n");
         exit(EXIT_FAILURE);
     }
     return address;
