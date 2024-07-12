@@ -34,7 +34,7 @@ main(int in_argc, const char* const* in_argv) {
         return EXIT_FAILURE;
     }
 
-    if (!arena_init(&arena, 1024 * 1024 * 5)) {
+    if (!arena_init(&arena, MAX_MEMORY)) {
         dprintf(STDERR_FILENO, "%s: failed to allocate memory\n", progname);
         return EXIT_FAILURE;
     }

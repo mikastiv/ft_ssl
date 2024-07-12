@@ -2,6 +2,8 @@
 
 #include "ssl.h"
 
+#define MAX_MEMORY (1024 * 1024 * 20)
+
 Command
 parse_command(const char* str);
 
