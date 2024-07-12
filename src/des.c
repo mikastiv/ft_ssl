@@ -49,7 +49,7 @@ const static u8 e[] = {
 
 // Substitution boxes
 const static u8 s[][64] = {
-  // clang-format off
+    // clang-format off
     {
         14, 4,  13, 1, 2,  15, 11, 8, 3, 10, 6, 12, 5,  9,  0,  7,  0,  15, 7,  4,  14, 2,
         13, 1,  10, 6, 12, 11, 9,  5, 3, 8,  4, 1,  14, 8,  13, 6,  2,  11, 15, 12, 9,  7,
@@ -90,7 +90,7 @@ const static u8 s[][64] = {
         7,  4, 12, 5, 6, 11, 0,  14, 9,  2,  7, 11, 4,  1,  9,  12, 14, 2,  0,  6, 10, 13,
         15, 3, 5,  8, 2, 1,  14, 7,  4,  10, 8, 13, 15, 12, 9,  0,  3,  5,  6,  11,
     }
-  // clang-format on
+    // clang-format on
 };
 
 const static u8 shift[] = { 1, 1, 2, 2, 2, 2, 2, 2, 1, 2, 2, 2, 2, 2, 2, 1 };
@@ -497,9 +497,9 @@ des3_pcbc_process_block_decrypt(void* ptr, Des64 block, Buffer out) {
 }
 
 static Buffer
-des_encrypt(Buffer message, void* ctx, BlockCipherModeFn mode_fn, bool skip_padding) {
+des_encrypt(Buffer message, void* ctx, BlockCipherModeFn mode_fn, bool is_stream) {
     u8 padding = DES_BLOCK_SIZE - (message.len % DES_BLOCK_SIZE);
-    if (skip_padding) padding = 0;
+    if (is_stream) padding = 0;
 
     u64 len = message.len + padding;
     u8* buffer = arena_alloc(&arena, len);
@@ -515,7 +515,7 @@ des_encrypt(Buffer message, void* ctx, BlockCipherModeFn mode_fn, bool skip_padd
     }
     if (i < len) {
         u64 block_size = DES_BLOCK_SIZE;
-        if (skip_padding) block_size = len - i;
+        if (is_stream) block_size = len - i;
 
         Des64 block;
         ft_memset(buf(block.block, sizeof(block)), padding);

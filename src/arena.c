@@ -19,7 +19,7 @@ arena_init(Arena* arena, u64 size) {
 }
 
 void*
-arena_alloc(Arena* arena, size_t size) {
+arena_alloc(Arena* arena, u64 size) {
     arena->index = align_up(arena->index, 16);
     char* address = arena->block + arena->index;
     arena->index += size;
