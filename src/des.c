@@ -1,3 +1,4 @@
+#include "arena.h"
 #include "cipher.h"
 #include "globals.h"
 #include "types.h"
@@ -5,7 +6,6 @@
 
 #include <assert.h>
 #include <stdio.h>
-#include <stdlib.h>
 #include <unistd.h>
 
 // Permuted choice 1
@@ -502,7 +502,7 @@ des_encrypt(Buffer message, void* ctx, BlockCipherModeFn mode_fn, bool skip_padd
     if (skip_padding) padding = 0;
 
     u64 len = message.len + padding;
-    u8* buffer = malloc(len);
+    u8* buffer = arena_alloc(&arena, len);
     if (!buffer) {
         dprintf(STDERR_FILENO, "%s: out of memory\n", progname);
         return (Buffer){ 0 };
@@ -544,7 +544,7 @@ des_decrypt(Buffer message, void* ctx, BlockCipherModeFn mode_fn) {
     if (message.len % DES_BLOCK_SIZE != 0) return (Buffer){ 0 };
 
     u64 len = message.len;
-    u8* buffer = malloc(len);
+    u8* buffer = arena_alloc(&arena, len);
     if (!buffer) {
         dprintf(STDERR_FILENO, "%s: out of memory\n", progname);
         return (Buffer){ 0 };
@@ -556,9 +556,7 @@ des_decrypt(Buffer message, void* ctx, BlockCipherModeFn mode_fn) {
     }
 
     Buffer result = buf(buffer, len);
-    Buffer tmp = remove_padding(result);
-    if (!tmp.ptr) free(result.ptr);
-    result = tmp;
+    result = remove_padding(result);
 
     return result;
 }
@@ -603,13 +601,9 @@ des_ofb_decrypt(Buffer ciphertext, Buffer key, Des64 iv) {
     DesCtx ctx;
     des_init_ctx(&ctx, key, iv);
     Buffer message = des_encrypt(ciphertext, &ctx, &des_ofb_process_block, true);
-    Buffer result = remove_padding(message);
-    if (!result.ptr) {
-        free(message.ptr);
-        return (Buffer){ 0 };
-    }
+    message = remove_padding(message);
 
-    return result;
+    return message;
 }
 
 Buffer
@@ -624,13 +618,9 @@ des_cfb_decrypt(Buffer ciphertext, Buffer key, Des64 iv) {
     DesCtx ctx;
     des_init_ctx(&ctx, key, iv);
     Buffer message = des_encrypt(ciphertext, &ctx, &des_cfb_process_block_decrypt, true);
-    Buffer result = remove_padding(message);
-    if (!result.ptr) {
-        free(message.ptr);
-        return (Buffer){ 0 };
-    }
+    message = remove_padding(message);
 
-    return result;
+    return message;
 }
 
 Buffer
@@ -691,13 +681,9 @@ des3_ofb_decrypt(Buffer ciphertext, Buffer key, Des64 iv) {
     Des3Ctx ctx;
     des3_init_ctx(&ctx, key, iv);
     Buffer message = des_encrypt(ciphertext, &ctx, &des3_ofb_process_block, true);
-    Buffer result = remove_padding(message);
-    if (!result.ptr) {
-        free(message.ptr);
-        return (Buffer){ 0 };
-    }
+    message = remove_padding(message);
 
-    return result;
+    return message;
 }
 
 Buffer
@@ -712,13 +698,9 @@ des3_cfb_decrypt(Buffer ciphertext, Buffer key, Des64 iv) {
     Des3Ctx ctx;
     des3_init_ctx(&ctx, key, iv);
     Buffer message = des_encrypt(ciphertext, &ctx, &des3_cfb_process_block_decrypt, true);
-    Buffer result = remove_padding(message);
-    if (!result.ptr) {
-        free(message.ptr);
-        return (Buffer){ 0 };
-    }
+    message = remove_padding(message);
 
-    return result;
+    return message;
 }
 
 Buffer

@@ -1,4 +1,5 @@
 #include "utils.h"
+#include "arena.h"
 #include "globals.h"
 
 #ifdef __APPLE__
@@ -11,7 +12,6 @@
 #include <errno.h>
 #include <fcntl.h>
 #include <stdio.h>
-#include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
 
@@ -157,7 +157,7 @@ buf(u8* ptr, u64 len) {
 Buffer
 read_all_fd(int fd) {
     u64 capacity = 2048;
-    Buffer str = { .ptr = malloc(capacity + 1), .len = 0 };
+    Buffer str = { .ptr = arena_alloc(&arena, capacity + 1), .len = 0 };
     if (!str.ptr) return (Buffer){ 0 };
 
     u8 buffer[2048];
@@ -172,11 +172,9 @@ read_all_fd(int fd) {
             u64 rest = bytes - remaining;
             capacity = (capacity * 2 > rest) ? capacity * 2 : rest;
 
-            u8* ptr = malloc(capacity + 1);
-            if (!ptr) return (Buffer){ 0 };
+            u8* ptr = arena_alloc(&arena, capacity + 1);
 
             ft_memcpy(buf(ptr, str.len), str);
-            free(str.ptr);
             str.ptr = ptr;
         }
 

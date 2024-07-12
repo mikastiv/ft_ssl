@@ -1,12 +1,12 @@
 #include "ssl.h"
 
+#include "arena.h"
+#include "globals.h"
 #include "utils.h"
 
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
-
-#include "globals.h"
 
 static const char* cmd_names[] = {
     [Command_None] = "none",
@@ -142,6 +142,7 @@ print_help(Command cmd) {
 static void
 unknown_flag(const char* flag) {
     dprintf(STDERR_FILENO, "%s: unknown flag: '%s'\n", progname, flag);
+    arena_free(&arena);
     exit(EXIT_FAILURE);
 }
 
@@ -149,6 +150,7 @@ static void
 check_next_argument(u32 index, char flag) {
     if (index + 1 >= argc) {
         dprintf(STDERR_FILENO, "%s: '-%c': missing value\n", progname, flag);
+        arena_free(&arena);
         exit(EXIT_FAILURE);
     }
 }
@@ -156,6 +158,7 @@ check_next_argument(u32 index, char flag) {
 static void
 duplicate_flag(char flag) {
     dprintf(STDERR_FILENO, "%s: duplicate flag: '-%c'\n", progname, flag);
+    arena_free(&arena);
     exit(EXIT_FAILURE);
 }
 
@@ -194,6 +197,7 @@ parse_options(Command cmd, void* out_options) {
         const char flag = argv[i][1];
         if (flag == 'h') {
             print_help(cmd);
+            arena_free(&arena);
             exit(EXIT_FAILURE);
         }
 

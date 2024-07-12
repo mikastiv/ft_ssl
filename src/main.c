@@ -1,3 +1,4 @@
+#include "arena.h"
 #include "cipher.h"
 #include "parse.h"
 #include "ssl.h"
@@ -11,6 +12,7 @@
 u32 argc;
 const char* const* argv;
 const char* progname = 0;
+Arena arena;
 
 int
 main(int in_argc, const char* const* in_argv) {
@@ -32,6 +34,12 @@ main(int in_argc, const char* const* in_argv) {
         return EXIT_FAILURE;
     }
 
+    if (!arena_init(&arena, 1024 * 1024 * 5)) {
+        dprintf(STDERR_FILENO, "%s: failed to allocate memory\n", progname);
+        return EXIT_FAILURE;
+    }
+
+    int result = EXIT_SUCCESS;
     switch (cmd) {
         case Command_Md5:
         case Command_Sha256:
@@ -43,14 +51,14 @@ main(int in_argc, const char* const* in_argv) {
             u32 first_input = parse_options(cmd, &options);
 
             bool success = digest(first_input, cmd, options);
-            if (!success) return EXIT_FAILURE;
+            if (!success) result = EXIT_FAILURE;
         } break;
         case Command_Base64: {
             Base64Options options = { 0 };
             parse_options(cmd, &options);
 
             bool success = base64(&options);
-            if (!success) return EXIT_FAILURE;
+            if (!success) result = EXIT_FAILURE;
         } break;
         case Command_Des:
         case Command_DesCbc:
@@ -68,11 +76,15 @@ main(int in_argc, const char* const* in_argv) {
             parse_options(cmd, &options);
 
             bool success = cipher(cmd, &options);
-            if (!success) return EXIT_FAILURE;
+            if (!success) result = EXIT_FAILURE;
         } break;
         case Command_None: {
             dprintf(STDERR_FILENO, "Unreachable\n");
-            return EXIT_FAILURE;
+            result = EXIT_FAILURE;
         } break;
     }
+
+    arena_free(&arena);
+
+    return result;
 }

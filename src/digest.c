@@ -113,7 +113,6 @@ digest(u32 first_input, Command cmd, DigestOptions options) {
             hasher_str(input, out);
             print_hash(out, cmd, false, "stdin", options);
         }
-        free(input.ptr);
     }
 
     if (options.string_argument) {

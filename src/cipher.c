@@ -6,7 +6,6 @@
 #include <assert.h>
 #include <fcntl.h>
 #include <stdio.h>
-#include <stdlib.h>
 #include <unistd.h>
 
 static void
@@ -245,14 +244,11 @@ cipher(Command cmd, DesOptions* options) {
     }
 
     if (options->decrypt && options->use_base64) {
-        Buffer tmp = base64_decode(input);
-        if (!tmp.ptr) {
+        input = base64_decode(input);
+        if (!input.ptr) {
             dprintf(STDERR_FILENO, "%s: invalid base64 input\n", progname);
-            free(input.ptr);
             goto cipher_err;
         }
-        free(input.ptr);
-        input = tmp;
     }
 
     assert(keylen == get_key_length(cmd));
@@ -268,20 +264,17 @@ cipher(Command cmd, DesOptions* options) {
     }
 
     if (options->encrypt && options->use_base64) {
-        Buffer tmp = base64_encode(res);
-        if (!tmp.ptr) {
+        res = base64_encode(res);
+        if (!res.ptr) {
             dprintf(STDERR_FILENO, "%s: failed to base64 encode\n", progname);
             goto cipher_err;
         }
-        free(res.ptr);
-        res = tmp;
     }
 
     write(out_fd, res.ptr, res.len);
     if (options->encrypt && options->use_base64) write(out_fd, "\n", 1);
     if (options->output_file && out_fd != -1) close(out_fd);
     if (options->input_file && in_fd != -1) close(in_fd);
-    free(res.ptr);
     return true;
 
 cipher_err:

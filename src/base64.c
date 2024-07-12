@@ -1,3 +1,4 @@
+#include "arena.h"
 #include "cipher.h"
 #include "globals.h"
 #include "ssl.h"
@@ -5,7 +6,6 @@
 
 #include <assert.h>
 #include <stdio.h>
-#include <stdlib.h>
 #include <unistd.h>
 
 static const char* base64_alpha =
@@ -29,7 +29,7 @@ base64_encode(Buffer input) {
     u64 extra = input.len % 3;
 
     u64 size = chunks * 4 + (extra > 0 ? 4 : 0);
-    Buffer buffer = buf(malloc(size), size);
+    Buffer buffer = buf(arena_alloc(&arena, size), size);
     if (!buffer.ptr) return (Buffer){ 0 };
     ft_memset(buffer, 0);
 
@@ -79,7 +79,7 @@ base64_decode(Buffer input) {
     if (input.len % 4 != 0) return (Buffer){ 0 };
 
     u64 output_size = chunks * 3;
-    Buffer buffer = buf(malloc(output_size), output_size);
+    Buffer buffer = buf(arena_alloc(&arena, output_size), output_size);
     if (!buffer.ptr) return (Buffer){ 0 };
     ft_memset(buffer, 0);
 
@@ -108,7 +108,6 @@ base64_decode(Buffer input) {
     return buffer;
 
 error:
-    free(buffer.ptr);
     return (Buffer){ 0 };
 }
 
@@ -150,7 +149,6 @@ base64(Base64Options* options) {
     if (options->encode) write(out_fd, "\n", 1);
     if (options->output_file && out_fd != -1) close(out_fd);
     if (options->input_file && in_fd != -1) close(in_fd);
-    free(res.ptr);
     return true;
 
 base64_err:
