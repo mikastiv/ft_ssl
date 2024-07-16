@@ -341,10 +341,10 @@ read_password(Buffer buffer, bool verify) {
     char verify_buf[MAX_PASSWORD_SIZE] = { 0 };
     u64 len = buffer.len > MAX_PASSWORD_SIZE ? MAX_PASSWORD_SIZE : buffer.len;
 
-    const char* pass_ptr = readpassphrase("enter password: ", (char*)buffer.ptr, sizeof(len), 0);
+    const char* pass_ptr = readpassphrase("enter password: ", (char*)buffer.ptr, len, 0);
 
     const char* verify_ptr = 0;
-    if (verify) verify_ptr = readpassphrase("reenter password: ", verify_buf, sizeof(len), 0);
+    if (verify) verify_ptr = readpassphrase("reenter password: ", verify_buf, len, 0);
 
     if (!pass_ptr || (verify && !verify_ptr)) {
         dprintf(STDERR_FILENO, "%s: error reading password\n", progname);
