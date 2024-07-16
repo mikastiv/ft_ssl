@@ -382,3 +382,57 @@ get_outfile_fd(const char* filename) {
 
     return fd;
 }
+
+u64
+power(u64 n, u64 k) {
+    if (k == 0) return 1;
+
+    while (k > 1) {
+        n *= n;
+        k--;
+    }
+    return n;
+}
+
+u64
+power_mod(u64 x, u64 y, u64 mod) {
+    x %= mod;
+
+    u64 result = 1;
+    while (y > 0) {
+        if (y & 1) result = (result * x) % mod;
+
+        y /= 2;
+        x = (x * x) % mod;
+    }
+
+    return result;
+}
+
+bool
+random_init(Random* random) {
+    random->fd = open("/dev/urandom", O_RDONLY);
+
+    return random->fd > 0;
+}
+
+void
+random_deinit(Random* random) {
+    assert(random->fd > 0);
+    close(random->fd);
+}
+
+u64
+random_number(Random* random, u64 min, u64 max) {
+    assert(random->fd > 0);
+
+    u64 num;
+    ssize_t bytes = read(random->fd, &num, sizeof(num));
+    assert(bytes == sizeof(num));
+
+    num -= min;
+    num %= max - min;
+    num += min;
+
+    return num;
+}

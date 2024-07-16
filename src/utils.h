@@ -1,7 +1,6 @@
 #pragma once
 
 #include "types.h"
-#include <stdbool.h>
 
 #define array_len(array) (sizeof(array) / sizeof(array[0]))
 
@@ -89,6 +88,19 @@ print_hex(Buffer str);
 bool
 get_random_bytes(Buffer buffer);
 
+typedef struct {
+    int fd;
+} Random;
+
+bool
+random_init(Random* random);
+
+void
+random_deinit(Random* random);
+
+u64
+random_number(Random* random, u64 min, u64 max);
+
 #define MAX_PASSWORD_SIZE 128
 
 bool
@@ -99,3 +111,9 @@ get_infile_fd(const char* filename);
 
 int
 get_outfile_fd(const char* filename);
+
+u64
+power(u64 n, u64 k);
+
+u64
+power_mod(u64 x, u64 y, u64 mod);

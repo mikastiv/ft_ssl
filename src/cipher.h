@@ -3,8 +3,6 @@
 #include "ssl.h"
 #include "types.h"
 
-#include <stdbool.h>
-
 typedef union {
     u8 block[8];
     u64 raw;

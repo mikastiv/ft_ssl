@@ -2,8 +2,6 @@
 
 #include "types.h"
 
-#include <stdbool.h>
-
 #define digest_declare_interface(prefix)                                                           \
     bool prefix##_hash_fd(int fd, Buffer out);                                                     \
     void prefix##_hash_str(Buffer in, Buffer out)

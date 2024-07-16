@@ -2,8 +2,6 @@
 
 #include "types.h"
 
-#include <stdbool.h>
-
 typedef struct {
     bool print_help;
     bool quiet;
