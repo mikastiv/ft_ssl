@@ -251,6 +251,12 @@ cipher(Command cmd, DesOptions* options) {
         }
     }
 
+    const Buffer magic = str("Salted__");
+    if (ft_memcmp(buf(input.ptr, magic.len), magic)) {
+        input.ptr += magic.len + PBKDF2_SALT_SIZE;
+        input.len += magic.len + PBKDF2_SALT_SIZE;
+    }
+
     assert(keylen == get_key_length(cmd));
 
     Des64 des_iv;
