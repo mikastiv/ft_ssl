@@ -2,6 +2,7 @@
 #include "cipher.h"
 #include "parse.h"
 #include "ssl.h"
+#include "standard.h"
 #include "types.h"
 #include "utils.h"
 
@@ -33,6 +34,13 @@ main(int in_argc, const char* const* in_argv) {
         print_help(cmd);
         return EXIT_FAILURE;
     }
+
+    // for (u64 i = 0; i < 100; i++) {
+    //     if (is_prime(i, 1)) {
+    //         printf("%lu ", i);
+    //     }
+    // }
+    // printf("\n");
 
     if (!arena_init(&arena, MAX_MEMORY)) {
         dprintf(STDERR_FILENO, "%s: failed to allocate memory\n", progname);
@@ -84,6 +92,7 @@ main(int in_argc, const char* const* in_argv) {
         } break;
     }
 
+    arena_log_watermark(&arena);
     arena_free(&arena);
 
     return result;
