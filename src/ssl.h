@@ -1,5 +1,7 @@
 #pragma once
 
+#define MAX_MEMORY (1024 * 1024 * 64)
+
 #include "types.h"
 
 typedef struct {
