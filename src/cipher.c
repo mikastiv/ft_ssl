@@ -177,24 +177,14 @@ cipher(Command cmd, DesOptions* options) {
         goto cipher_err;
     }
 
-    if (des_requires_iv(cmd) && !options->hex_iv) {
-        const char* mode = get_cipher_mode_name(cmd);
-        dprintf(
-            STDERR_FILENO,
-            "%s: initialization vector is required for %s mode\n",
-            progname,
-            mode
-        );
-        goto cipher_err;
-    }
-
     u64 keylen = get_key_length(cmd);
 
     bool err1 = 0;
     bool err2 = 0;
     bool err3 = 0;
     u8 salt[PBKDF2_SALT_SIZE + 1] = { 0 };
-    u8 key[PBKDF2_MAX_KEY_SIZE] = { 0 };
+    // iv is at the end of key when using pbkdf2
+    u8 key[PBKDF2_MAX_KEY_SIZE + DES_BLOCK_SIZE] = { 0 };
     u8 iv[DES_BLOCK_SIZE] = { 0 };
     parse_option_hex(options->hex_salt, "salt", buf(salt, PBKDF2_SALT_SIZE), &err1);
     parse_option_hex(options->hex_key, "key", buf(key, keylen), &err2);
@@ -253,14 +243,40 @@ cipher(Command cmd, DesOptions* options) {
             options->password = password;
         }
 
-        pbkdf2_generate(str(options->password), buf(salt, PBKDF2_SALT_SIZE), buf(key, keylen));
+        u64 ivlen = 0;
+        if (!options->hex_iv && des_requires_iv(cmd)) {
+            ivlen = DES_BLOCK_SIZE;
+        }
+
+        pbkdf2_generate(
+            str(options->password),
+            buf(salt, PBKDF2_SALT_SIZE),
+            buf(key, keylen + ivlen)
+        );
+
+        if (ivlen) {
+            ft_memcpy(buf(iv, DES_BLOCK_SIZE), buf(key + keylen, DES_BLOCK_SIZE));
+        }
 
         if (options->encrypt) {
             printf("salt=");
             print_hex(buf(salt, PBKDF2_SALT_SIZE));
             printf("key=");
             print_hex(buf(key, keylen));
+            if (des_requires_iv(cmd)) {
+                printf("iv=");
+                print_hex(buf(iv, DES_BLOCK_SIZE));
+            }
         }
+    } else if (des_requires_iv(cmd) && !options->hex_iv) {
+        const char* mode = get_cipher_mode_name(cmd);
+        dprintf(
+            STDERR_FILENO,
+            "%s: initialization vector is required for %s mode\n",
+            progname,
+            mode
+        );
+        goto cipher_err;
     }
 
     Des64 des_iv;
