@@ -193,7 +193,7 @@ cipher(Command cmd, DesOptions* options) {
     bool err1 = 0;
     bool err2 = 0;
     bool err3 = 0;
-    u8 salt[PBKDF2_SALT_SIZE] = { 0 };
+    u8 salt[PBKDF2_SALT_SIZE + 1] = { 0 };
     u8 key[PBKDF2_MAX_KEY_SIZE] = { 0 };
     u8 iv[DES_BLOCK_SIZE] = { 0 };
     parse_option_hex(options->hex_salt, "salt", buf(salt, PBKDF2_SALT_SIZE), &err1);
@@ -204,8 +204,33 @@ cipher(Command cmd, DesOptions* options) {
         goto cipher_err;
     }
 
+    Buffer input = read_all_fd(in_fd);
+    if (!input.ptr) {
+        print_error();
+        goto cipher_err;
+    }
+
+    if (options->decrypt && options->use_base64) {
+        input = base64_decode(input);
+        if (!input.ptr) {
+            dprintf(STDERR_FILENO, "%s: invalid base64 input\n", progname);
+            goto cipher_err;
+        }
+    }
+
+    bool generate_salt = !options->hex_salt;
+
+    const Buffer magic = str("Salted__");
+    if (ft_memcmp(buf(input.ptr, magic.len), magic)) {
+        generate_salt = false;
+        input.ptr += magic.len;
+        ft_memcpy(buf(salt, PBKDF2_SALT_SIZE), buf(input.ptr, PBKDF2_SALT_SIZE));
+        input.ptr += PBKDF2_SALT_SIZE;
+        input.len -= magic.len + PBKDF2_SALT_SIZE;
+    }
+
     if (!options->hex_key) {
-        if (!options->hex_salt) {
+        if (generate_salt) {
             if (options->decrypt) {
                 dprintf(STDERR_FILENO, "%s: provide salt when decrypting\n", progname);
                 goto cipher_err;
@@ -237,30 +262,10 @@ cipher(Command cmd, DesOptions* options) {
         }
     }
 
-    Buffer input = read_all_fd(in_fd);
-    if (!input.ptr) {
-        print_error();
-        goto cipher_err;
-    }
-
-    if (options->decrypt && options->use_base64) {
-        input = base64_decode(input);
-        if (!input.ptr) {
-            dprintf(STDERR_FILENO, "%s: invalid base64 input\n", progname);
-            goto cipher_err;
-        }
-    }
-
-    const Buffer magic = str("Salted__");
-    if (ft_memcmp(buf(input.ptr, magic.len), magic)) {
-        input.ptr += magic.len + PBKDF2_SALT_SIZE;
-        input.len += magic.len + PBKDF2_SALT_SIZE;
-    }
-
-    assert(keylen == get_key_length(cmd));
-
     Des64 des_iv;
     ft_memcpy(buf(des_iv.block, DES_BLOCK_SIZE), buf(iv, DES_BLOCK_SIZE));
+
+    assert(keylen == get_key_length(cmd));
 
     DesFunc func = fetch_des_func(options->encrypt, cmd);
     Buffer res = func(input, buf(key, keylen), des_iv);
