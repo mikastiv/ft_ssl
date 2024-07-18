@@ -440,6 +440,7 @@ random_number(Random* random, u64 min, u64 max) {
     u64 num;
     ssize_t bytes = read(random->fd, &num, sizeof(num));
     assert(bytes == sizeof(num));
+    (void)bytes;
 
     num -= min;
     num %= max - min;
