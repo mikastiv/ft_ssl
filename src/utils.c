@@ -13,6 +13,7 @@
 #include <fcntl.h>
 #include <stdio.h>
 #include <string.h>
+#include <sys/stat.h>
 #include <unistd.h>
 
 u64
@@ -155,8 +156,8 @@ buf(u8* ptr, u64 len) {
 }
 
 Buffer
-read_all_fd(int fd) {
-    u64 capacity = 2048;
+read_all_fd(int fd, u64 size_hint) {
+    u64 capacity = size_hint > 0 ? size_hint : 2048;
     Buffer str = { .ptr = arena_alloc(&arena, capacity + 1), .len = 0 };
     if (!str.ptr) return (Buffer){ 0 };
 
@@ -185,6 +186,16 @@ read_all_fd(int fd) {
     str.ptr[str.len] = 0;
 
     return str;
+}
+
+u64
+get_filesize(int fd) {
+    struct stat filestat;
+
+    int result = fstat(fd, &filestat);
+    if (result != 0) return 0;
+
+    return filestat.st_size;
 }
 
 u32

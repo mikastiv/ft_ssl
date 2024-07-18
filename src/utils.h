@@ -50,7 +50,10 @@ Buffer
 buf(u8* ptr, u64 len);
 
 Buffer
-read_all_fd(int fd);
+read_all_fd(int fd, u64 size_hint);
+
+u64
+get_filesize(int fd);
 
 u32
 read_u32(u8* buffer);

@@ -107,7 +107,8 @@ digest(u32 first_input, Command cmd, DigestOptions options) {
     Buffer out = { .ptr = buffer, .len = digest_size };
 
     if (options.echo_stdin || (first_input == argc && !options.string_argument)) {
-        Buffer input = read_all_fd(STDIN_FILENO);
+        u64 size_hint = get_filesize(STDIN_FILENO);
+        Buffer input = read_all_fd(STDIN_FILENO, size_hint);
         if (input.ptr) {
             if (options.echo_stdin) write(STDOUT_FILENO, input.ptr, input.len);
             hasher_str(input, out);

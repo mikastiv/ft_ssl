@@ -204,7 +204,8 @@ cipher(Command cmd, DesOptions* options) {
         goto cipher_err;
     }
 
-    Buffer input = read_all_fd(in_fd);
+    u64 size_hint = get_filesize(in_fd);
+    Buffer input = read_all_fd(in_fd, size_hint);
     if (!input.ptr) {
         print_error();
         goto cipher_err;
