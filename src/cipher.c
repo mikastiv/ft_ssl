@@ -259,12 +259,12 @@ cipher(Command cmd, DesOptions* options) {
         }
 
         if (options->encrypt) {
-            printf("salt=");
+            dprintf(STDERR_FILENO, "salt=");
             print_hex(buf(salt, PBKDF2_SALT_SIZE));
-            printf("key=");
+            dprintf(STDERR_FILENO, "key=");
             print_hex(buf(key, keylen));
             if (des_requires_iv(cmd)) {
-                printf("iv=");
+                dprintf(STDERR_FILENO, "iv=");
                 print_hex(buf(iv, DES_BLOCK_SIZE));
             }
         }
@@ -289,6 +289,15 @@ cipher(Command cmd, DesOptions* options) {
 
     if (!res.ptr) {
         goto cipher_err;
+    }
+
+    if (!options->hex_key && generate_salt) {
+        u64 newsize = res.len + magic.len + DES_BLOCK_SIZE;
+        Buffer tmp = { .ptr = arena_alloc(&arena, newsize), .len = newsize };
+        ft_memcpy(buf(tmp.ptr, magic.len), magic);
+        ft_memcpy(buf(tmp.ptr + magic.len, DES_BLOCK_SIZE), buf(salt, DES_BLOCK_SIZE));
+        ft_memcpy(buf(tmp.ptr + magic.len + DES_BLOCK_SIZE, res.len), res);
+        res = tmp;
     }
 
     if (options->encrypt && options->use_base64) {

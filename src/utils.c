@@ -328,9 +328,9 @@ parse_hex(Buffer str, Buffer out, bool* err) {
 void
 print_hex(Buffer str) {
     for (u64 i = 0; i < str.len; i++) {
-        printf("%02X", str.ptr[i]);
+        dprintf(STDERR_FILENO, "%02X", str.ptr[i]);
     }
-    printf("\n");
+    dprintf(STDERR_FILENO, "\n");
 }
 
 bool
