@@ -29,13 +29,22 @@ base64_encode(Buffer input) {
     u64 extra = input.len % 3;
 
     u64 size = chunks * 4 + (extra > 0 ? 4 : 0);
+    u64 newlines = size / 64;
+    size += newlines;
+
     Buffer buffer = buf(arena_alloc(&arena, size), size);
     if (!buffer.ptr) return (Buffer){ 0 };
     ft_memset(buffer, 0);
 
     u64 i = 0;
     u64 j = 0;
-    for (; i + 2 < input.len; i += 3, j += 4) {
+    u64 accum = 0;
+    for (; i + 2 < input.len; i += 3, j += 4, accum += 4) {
+        if (accum != 0 && accum % 64 == 0) {
+            buffer.ptr[j] = '\n';
+            j++;
+        }
+
         u32 bytes = read_u24_be(&input.ptr[i]);
         buffer.ptr[j + 0] = base64_alpha[(bytes >> 18) & 0x3F];
         buffer.ptr[j + 1] = base64_alpha[(bytes >> 12) & 0x3F];
