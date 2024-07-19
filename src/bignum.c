@@ -9,9 +9,9 @@
 BigNum
 bignum_init(u64 bitsize) {
     assert(bitsize <= BIGNUM_MAX_BITS);
-    assert(bitsize % sizeof(u32) == 0);
+    assert(bitsize % sizeof(BigNumChunk) == 0);
 
-    const u64 chunk_count = bitsize / (sizeof(u32) * 8);
+    const u64 chunk_count = bitsize / (sizeof(BigNumChunk) * 8);
     assert(chunk_count * 2 <= BIGNUM_MAX_CHUNKS);
 
     return (BigNum){ .chunk_count = chunk_count };
@@ -32,8 +32,8 @@ bignum_mul(BigNum* a, BigNum* b, BigNum* out) {
         u64 carry = 0;
         for (u64 j = 0; j < b->chunk_count; j++) {
             u64 product = (u64)a->chunks[i] * (u64)b->chunks[j] + (u64)out->chunks[i + j] + carry;
-            out->chunks[i + j] = (u32)product;
-            carry = product >> 32;
+            out->chunks[i + j] = (BigNumChunk)product;
+            carry = product >> (sizeof(BigNumChunk) * 8);
         }
         if (carry) {
             u64 index = i + out->chunk_count;
