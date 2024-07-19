@@ -1,4 +1,5 @@
 #include "arena.h"
+#include "bignum.h"
 #include "cipher.h"
 #include "parse.h"
 #include "ssl.h"
@@ -41,6 +42,18 @@ main(int in_argc, const char* const* in_argv) {
     //     }
     // }
     // printf("\n");
+
+    // BigNum a = bignum_init(32);
+    // BigNum b = bignum_init(64);
+    // BigNum out = bignum_init(32);
+
+    // a.chunks[0] = 0xFFFFFFFF;
+    // b.chunks[0] = 0xFFFFFFFF;
+    // b.chunks[1] = 0xFFFF00FF;
+
+    // bignum_mul(&a, &b, &out);
+
+    // bignum_print(&out);
 
     if (!arena_init(&arena, MAX_MEMORY)) {
         dprintf(STDERR_FILENO, "%s: failed to allocate memory\n", progname);
