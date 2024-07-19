@@ -37,6 +37,8 @@ bignum_mul(BigNum* a, BigNum* b, BigNum* out) {
         }
         if (carry) {
             u64 index = i + out->chunk_count;
+            assert(index < BIGNUM_MAX_CHUNKS);
+
             out->chunks[index] = carry;
             if (index >= a->chunk_count) {
                 extra_chunks++;
@@ -45,7 +47,6 @@ bignum_mul(BigNum* a, BigNum* b, BigNum* out) {
     }
 
     out->chunk_count = a->chunk_count + extra_chunks;
-    assert(out->chunk_count <= BIGNUM_MAX_CHUNKS);
 }
 
 void
