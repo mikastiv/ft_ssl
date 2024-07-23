@@ -68,6 +68,9 @@ bignum_sub(BigNum* a, BigNum* b, BigNum* out) {
         u64 b_part = b->chunks[i];
 
         u64 diff = a_part - b_part - borrow;
+        if (borrow) {
+            diff += 1 << (sizeof(BigNumChunk) * 8);
+        }
         out->chunks[i] = (BigNumChunk)diff;
 
         borrow = (diff >> 63) & 1;
@@ -76,19 +79,16 @@ bignum_sub(BigNum* a, BigNum* b, BigNum* out) {
 
 void
 bignum_mod(BigNum* a, BigNum* b, BigNum* out) {
-    BigNum tmp = { 0 };
-    BigNum divisor = { 0 };
+    BigNum tmp_a = *a;
+    BigNum tmp_b = *b;
 
-    ft_memcpy(buf(divisor.chunks, BIGNUM_MAX_CHUNKS), buf(b->chunks, BIGNUM_MAX_CHUNKS));
-
-    for (u64 i = 0; i < BIGNUM_MAX_CHUNKS; i++) {
-        tmp.chunks[i] = a->chunks[i];
-        while (bignum_compare(&tmp, &divisor) >= 0) {
-            bignum_sub(&tmp, &tmp, &divisor);
-        }
+    while (bignum_compare(&tmp_a, &tmp_b) >= 0) {
+        BigNum tmp = { 0 };
+        bignum_sub(&tmp_a, &tmp_b, &tmp);
+        tmp_a = tmp;
     }
 
-    ft_memcpy(buf(out->chunks, BIGNUM_MAX_CHUNKS), buf(tmp.chunks, BIGNUM_MAX_CHUNKS));
+    *out = tmp_a;
 }
 
 void

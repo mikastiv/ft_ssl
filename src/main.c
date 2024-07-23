@@ -43,8 +43,8 @@ main(int in_argc, const char* const* in_argv) {
     // }
     // printf("\n");
 
-    char value1[] = { 0x02, 0x30, 0 };
-    char value2[] = { 0x33, 0 };
+    char value1[] = { 0x88, 0x99, 0x44, 0x55, 0x22, 0 };
+    char value2[] = { 0x66, 0 };
 
     BigNum a = bignum_init(str(value1));
     BigNum b = bignum_init(str(value2));
