@@ -6,6 +6,7 @@ typedef u8 BigNumChunk;
 
 #define BIGNUM_MAX_BITS 4096
 #define BIGNUM_MAX_CHUNKS (BIGNUM_MAX_BITS / (sizeof(BigNumChunk) * 8))
+#define BIGNUM_CHUNK_BITS (sizeof(BigNumChunk) * 8)
 
 typedef struct {
     BigNumChunk chunks[BIGNUM_MAX_CHUNKS];
