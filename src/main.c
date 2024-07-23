@@ -43,17 +43,16 @@ main(int in_argc, const char* const* in_argv) {
     // }
     // printf("\n");
 
-    // BigNum a = bignum_init(32);
-    // BigNum b = bignum_init(64);
-    // BigNum out = bignum_init(32);
+    char value1[] = { 0x02, 0x30, 0 };
+    char value2[] = { 0x33, 0 };
 
-    // a.chunks[0] = 0xFFFFFFFF;
-    // b.chunks[0] = 0xFFFFFFFF;
-    // b.chunks[1] = 0xFFFF00FF;
+    BigNum a = bignum_init(str(value1));
+    BigNum b = bignum_init(str(value2));
+    BigNum out = { 0 };
 
-    // bignum_mul(&a, &b, &out);
+    bignum_sub(&a, &b, &out);
 
-    // bignum_print(&out);
+    bignum_print(&out);
 
     if (!arena_init(&arena, MAX_MEMORY)) {
         dprintf(STDERR_FILENO, "%s: failed to allocate memory\n", progname);
