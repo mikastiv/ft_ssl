@@ -44,13 +44,13 @@ main(int in_argc, const char* const* in_argv) {
     // printf("\n");
 
     char value1[] = { 0x88, 0x99, 0x44, 0x55, 0x22, 0 };
-    char value2[] = { 0x66, 0 };
+    char value2[] = { 0x66, 0x78, 0 };
 
     BigNum a = bignum_init(str(value1));
     BigNum b = bignum_init(str(value2));
     BigNum out = { 0 };
 
-    bignum_sub(&a, &b, &out);
+    bignum_mul(&a, &b, &out);
 
     bignum_print(&out);
 

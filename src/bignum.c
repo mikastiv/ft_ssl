@@ -1,7 +1,5 @@
 #include "bignum.h"
 
-#include "utils.h"
-
 #include <assert.h>
 #include <stdio.h>
 #include <unistd.h>
@@ -18,35 +16,23 @@ bignum_init(Buffer number) {
     return out;
 }
 
-// void
-// bignum_mul(BigNum* a, BigNum* b, BigNum* out) {
-//     ft_memset(buf((u8*)out->chunks, sizeof(out->chunks)), 0);
+void
+bignum_mul(BigNum* a, BigNum* b, BigNum* out) {
+    *out = (BigNum){ 0 };
 
-//     if (a->chunk_count < b->chunk_count) {
-//         swap(&a, &b);
-//     }
+    for (u64 i = 0; i < BIGNUM_MAX_CHUNKS; i++) {
+        u64 carry = 0;
+        for (u64 j = 0; j < BIGNUM_MAX_CHUNKS; j++) {
+            u64 a_part = a->chunks[i];
+            u64 b_part = b->chunks[j];
+            u64 c_part = out->chunks[i + j];
 
-//     u64 extra_chunks = 0;
-//     for (u64 i = 0; i < a->chunk_count; i++) {
-//         u64 carry = 0;
-//         for (u64 j = 0; j < b->chunk_count; j++) {
-//             u64 product = (u64)a->chunks[i] * (u64)b->chunks[j] + (u64)out->chunks[i + j] +
-//             carry; out->chunks[i + j] = (BigNumChunk)product; carry = product >>
-//             (sizeof(BigNumChunk) * 8);
-//         }
-//         if (carry) {
-//             u64 index = i + out->chunk_count;
-//             assert(index < BIGNUM_MAX_CHUNKS);
-
-//             out->chunks[index] = carry;
-//             if (index >= a->chunk_count) {
-//                 extra_chunks++;
-//             }
-//         }
-//     }
-
-//     out->chunk_count = a->chunk_count + extra_chunks;
-// }
+            u64 product = a_part * b_part + c_part + carry;
+            out->chunks[i + j] = (BigNumChunk)product;
+            carry = product >> (sizeof(BigNumChunk) * 8);
+        }
+    }
+}
 
 static i32
 bignum_compare(BigNum* a, BigNum* b) {
