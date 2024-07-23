@@ -54,12 +54,11 @@ bignum_sub(BigNum* a, BigNum* b, BigNum* out) {
         u64 b_part = b->chunks[i];
 
         u64 diff = a_part - b_part - borrow;
+        borrow = (diff >> 63) & 1;
         if (borrow) {
             diff += 1 << (sizeof(BigNumChunk) * 8);
         }
         out->chunks[i] = (BigNumChunk)diff;
-
-        borrow = (diff >> 63) & 1;
     }
 }
 
