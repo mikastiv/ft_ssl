@@ -12,6 +12,7 @@
 #include <errno.h>
 #include <fcntl.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 #include <sys/stat.h>
 #include <unistd.h>
@@ -406,14 +407,14 @@ power(u64 n, u64 k) {
 }
 
 u64
-power_mod(u64 x, u64 y, u64 mod) {
+power_mod(u64 x, u64 exp, u64 mod) {
     x %= mod;
 
     u64 result = 1;
-    while (y > 0) {
-        if (y & 1) result = (result * x) % mod;
+    while (exp > 0) {
+        if (exp & 1) result = (result * x) % mod;
 
-        y /= 2;
+        exp /= 2;
         x = (x * x) % mod;
     }
 
@@ -439,8 +440,11 @@ random_number(Random* random, u64 min, u64 max) {
 
     u64 num;
     ssize_t bytes = read(random->fd, &num, sizeof(num));
-    assert(bytes == sizeof(num));
-    (void)bytes;
+    if (bytes < 0) {
+        dprintf(STDERR_FILENO, "%s: error getting random bytes\n", progname);
+        arena_free(&arena);
+        exit(EXIT_FAILURE);
+    }
 
     num -= min;
     num %= max - min;
@@ -475,4 +479,50 @@ clz(u32 x) {
     }
 
     return n;
+}
+
+static u64
+extended_gcd(u64 a, u64 b, i64* x, i64* y) {
+    i64 aa[2] = { 1, 0 };
+    i64 bb[2] = { 0, 1 };
+    i64 q;
+
+    while (true) {
+        q = a / b;
+        a = a % b;
+
+        aa[0] = aa[0] - q * aa[1];
+        bb[0] = bb[0] - q * bb[1];
+
+        if (a == 0) {
+            *x = aa[1];
+            *y = bb[1];
+            return b;
+        }
+
+        q = b / a;
+        b = b % a;
+
+        aa[1] = aa[1] - q * aa[0];
+        bb[1] = bb[1] - q * bb[0];
+
+        if (b == 0) {
+            *x = aa[0];
+            *y = bb[0];
+            return a;
+        };
+    }
+}
+
+u64
+inverse_mod(u64 x, u64 y) {
+    i64 a;
+    i64 b;
+    if (extended_gcd(x, y, &a, &b) != 1) {
+        return 0;
+    }
+
+    if (a < 0) a += y;
+
+    return a;
 }

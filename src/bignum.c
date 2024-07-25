@@ -113,6 +113,22 @@ bignum_sub(BigNum* a, BigNum* b, BigNum* out) {
 }
 
 void
+bignum_div(BigNum* a, BigNum* b, BigNum* quotient, BigNum* remainder) {
+    BigNum tmp = { 0 };
+    *remainder = *a;
+    *quotient = (BigNum){ 0 };
+
+    for (i64 i = BIGNUM_MAX_CHUNKS * BIGNUM_CHUNK_BITS - 1; i >= 0; i--) {
+        bignum_shift_left(&tmp, 1);
+        tmp.chunks[0] = (remainder->chunks[i / BIGNUM_CHUNK_BITS] >> (i % BIGNUM_CHUNK_BITS)) & 1;
+        if (bignum_compare(&tmp, b) >= 0) {
+            bignum_sub(&tmp, &tmp, b);
+            quotient->chunks[i / BIGNUM_CHUNK_BITS] |= (1 << (i % BIGNUM_CHUNK_BITS));
+        }
+    }
+}
+
+void
 bignum_mod(BigNum* a, BigNum* b, BigNum* out) {
     u32 k = BIGNUM_MAX_BITS / 2;
 
@@ -122,8 +138,15 @@ bignum_mod(BigNum* a, BigNum* b, BigNum* out) {
         buf(a->chunks + BIGNUM_MAX_CHUNKS / 2, sizeof(BigNumChunk) * (BIGNUM_MAX_CHUNKS / 2))
     );
 
+    BigNum pow_2 = { 0 };
+    pow_2.chunks[BIGNUM_MAX_CHUNKS - 1] = 1;
+    BigNum mu = { 0 };
+    BigNum tmp = { 0 };
+
+    bignum_div(&pow_2, b, &mu, &tmp);
+
     BigNum q2 = { 0 };
-    bignum_mul(&q2, &q1, mu);
+    bignum_mul(&q2, &q1, &mu);
 
     BigNum q3 = { 0 };
     bignum_shift_right(&q2, k / 2);

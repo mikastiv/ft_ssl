@@ -121,5 +121,8 @@ power(u64 n, u64 k);
 u64
 power_mod(u64 x, u64 y, u64 mod);
 
+u64
+inverse_mod(u64 x, u64 y);
+
 u32
 clz(u32 value);

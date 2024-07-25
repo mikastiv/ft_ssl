@@ -36,23 +36,7 @@ main(int in_argc, const char* const* in_argv) {
         return EXIT_FAILURE;
     }
 
-    // for (u64 i = 0; i < 100; i++) {
-    //     if (is_prime(i, 1)) {
-    //         printf("%lu ", i);
-    //     }
-    // }
-    // printf("\n");
-
-    char value1[] = { 0x88, 0x99, 0x44, 0x55, 0x22, 0 };
-    char value2[] = { 0x66, 0x78, 0 };
-
-    BigNum a = bignum_init(str(value1));
-    BigNum b = bignum_init(str(value2));
-    BigNum out = { 0 };
-
-    bignum_mul(&a, &b, &out);
-
-    bignum_print(&out);
+    genrsa();
 
     if (!arena_init(&arena, MAX_MEMORY)) {
         dprintf(STDERR_FILENO, "%s: failed to allocate memory\n", progname);

@@ -22,6 +22,9 @@ void
 bignum_mul(BigNum* a, BigNum* b, BigNum* out);
 
 void
+bignum_div(BigNum* a, BigNum* b, BigNum* quotient, BigNum* remainder);
+
+void
 bignum_mod(BigNum* a, BigNum* b, BigNum* out);
 
 void
