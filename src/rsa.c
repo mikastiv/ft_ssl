@@ -96,6 +96,7 @@ genrsa(void) {
     AsnSeq rsa = asn_seq_init();
     asn_seq_add_object_ident(&rsa, str(ASN_RSA_ENCRYPTION));
     asn_seq_add_null(&rsa, 0);
+
     asn_seq_add_seq(&private_key, &rsa);
 
     AsnSeq rsa_private_key = asn_seq_init();

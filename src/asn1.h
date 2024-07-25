@@ -39,7 +39,6 @@ typedef union {
     u8 raw;
 } AsnLength;
 
-#define ASN_MAXSIZE 4096
 #define ASN_SEQ_MAXSIZE 1024
 #define ASN_RSA_ENCRYPTION "\x2A\x86\x48\x86\xF7\x0D\x01\x01\x01"
 
