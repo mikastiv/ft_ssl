@@ -63,8 +63,8 @@ genrsa(void) {
     u64 p = 0;
     u64 q = 0;
     while (true) {
-        if (!p) p = random_number(&rng, 0, UINT32_MAX);
-        if (!q) q = random_number(&rng, 0, UINT32_MAX);
+        if (!p) p = random_number(&rng, 0xC0000000, UINT32_MAX);
+        if (!q) q = random_number(&rng, 0xC0000000, UINT32_MAX);
 
         if (!is_prime(p)) p = 0;
         if (!is_prime(q)) q = 0;
@@ -114,7 +114,7 @@ genrsa(void) {
 
     Buffer encoded = base64_encode(buf(ctx.buffer, ctx.len));
 
-    int file = open("test_me.der", O_WRONLY | O_CREAT | O_TRUNC, S_IRWXU | S_IRGRP | S_IROTH);
+    int file = open("test_me.pem", O_WRONLY | O_CREAT | O_TRUNC, S_IRWXU | S_IRGRP | S_IROTH);
     Buffer begin = str("-----BEGIN RSA PRIVATE KEY-----\n");
     Buffer end = str("\n-----END RSA PRIVATE KEY-----\n");
     write(file, begin.ptr, begin.len);
