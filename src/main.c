@@ -36,12 +36,12 @@ main(int in_argc, const char* const* in_argv) {
         return EXIT_FAILURE;
     }
 
-    genrsa();
-
     if (!arena_init(&arena, MAX_MEMORY)) {
         dprintf(STDERR_FILENO, "%s: failed to allocate memory\n", progname);
         return EXIT_FAILURE;
     }
+
+    genrsa();
 
     int result = EXIT_SUCCESS;
     switch (cmd) {

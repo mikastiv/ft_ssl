@@ -1,3 +1,5 @@
+#include "asn1.h"
+#include "cipher.h"
 #include "globals.h"
 #include "types.h"
 #include "utils.h"
@@ -5,6 +7,9 @@
 #include <assert.h>
 #include <inttypes.h>
 #include <stdio.h>
+#include <unistd.h>
+
+#include <fcntl.h>
 #include <unistd.h>
 
 // https://en.wikipedia.org/wiki/Miller%E2%80%93Rabin_primality_test#Testing_against_small_sets_of_bases
@@ -72,6 +77,9 @@ genrsa(void) {
     u64 phi = (p - 1) * (q - 1);
     u64 e = 65537;
     u64 d = inverse_mod(e, phi);
+    u64 exp1 = d % (p - 1);
+    u64 exp2 = d % (q - 1);
+    u64 coef = inverse_mod(q, p);
 
     dprintf(STDERR_FILENO, "p: %" PRIu64 "\n", p);
     dprintf(STDERR_FILENO, "q: %" PRIu64 "\n", q);
@@ -79,6 +87,40 @@ genrsa(void) {
     dprintf(STDERR_FILENO, "phi: %" PRIu64 "\n", phi);
     dprintf(STDERR_FILENO, "e: %" PRIu64 "\n", e);
     dprintf(STDERR_FILENO, "d: %" PRIu64 "\n", d);
+
+    AsnSeq ctx = asn_seq_init();
+
+    AsnSeq private_key = asn_seq_init();
+    asn_seq_add_integer(&private_key, 0); // version
+
+    AsnSeq rsa = asn_seq_init();
+    asn_seq_add_object_ident(&rsa, str(ASN_RSA_ENCRYPTION));
+    asn_seq_add_null(&rsa, 0);
+    asn_seq_add_seq(&private_key, &rsa);
+
+    AsnSeq rsa_private_key = asn_seq_init();
+    asn_seq_add_integer(&rsa_private_key, 0);    // version
+    asn_seq_add_integer(&rsa_private_key, n);    // modulus
+    asn_seq_add_integer(&rsa_private_key, e);    // public exponent
+    asn_seq_add_integer(&rsa_private_key, d);    // private exponent
+    asn_seq_add_integer(&rsa_private_key, p);    // prime 1
+    asn_seq_add_integer(&rsa_private_key, q);    // prime 2
+    asn_seq_add_integer(&rsa_private_key, exp1); // exponent 1
+    asn_seq_add_integer(&rsa_private_key, exp2); // exponent 2
+    asn_seq_add_integer(&rsa_private_key, coef); // coefficient
+
+    asn_seq_add_octet_str_seq(&private_key, &rsa_private_key);
+    asn_seq_add_seq(&ctx, &private_key);
+
+    Buffer encoded = base64_encode(buf(ctx.buffer, ctx.len));
+
+    int file = open("test_me.der", O_WRONLY | O_CREAT | O_TRUNC, S_IRWXU | S_IRGRP | S_IROTH);
+    Buffer begin = str("-----BEGIN RSA PRIVATE KEY-----\n");
+    Buffer end = str("\n-----END RSA PRIVATE KEY-----\n");
+    write(file, begin.ptr, begin.len);
+    write(file, encoded.ptr, encoded.len);
+    write(file, end.ptr, end.len);
+    close(file);
 
     return true;
 }
