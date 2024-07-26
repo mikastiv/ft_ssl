@@ -288,16 +288,16 @@ parse_options(Command cmd, void* out_options) {
                      .value = &options->output_file,
                      },
                     {
-                     .name = "input file pass phrase source",
+                     .name = "input file passphrase",
                      .flag = "passin",
                      .type = OptionType_String,
-                     .value = &options->input_passphrase_file,
+                     .value = &options->input_passphrase,
                      },
                     {
-                     .name = "output file pass phrase source",
+                     .name = "output file passphrase",
                      .flag = "passout",
                      .type = OptionType_String,
-                     .value = &options->output_passphrase_file,
+                     .value = &options->output_passphrase,
                      },
                     {
                      .name = "use DES",
@@ -333,13 +333,13 @@ parse_options(Command cmd, void* out_options) {
                      .name = "input file is pubkey",
                      .flag = "pubin",
                      .type = OptionType_Bool,
-                     .value = &options->is_public_key_input_file,
+                     .value = &options->public_key_in,
                      },
                     {
                      .name = "output file is pubkey",
                      .flag = "pubout",
                      .type = OptionType_Bool,
-                     .value = &options->is_public_key_output_file,
+                     .value = &options->public_key_out,
                      }
                 };
 
@@ -373,7 +373,7 @@ parse_options(Command cmd, void* out_options) {
                      .name = "input file is pubkey",
                      .flag = "pubin",
                      .type = OptionType_Bool,
-                     .value = &options->is_public_key_input_file,
+                     .value = &options->public_key_in,
                      },
                     {
                      .name = "encrypt",

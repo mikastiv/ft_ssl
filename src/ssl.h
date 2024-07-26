@@ -52,10 +52,10 @@ typedef struct {
     const char* output_format;
     const char* input_file;
     const char* output_file;
-    const char* input_passphrase_file;
-    const char* output_passphrase_file;
-    bool is_public_key_input_file;
-    bool is_public_key_output_file;
+    const char* input_passphrase;
+    const char* output_passphrase;
+    bool public_key_in;
+    bool public_key_out;
     bool use_des;
     bool print_key_text;
     bool no_print_key;
@@ -67,7 +67,7 @@ typedef struct {
     const char* input_file;
     const char* output_file;
     const char* input_key;
-    bool is_public_key_input_file;
+    bool public_key_in;
     bool encrypt;
     bool decrypt;
     bool hexdump;
