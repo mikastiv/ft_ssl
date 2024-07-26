@@ -163,18 +163,24 @@ output_public_key(Rsa rsa, int fd) {
 }
 
 typedef enum {
+    PemNone,
+    PemPublic,
+    PemRsaPublic,
     PemPrivate,
     PemRsaPrivate,
     PemEncPrivate,
 } PemKeyType;
 
+static const char* public_key_begin = "-----BEGIN PUBLIC KEY-----\n";
+static const char* public_key_end = "-----END PUBLIC KEY-----\n";
+static const char* public_key_begin_rsa = "-----BEGIN RSA PUBLIC KEY-----\n";
+static const char* public_key_end_rsa = "-----END RSA PUBLIC KEY-----\n";
 static const char* private_key_begin = "-----BEGIN PRIVATE KEY-----\n";
 static const char* private_key_end = "-----END PRIVATE KEY-----\n";
-
-// static const char* private_key_begin_rsa = "-----BEGIN RSA PRIVATE KEY-----\n";
-// static const char* private_key_end_rsa = "-----END RSA PRIVATE KEY-----\n";
-// static const char* private_key_begin_enc = "-----BEGIN ENCRYPTED PRIVATE KEY-----\n";
-// static const char* private_key_end_enc = "-----END ENCRYPTED PRIVATE KEY-----\n";
+static const char* private_key_begin_rsa = "-----BEGIN RSA PRIVATE KEY-----\n";
+static const char* private_key_end_rsa = "-----END RSA PRIVATE KEY-----\n";
+static const char* private_key_begin_enc = "-----BEGIN ENCRYPTED PRIVATE KEY-----\n";
+static const char* private_key_end_enc = "-----END ENCRYPTED PRIVATE KEY-----\n";
 
 static Buffer
 read_pem_key(Buffer input, Buffer begin, Buffer end) {
@@ -197,6 +203,45 @@ read_pem_key(Buffer input, Buffer begin, Buffer end) {
     Buffer data = buf(start_ptr, end_delim.ptr - start_ptr);
 
     return data;
+}
+
+static Buffer
+read_private_key(Buffer input, PemKeyType* out) {
+    *out = PemPrivate;
+    Buffer base64_key = read_pem_key(input, str(private_key_begin), str(private_key_end));
+
+    if (!base64_key.ptr) {
+        *out = PemRsaPrivate;
+        base64_key = read_pem_key(input, str(private_key_begin_rsa), str(private_key_end_rsa));
+    }
+
+    if (!base64_key.ptr) {
+        *out = PemEncPrivate;
+        base64_key = read_pem_key(input, str(private_key_begin_enc), str(private_key_end_enc));
+    }
+
+    if (!base64_key.ptr) {
+        *out = PemNone;
+    }
+
+    return base64_key;
+}
+
+static Buffer
+read_public_key(Buffer input, PemKeyType* out) {
+    *out = PemPublic;
+    Buffer base64_key = read_pem_key(input, str(public_key_begin), str(public_key_end));
+
+    if (!base64_key.ptr) {
+        *out = PemRsaPublic;
+        base64_key = read_pem_key(input, str(public_key_begin_rsa), str(public_key_end_rsa));
+    }
+
+    if (!base64_key.ptr) {
+        *out = PemNone;
+    }
+
+    return base64_key;
 }
 
 bool
@@ -238,9 +283,17 @@ rsa(RsaOptions* options) {
     }
 
     Buffer input = read_all_fd(in_fd, get_filesize(in_fd));
-    Buffer base64_key = read_pem_key(input, str(private_key_begin), str(private_key_end));
 
-    write(STDERR_FILENO, base64_key.ptr, base64_key.len);
+    PemKeyType key_type = PemNone;
+    Buffer base64_key = { 0 };
+    if (options->public_key_in) {
+        base64_key = read_public_key(input, &key_type);
+    } else {
+        base64_key = read_private_key(input, &key_type);
+    }
+
+    dprintf(STDERR_FILENO, "Type: %d\n", key_type);
+    if (base64_key.ptr) write(STDERR_FILENO, base64_key.ptr, base64_key.len);
 
     if (options->input_file && in_fd != -1) close(in_fd);
     return true;
