@@ -51,7 +51,7 @@ AsnSeq
 asn_seq_init(void);
 
 void
-asn_seq_add_integer(AsnSeq* seq, u64 value);
+asn_seq_add_integer(AsnSeq* seq, u64 value, bool padzero);
 
 void
 asn_seq_add_null(AsnSeq* seq, u8 value);
@@ -61,6 +61,9 @@ asn_seq_add_object_ident(AsnSeq* seq, Buffer value);
 
 void
 asn_seq_add_octet_str_seq(AsnSeq* seq, AsnSeq* value);
+
+void
+asn_seq_add_bit_str_seq(AsnSeq* seq, AsnSeq* value);
 
 void
 asn_seq_add_seq(AsnSeq* parent, AsnSeq* seq);

@@ -57,7 +57,7 @@ static u64
 generate_prime(Random* rng, u64* first_prime) {
     u64 prime = 0;
     while (true) {
-        prime = random_number(rng, 0xC0000000, UINT32_MAX);
+        prime = random_number(rng, 0x80000000, UINT32_MAX);
         dprintf(STDERR_FILENO, ".");
 
         if (first_prime && *first_prime == prime) continue;
@@ -75,7 +75,7 @@ output_private_key(u64 n, u64 e, u64 d, u64 p, u64 q, u64 exp1, u64 exp2, u64 co
     AsnSeq ctx = asn_seq_init();
 
     AsnSeq private_key = asn_seq_init();
-    asn_seq_add_integer(&private_key, 0); // version
+    asn_seq_add_integer(&private_key, 0, false); // version
 
     AsnSeq rsa = asn_seq_init();
     asn_seq_add_object_ident(&rsa, str(ASN_RSA_ENCRYPTION));
@@ -84,15 +84,15 @@ output_private_key(u64 n, u64 e, u64 d, u64 p, u64 q, u64 exp1, u64 exp2, u64 co
     asn_seq_add_seq(&private_key, &rsa);
 
     AsnSeq rsa_private_key = asn_seq_init();
-    asn_seq_add_integer(&rsa_private_key, 0);    // version
-    asn_seq_add_integer(&rsa_private_key, n);    // modulus
-    asn_seq_add_integer(&rsa_private_key, e);    // public exponent
-    asn_seq_add_integer(&rsa_private_key, d);    // private exponent
-    asn_seq_add_integer(&rsa_private_key, p);    // prime 1
-    asn_seq_add_integer(&rsa_private_key, q);    // prime 2
-    asn_seq_add_integer(&rsa_private_key, exp1); // exponent 1
-    asn_seq_add_integer(&rsa_private_key, exp2); // exponent 2
-    asn_seq_add_integer(&rsa_private_key, coef); // coefficient
+    asn_seq_add_integer(&rsa_private_key, 0, false);    // version
+    asn_seq_add_integer(&rsa_private_key, n, true);     // modulus
+    asn_seq_add_integer(&rsa_private_key, e, false);    // public exponent
+    asn_seq_add_integer(&rsa_private_key, d, false);    // private exponent
+    asn_seq_add_integer(&rsa_private_key, p, true);     // prime 1
+    asn_seq_add_integer(&rsa_private_key, q, true);     // prime 2
+    asn_seq_add_integer(&rsa_private_key, exp1, false); // exponent 1
+    asn_seq_add_integer(&rsa_private_key, exp2, false); // exponent 2
+    asn_seq_add_integer(&rsa_private_key, coef, false); // coefficient
 
     asn_seq_add_octet_str_seq(&private_key, &rsa_private_key);
     asn_seq_add_seq(&ctx, &private_key);
@@ -101,6 +101,36 @@ output_private_key(u64 n, u64 e, u64 d, u64 p, u64 q, u64 exp1, u64 exp2, u64 co
 
     Buffer begin = str("-----BEGIN RSA PRIVATE KEY-----\n");
     Buffer end = str("\n-----END RSA PRIVATE KEY-----\n");
+    write(fd, begin.ptr, begin.len);
+    write(fd, encoded.ptr, encoded.len);
+    write(fd, end.ptr, end.len);
+}
+
+static void
+output_public_key(u64 n, u64 e, int fd) {
+    AsnSeq ctx = asn_seq_init();
+
+    AsnSeq public_key = asn_seq_init();
+
+    AsnSeq rsa = asn_seq_init();
+    asn_seq_add_object_ident(&rsa, str(ASN_RSA_ENCRYPTION));
+    asn_seq_add_null(&rsa, 0);
+
+    asn_seq_add_seq(&public_key, &rsa);
+
+    AsnSeq rsa_public_key = asn_seq_init();
+    asn_seq_add_integer(&rsa_public_key, n, true);  // modulus
+    asn_seq_add_integer(&rsa_public_key, e, false); // public exponent
+
+    asn_seq_add_bit_str_seq(&public_key, &rsa_public_key);
+    asn_seq_add_seq(&ctx, &public_key);
+
+    // write(fd, ctx.buffer, ctx.len);
+
+    Buffer encoded = base64_encode(buf(ctx.buffer, ctx.len));
+
+    Buffer begin = str("-----BEGIN RSA PUBLIC KEY-----\n");
+    Buffer end = str("\n-----END RSA PUBLIC KEY-----\n");
     write(fd, begin.ptr, begin.len);
     write(fd, encoded.ptr, encoded.len);
     write(fd, end.ptr, end.len);
@@ -135,6 +165,7 @@ genrsa(GenRsaOptions* options) {
     dprintf(STDERR_FILENO, "e is %" PRIu64 " (%#" PRIx64 ")\n", e, e);
 
     output_private_key(n, e, d, p, q, exp1, exp2, coef, out_fd);
+    output_public_key(n, e, STDOUT_FILENO);
 
     if (options->output_file && out_fd != -1) close(out_fd);
     return true;

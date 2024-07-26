@@ -33,7 +33,7 @@ asn_seq_write_length(AsnSeq* seq, u64 len) {
 }
 
 void
-asn_seq_add_integer(AsnSeq* seq, u64 value) {
+asn_seq_add_integer(AsnSeq* seq, u64 value, bool padzero) {
     AsnOctet1 oct1 = { 0 };
     oct1.tag_type = AsnInteger;
 
@@ -46,8 +46,16 @@ asn_seq_add_integer(AsnSeq* seq, u64 value) {
     if (value > 0xFFFFFFFFFFFF) len++;
     if (value > 0xFFFFFFFFFFFFFF) len++;
 
+    if (padzero) {
+        len++;
+    }
+
     asn_seq_write_byte(seq, oct1.raw);
     asn_seq_write_byte(seq, len);
+
+    if (padzero) {
+        asn_seq_write_byte(seq, 0);
+    }
 
     if (value == 0) {
         asn_seq_write_byte(seq, 0);
@@ -101,6 +109,22 @@ asn_seq_add_octet_str_seq(AsnSeq* seq, AsnSeq* value) {
 
     asn_seq_write_byte(seq, oct1.raw);
     asn_seq_write_length(seq, octet_str_len);
+
+    asn_seq_add_seq(seq, value);
+}
+
+void
+asn_seq_add_bit_str_seq(AsnSeq* seq, AsnSeq* value) {
+    AsnOctet1 oct1 = { 0 };
+    oct1.tag_type = AsnBitString;
+
+    u64 bit_str_len = value->len;
+    if (bit_str_len > 127) bit_str_len += 2; // seq long form length
+    bit_str_len += 3;                        // seq length + tag octet + unused bits
+
+    asn_seq_write_byte(seq, oct1.raw);
+    asn_seq_write_length(seq, bit_str_len);
+    asn_seq_write_byte(seq, 0); // unused bits
 
     asn_seq_add_seq(seq, value);
 }
