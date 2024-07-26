@@ -47,9 +47,29 @@ is_prime(u64 n) {
         if (!miller_rabin_test(n, d, witnesses[i])) {
             return false;
         }
+        dprintf(STDERR_FILENO, "+");
     }
 
     return true;
+}
+
+static u64
+generate_prime(Random* rng, u64* first_prime) {
+    u64 prime = 0;
+    while (true) {
+        prime = random_number(rng, 0xC0000000, UINT32_MAX);
+        dprintf(STDERR_FILENO, ".");
+
+        if (first_prime && *first_prime == prime) {
+            continue;
+        }
+
+        if (is_prime(prime)) break;
+    }
+
+    dprintf(STDERR_FILENO, "\n");
+
+    return prime;
 }
 
 bool
@@ -66,19 +86,10 @@ genrsa(GenRsaOptions* options) {
         return false;
     }
 
-    u64 p = 0;
-    u64 q = 0;
-    while (true) {
-        if (!p) p = random_number(&rng, 0xC0000000, UINT32_MAX);
-        if (!q) q = random_number(&rng, 0xC0000000, UINT32_MAX);
+    dprintf(STDERR_FILENO, "Generating RSA key with 64 bits\n");
 
-        if (!is_prime(p)) p = 0;
-        if (!is_prime(q)) q = 0;
-        if (p == q) q = 0;
-
-        if (p && q) break;
-    }
-
+    u64 p = generate_prime(&rng, 0);
+    u64 q = generate_prime(&rng, &p);
     u64 n = p * q;
     u64 phi = (p - 1) * (q - 1);
     u64 e = 65537;
@@ -86,6 +97,8 @@ genrsa(GenRsaOptions* options) {
     u64 exp1 = d % (p - 1);
     u64 exp2 = d % (q - 1);
     u64 coef = inverse_mod(q, p);
+
+    dprintf(STDERR_FILENO, "e is %" PRIu64 " (%#" PRIx64 ")\n", e, e);
 
     AsnSeq ctx = asn_seq_init();
 
