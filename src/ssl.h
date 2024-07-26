@@ -63,11 +63,22 @@ typedef struct {
     bool verify_key;
 } RsaOptions;
 
+typedef struct {
+    const char* input_file;
+    const char* output_file;
+    const char* input_key;
+    bool is_public_key_input_file;
+    bool encrypt;
+    bool decrypt;
+    bool hexdump;
+} RsaUtlOptions;
+
 typedef enum {
     Command_None,
     Command_GenRsa,
     Command_Rsa,
-    Command_LastStandard = Command_Rsa,
+    Command_RsaUtl,
+    Command_LastStandard = Command_RsaUtl,
     Command_Md5,
     Command_Sha256,
     Command_Sha224,

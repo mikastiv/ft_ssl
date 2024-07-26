@@ -12,6 +12,7 @@ static const char* cmd_names[] = {
     [Command_None] = "none",
     [Command_GenRsa] = "genrsa",
     [Command_Rsa] = "rsa",
+    [Command_RsaUtl] = "rsautl",
     [Command_Md5] = "md5",
     [Command_Sha256] = "sha256",
     [Command_Sha224] = "sha224",
@@ -93,10 +94,11 @@ print_help(Command cmd) {
             dprintf(STDERR_FILENO, "usage: %s %s [flags]\n", progname, cmd_names[cmd]);
 
             dprintf(STDERR_FILENO, "\nFlags:\n");
+            print_flag("h", "print help");
             print_flag("inform <format>", "input format; available: PEM");
             print_flag("outform <format>", "output format; available: PEM");
-            print_flag("i <filename>", "input file");
-            print_flag("o <filename>", "output file");
+            print_flag("in <filename>", "input file");
+            print_flag("out <filename>", "output file");
             print_flag("passin <filename>", "input file pass phrase source");
             print_flag("passout <filename>", "output file pass phrase source");
             print_flag("des", "use DES cipher");
@@ -106,6 +108,19 @@ print_help(Command cmd) {
             print_flag("check", "verify key consistency");
             print_flag("pubin", "expect a public key in input file");
             print_flag("pubout", "output a public key");
+        } break;
+        case Command_RsaUtl: {
+            dprintf(STDERR_FILENO, "usage: %s %s [flags]\n", progname, cmd_names[cmd]);
+
+            dprintf(STDERR_FILENO, "\nFlags:\n");
+            print_flag("h", "print help");
+            print_flag("in <filename>", "input file");
+            print_flag("out <filename>", "output file");
+            print_flag("inkey <filename>", "input key");
+            print_flag("pubin", "expect a public key in input file");
+            print_flag("encrypt", "encrypt with public key");
+            print_flag("decrypt", "decrypt with private key");
+            print_flag("hexdump", "hex dump output");
         } break;
         case Command_Md5:
         case Command_Sha256:
@@ -262,13 +277,13 @@ parse_options(Command cmd, void* out_options) {
                      },
                     {
                      .name = "input file",
-                     .flag = "i",
+                     .flag = "in",
                      .type = OptionType_String,
                      .value = &options->input_file,
                      },
                     {
                      .name = "output file",
-                     .flag = "o",
+                     .flag = "out",
                      .type = OptionType_String,
                      .value = &options->output_file,
                      },
@@ -329,6 +344,58 @@ parse_options(Command cmd, void* out_options) {
                 };
 
                 bool found = parse_flags(flag, rsa_options, array_len(rsa_options), &i);
+                if (!found) {
+                    unknown_flag(argv[i]);
+                }
+            } break;
+            case Command_RsaUtl: {
+                RsaUtlOptions* options = out_options;
+                const Option rsautl_options[] = {
+                    {
+                     .name = "input file",
+                     .flag = "in",
+                     .type = OptionType_String,
+                     .value = &options->input_file,
+                     },
+                    {
+                     .name = "output file",
+                     .flag = "out",
+                     .type = OptionType_String,
+                     .value = &options->output_file,
+                     },
+                    {
+                     .name = "input key",
+                     .flag = "inkey",
+                     .type = OptionType_String,
+                     .value = &options->input_key,
+                     },
+                    {
+                     .name = "input file is pubkey",
+                     .flag = "pubin",
+                     .type = OptionType_Bool,
+                     .value = &options->is_public_key_input_file,
+                     },
+                    {
+                     .name = "encrypt",
+                     .flag = "encrypt",
+                     .type = OptionType_Bool,
+                     .value = &options->encrypt,
+                     },
+                    {
+                     .name = "decrypt",
+                     .flag = "decrypt",
+                     .type = OptionType_Bool,
+                     .value = &options->decrypt,
+                     },
+                    {
+                     .name = "hexdump",
+                     .flag = "hexdump",
+                     .type = OptionType_Bool,
+                     .value = &options->hexdump,
+                     }
+                };
+
+                bool found = parse_flags(flag, rsautl_options, array_len(rsautl_options), &i);
                 if (!found) {
                     unknown_flag(argv[i]);
                 }

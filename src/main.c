@@ -53,6 +53,11 @@ main(int in_argc, const char* const* in_argv) {
             parse_options(cmd, &options);
 
         } break;
+        case Command_RsaUtl: {
+            RsaUtlOptions options = { 0 };
+            parse_options(cmd, &options);
+
+        } break;
         case Command_Md5:
         case Command_Sha256:
         case Command_Sha224:
