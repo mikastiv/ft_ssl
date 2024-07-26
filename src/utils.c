@@ -34,6 +34,21 @@ ft_strcmp(const char* s1, const char* s2) {
     return (*s1 - *s2);
 }
 
+Buffer
+ft_strstr(Buffer hay, Buffer needle) {
+    if (needle.len > hay.len) return (Buffer){ 0 };
+
+    u64 iter = hay.len - needle.len;
+    for (u64 i = 0; i <= iter; i++) {
+        u8* ptr = hay.ptr + i;
+        if (ft_memcmp(buf(ptr, needle.len), needle)) {
+            return buf(ptr, needle.len);
+        }
+    }
+
+    return (Buffer){ 0 };
+}
+
 void
 ft_memcpy(Buffer dst, Buffer src) {
     assert(dst.len == src.len);

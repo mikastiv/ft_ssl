@@ -162,6 +162,43 @@ output_public_key(Rsa rsa, int fd) {
     write(fd, end.ptr, end.len);
 }
 
+typedef enum {
+    PemPrivate,
+    PemRsaPrivate,
+    PemEncPrivate,
+} PemKeyType;
+
+static const char* private_key_begin = "-----BEGIN PRIVATE KEY-----\n";
+static const char* private_key_end = "-----END PRIVATE KEY-----\n";
+
+// static const char* private_key_begin_rsa = "-----BEGIN RSA PRIVATE KEY-----\n";
+// static const char* private_key_end_rsa = "-----END RSA PRIVATE KEY-----\n";
+// static const char* private_key_begin_enc = "-----BEGIN ENCRYPTED PRIVATE KEY-----\n";
+// static const char* private_key_end_enc = "-----END ENCRYPTED PRIVATE KEY-----\n";
+
+static Buffer
+read_pem_key(Buffer input, Buffer begin, Buffer end) {
+    Buffer begin_delim = ft_strstr(input, begin);
+
+    if (!begin_delim.ptr) {
+        return (Buffer){ 0 };
+    }
+
+    Buffer end_delim = ft_strstr(input, end);
+    if (!end_delim.ptr) {
+        return (Buffer){ 0 };
+    }
+
+    if (begin_delim.ptr >= end_delim.ptr) {
+        return (Buffer){ 0 };
+    }
+
+    u8* start_ptr = begin_delim.ptr + begin_delim.len;
+    Buffer data = buf(start_ptr, end_delim.ptr - start_ptr);
+
+    return data;
+}
+
 bool
 genrsa(GenRsaOptions* options) {
     int out_fd = get_outfile_fd(options->output_file);
@@ -190,5 +227,25 @@ genrsa(GenRsaOptions* options) {
 
 genrsa_error:
     if (options->output_file && out_fd != -1) close(out_fd);
+    return false;
+}
+
+bool
+rsa(RsaOptions* options) {
+    int in_fd = get_infile_fd(options->input_file);
+    if (in_fd < 0) {
+        goto rsa_err;
+    }
+
+    Buffer input = read_all_fd(in_fd, get_filesize(in_fd));
+    Buffer base64_key = read_pem_key(input, str(private_key_begin), str(private_key_end));
+
+    write(STDERR_FILENO, base64_key.ptr, base64_key.len);
+
+    if (options->input_file && in_fd != -1) close(in_fd);
+    return true;
+
+rsa_err:
+    if (options->input_file && in_fd != -1) close(in_fd);
     return false;
 }

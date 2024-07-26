@@ -10,6 +10,9 @@ ft_strlen(const char* str);
 i64
 ft_strcmp(const char* s1, const char* s2);
 
+Buffer
+ft_strstr(Buffer hay, Buffer needle);
+
 void
 ft_memcpy(Buffer dst, Buffer src);
 

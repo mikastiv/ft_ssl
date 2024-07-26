@@ -52,6 +52,8 @@ main(int in_argc, const char* const* in_argv) {
             RsaOptions options = { 0 };
             parse_options(cmd, &options);
 
+            bool success = rsa(&options);
+            if (!success) result = EXIT_FAILURE;
         } break;
         case Command_RsaUtl: {
             RsaUtlOptions options = { 0 };

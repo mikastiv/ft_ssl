@@ -17,3 +17,6 @@ typedef struct {
 
 bool
 genrsa(GenRsaOptions* options);
+
+bool
+rsa(RsaOptions* options);
