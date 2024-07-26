@@ -10,7 +10,8 @@
             "name": "Debug",
             "program": "${workspaceFolder}/ft_ssl",
             "args": [
-                "sha256"
+                "rsa",
+                "-des"
             ],
             "cwd": "${workspaceFolder}"
         }

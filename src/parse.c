@@ -11,6 +11,7 @@
 static const char* cmd_names[] = {
     [Command_None] = "none",
     [Command_GenRsa] = "genrsa",
+    [Command_Rsa] = "rsa",
     [Command_Md5] = "md5",
     [Command_Sha256] = "sha256",
     [Command_Sha224] = "sha224",
@@ -39,7 +40,7 @@ typedef enum {
 
 typedef struct {
     const char* name;
-    char flag;
+    const char* flag;
     OptionType type;
     void* value;
 } Option;
@@ -53,19 +54,9 @@ parse_command(const char* str) {
     return Command_None;
 }
 
-void
-usage(const char* command) {
-    dprintf(
-        STDERR_FILENO,
-        "usage: %s %s [flags] [file/string]\n",
-        progname,
-        command ? command : "command"
-    );
-}
-
 static void
 print_flag(const char* flag, const char* desc) {
-    dprintf(STDERR_FILENO, "    -%-14s %s\n", flag, desc);
+    dprintf(STDERR_FILENO, "    -%-20s %s\n", flag, desc);
 }
 
 void
@@ -73,6 +64,7 @@ print_help(Command cmd) {
 
     switch (cmd) {
         case Command_None: {
+            dprintf(STDERR_FILENO, "usage: %s [command]\n", progname);
             dprintf(STDERR_FILENO, "\nGeneral flags:\n");
             print_flag("h", "print help");
 
@@ -93,8 +85,27 @@ print_help(Command cmd) {
             dprintf(STDERR_FILENO, "usage: %s %s [flags]\n", progname, cmd_names[cmd]);
 
             dprintf(STDERR_FILENO, "\nFlags:\n");
+            print_flag("h", "print help");
             print_flag("i <filename>", "input file");
             print_flag("o <filename>", "output file");
+        } break;
+        case Command_Rsa: {
+            dprintf(STDERR_FILENO, "usage: %s %s [flags]\n", progname, cmd_names[cmd]);
+
+            dprintf(STDERR_FILENO, "\nFlags:\n");
+            print_flag("inform <format>", "input format; available: PEM");
+            print_flag("outform <format>", "output format; available: PEM");
+            print_flag("i <filename>", "input file");
+            print_flag("o <filename>", "output file");
+            print_flag("passin <filename>", "input file pass phrase source");
+            print_flag("passout <filename>", "output file pass phrase source");
+            print_flag("des", "use DES cipher");
+            print_flag("text", "print the key in text");
+            print_flag("noout", "don't print key out");
+            print_flag("modulus", "print the RSA key modulus");
+            print_flag("check", "verify key consistency");
+            print_flag("pubin", "expect a public key in input file");
+            print_flag("pubout", "output a public key");
         } break;
         case Command_Md5:
         case Command_Sha256:
@@ -158,26 +169,26 @@ unknown_flag(const char* flag) {
 }
 
 static void
-check_next_argument(u32 index, char flag) {
+check_next_argument(u32 index, const char* flag) {
     if (index + 1 >= argc) {
-        dprintf(STDERR_FILENO, "%s: '-%c': missing value\n", progname, flag);
+        dprintf(STDERR_FILENO, "%s: '-%s': missing value\n", progname, flag);
         arena_free(&arena);
         exit(EXIT_FAILURE);
     }
 }
 
 static void
-duplicate_flag(char flag) {
-    dprintf(STDERR_FILENO, "%s: duplicate flag: '-%c'\n", progname, flag);
+duplicate_flag(const char* flag) {
+    dprintf(STDERR_FILENO, "%s: duplicate flag: '-%s'\n", progname, flag);
     arena_free(&arena);
     exit(EXIT_FAILURE);
 }
 
 static bool
-parse_flags(const char flag, const Option* options, u64 size, u32* index) {
+parse_flags(const char* flag, const Option* options, u64 size, u32* index) {
     for (u32 j = 0; j < size; j++) {
         Option op = options[j];
-        if (flag == op.flag) {
+        if (ft_strcmp(flag, op.flag) == 0) {
             switch (op.type) {
                 case OptionType_String: {
                     const char** value = options[j].value;
@@ -203,10 +214,9 @@ u32
 parse_options(Command cmd, void* out_options) {
     for (u32 i = 2; i < argc; i++) {
         if (argv[i][0] != '-') return i;
-        if (ft_strlen(&argv[i][1]) != 1) unknown_flag(argv[i]);
 
-        const char flag = argv[i][1];
-        if (flag == 'h') {
+        const char* flag = &argv[i][1];
+        if (ft_strcmp(flag, "h") == 0) {
             print_help(cmd);
             arena_free(&arena);
             exit(EXIT_FAILURE);
@@ -218,19 +228,107 @@ parse_options(Command cmd, void* out_options) {
                 const Option genrsa_options[] = {
                     {
                      .name = "input file",
-                     .flag = 'i',
+                     .flag = "i",
                      .type = OptionType_String,
                      .value = &options->input_file,
                      },
                     {
                      .name = "output file",
-                     .flag = 'o',
+                     .flag = "o",
                      .type = OptionType_String,
                      .value = &options->output_file,
                      },
                 };
 
                 bool found = parse_flags(flag, genrsa_options, array_len(genrsa_options), &i);
+                if (!found) {
+                    unknown_flag(argv[i]);
+                }
+            } break;
+            case Command_Rsa: {
+                RsaOptions* options = out_options;
+                const Option rsa_options[] = {
+                    {
+                     .name = "input format",
+                     .flag = "inform",
+                     .type = OptionType_String,
+                     .value = &options->input_format,
+                     },
+                    {
+                     .name = "output format",
+                     .flag = "outform",
+                     .type = OptionType_String,
+                     .value = &options->output_format,
+                     },
+                    {
+                     .name = "input file",
+                     .flag = "i",
+                     .type = OptionType_String,
+                     .value = &options->input_file,
+                     },
+                    {
+                     .name = "output file",
+                     .flag = "o",
+                     .type = OptionType_String,
+                     .value = &options->output_file,
+                     },
+                    {
+                     .name = "input file pass phrase source",
+                     .flag = "passin",
+                     .type = OptionType_String,
+                     .value = &options->input_passphrase_file,
+                     },
+                    {
+                     .name = "output file pass phrase source",
+                     .flag = "passout",
+                     .type = OptionType_String,
+                     .value = &options->output_passphrase_file,
+                     },
+                    {
+                     .name = "use DES",
+                     .flag = "des",
+                     .type = OptionType_Bool,
+                     .value = &options->use_des,
+                     },
+                    {
+                     .name = "print key text",
+                     .flag = "text",
+                     .type = OptionType_Bool,
+                     .value = &options->print_key_text,
+                     },
+                    {
+                     .name = "no print key",
+                     .flag = "noout",
+                     .type = OptionType_Bool,
+                     .value = &options->no_print_key,
+                     },
+                    {
+                     .name = "print modulus",
+                     .flag = "modulus",
+                     .type = OptionType_Bool,
+                     .value = &options->print_modulus,
+                     },
+                    {
+                     .name = "verify key",
+                     .flag = "check",
+                     .type = OptionType_Bool,
+                     .value = &options->verify_key,
+                     },
+                    {
+                     .name = "input file is pubkey",
+                     .flag = "pubin",
+                     .type = OptionType_Bool,
+                     .value = &options->is_public_key_input_file,
+                     },
+                    {
+                     .name = "output file is pubkey",
+                     .flag = "pubout",
+                     .type = OptionType_Bool,
+                     .value = &options->is_public_key_output_file,
+                     }
+                };
+
+                bool found = parse_flags(flag, rsa_options, array_len(rsa_options), &i);
                 if (!found) {
                     unknown_flag(argv[i]);
                 }
@@ -245,25 +343,25 @@ parse_options(Command cmd, void* out_options) {
                 const Option digest_options[] = {
                     {
                      .name = "echo stdin",
-                     .flag = 'p',
+                     .flag = "p",
                      .type = OptionType_Bool,
                      .value = &options->echo_stdin,
                      },
                     {
                      .name = "reverse format",
-                     .flag = 'r',
+                     .flag = "r",
                      .type = OptionType_Bool,
                      .value = &options->reverse_fmt,
                      },
                     {
                      .name = "string argument",
-                     .flag = 's',
+                     .flag = "s",
                      .type = OptionType_String,
                      .value = &options->string_argument,
                      },
                     {
                      .name = "quiet",
-                     .flag = 'q',
+                     .flag = "q",
                      .type = OptionType_Bool,
                      .value = &options->quiet,
                      },
@@ -279,25 +377,25 @@ parse_options(Command cmd, void* out_options) {
                 const Option base64_options[] = {
                     {
                      .name = "encode",
-                     .flag = 'e',
+                     .flag = "e",
                      .type = OptionType_Bool,
                      .value = &options->encode,
                      },
                     {
                      .name = "decode",
-                     .flag = 'd',
+                     .flag = "d",
                      .type = OptionType_Bool,
                      .value = &options->decode,
                      },
                     {
                      .name = "input file",
-                     .flag = 'i',
+                     .flag = "i",
                      .type = OptionType_String,
                      .value = &options->input_file,
                      },
                     {
                      .name = "output file",
-                     .flag = 'o',
+                     .flag = "o",
                      .type = OptionType_String,
                      .value = &options->output_file,
                      },
@@ -324,55 +422,55 @@ parse_options(Command cmd, void* out_options) {
                 const Option des_options[] = {
                     {
                      .name = "use base64",
-                     .flag = 'a',
+                     .flag = "a",
                      .type = OptionType_Bool,
                      .value = &options->use_base64,
                      },
                     {
                      .name = "decrypt",
-                     .flag = 'd',
+                     .flag = "d",
                      .type = OptionType_Bool,
                      .value = &options->decrypt,
                      },
                     {
                      .name = "encrypt",
-                     .flag = 'e',
+                     .flag = "e",
                      .type = OptionType_Bool,
                      .value = &options->encrypt,
                      },
                     {
                      .name = "input file",
-                     .flag = 'i',
+                     .flag = "i",
                      .type = OptionType_String,
                      .value = &options->input_file,
                      },
                     {
                      .name = "output file",
-                     .flag = 'o',
+                     .flag = "o",
                      .type = OptionType_String,
                      .value = &options->output_file,
                      },
                     {
                      .name = "hex key",
-                     .flag = 'k',
+                     .flag = "k",
                      .type = OptionType_String,
                      .value = &options->hex_key,
                      },
                     {
                      .name = "hex salt",
-                     .flag = 's',
+                     .flag = "s",
                      .type = OptionType_String,
                      .value = &options->hex_salt,
                      },
                     {
                      .name = "hex iv",
-                     .flag = 'v',
+                     .flag = "v",
                      .type = OptionType_String,
                      .value = &options->hex_iv,
                      },
                     {
                      .name = "password",
-                     .flag = 'p',
+                     .flag = "p",
                      .type = OptionType_String,
                      .value = &options->password,
                      },
@@ -383,7 +481,10 @@ parse_options(Command cmd, void* out_options) {
                     unknown_flag(argv[i]);
                 }
             } break;
-            default: {
+            case Command_None: {
+                dprintf(STDERR_FILENO, "unreachable code\n");
+                arena_free(&arena);
+                exit(EXIT_FAILURE);
             } break;
         }
     }

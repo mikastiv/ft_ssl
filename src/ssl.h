@@ -47,10 +47,27 @@ typedef struct {
     const char* output_file;
 } GenRsaOptions;
 
+typedef struct {
+    const char* input_format;
+    const char* output_format;
+    const char* input_file;
+    const char* output_file;
+    const char* input_passphrase_file;
+    const char* output_passphrase_file;
+    bool is_public_key_input_file;
+    bool is_public_key_output_file;
+    bool use_des;
+    bool print_key_text;
+    bool no_print_key;
+    bool print_modulus;
+    bool verify_key;
+} RsaOptions;
+
 typedef enum {
     Command_None,
     Command_GenRsa,
-    Command_LastStandard = Command_GenRsa,
+    Command_Rsa,
+    Command_LastStandard = Command_Rsa,
     Command_Md5,
     Command_Sha256,
     Command_Sha224,

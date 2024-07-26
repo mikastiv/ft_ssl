@@ -32,7 +32,7 @@ miller_rabin_test(u64 n, u64 d, u64 a) {
     return false;
 }
 
-bool
+static bool
 is_prime(u64 n) {
     if (n < 2) return false;
     if (n < 4) return true;

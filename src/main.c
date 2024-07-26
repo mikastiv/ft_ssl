@@ -21,7 +21,7 @@ main(int in_argc, const char* const* in_argv) {
 
     if (argc > 0) progname = argv[0];
     if (argc < 2) {
-        usage(0);
+        print_help(Command_None);
         return EXIT_FAILURE;
     }
 
@@ -47,6 +47,11 @@ main(int in_argc, const char* const* in_argv) {
 
             bool success = genrsa(&options);
             if (!success) result = EXIT_FAILURE;
+        } break;
+        case Command_Rsa: {
+            RsaOptions options = { 0 };
+            parse_options(cmd, &options);
+
         } break;
         case Command_Md5:
         case Command_Sha256:

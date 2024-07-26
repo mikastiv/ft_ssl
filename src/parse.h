@@ -9,7 +9,4 @@ u32
 parse_options(Command cmd, void* out_options);
 
 void
-usage(const char* command);
-
-void
 print_help(Command cmd);
