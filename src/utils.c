@@ -175,7 +175,6 @@ Buffer
 read_all_fd(int fd, u64 size_hint) {
     u64 capacity = size_hint > 0 ? size_hint : 2048;
     Buffer str = { .ptr = arena_alloc(&arena, capacity + 1), .len = 0 };
-    if (!str.ptr) return (Buffer){ 0 };
 
     u8 buffer[2048];
     i64 bytes = sizeof(buffer);

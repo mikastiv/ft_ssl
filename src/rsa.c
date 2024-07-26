@@ -279,6 +279,7 @@ bool
 rsa(RsaOptions* options) {
     int in_fd = get_infile_fd(options->input_file);
     if (in_fd < 0) {
+        print_error();
         goto rsa_err;
     }
 
@@ -292,8 +293,25 @@ rsa(RsaOptions* options) {
         base64_key = read_private_key(input, &key_type);
     }
 
+    if (!base64_key.ptr) {
+        dprintf(
+            STDERR_FILENO,
+            "%s: could not read %s key from %s\n",
+            progname,
+            options->public_key_in ? "public" : "private",
+            in_fd == STDIN_FILENO ? "<stdin>" : options->input_file
+        );
+        goto rsa_err;
+    }
+
     dprintf(STDERR_FILENO, "Type: %d\n", key_type);
-    if (base64_key.ptr) write(STDERR_FILENO, base64_key.ptr, base64_key.len);
+    write(STDERR_FILENO, base64_key.ptr, base64_key.len);
+
+    Buffer decoded = base64_decode(base64_key);
+    if (!decoded.ptr) {
+        dprintf(STDERR_FILENO, "%s: invalid base64 input\n", progname);
+        goto rsa_err;
+    }
 
     if (options->input_file && in_fd != -1) close(in_fd);
     return true;

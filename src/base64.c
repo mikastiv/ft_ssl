@@ -33,7 +33,6 @@ base64_encode(Buffer input) {
     size += newlines;
 
     Buffer buffer = buf(arena_alloc(&arena, size), size);
-    if (!buffer.ptr) return (Buffer){ 0 };
     ft_memset(buffer, 0);
 
     u64 i = 0;
@@ -89,7 +88,6 @@ base64_decode(Buffer input) {
 
     u64 output_size = chunks * 3;
     Buffer buffer = buf(arena_alloc(&arena, output_size), output_size);
-    if (!buffer.ptr) return (Buffer){ 0 };
     ft_memset(buffer, 0);
 
     for (u64 i = 0, j = 0; i < input.len; i += 4, j += 3) {
