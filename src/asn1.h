@@ -51,7 +51,7 @@ AsnSeq
 asn_seq_init(void);
 
 void
-asn_seq_add_integer(AsnSeq* seq, u64 value, bool padzero);
+asn_seq_add_integer(AsnSeq* seq, u64 value, u64 bitsize);
 
 void
 asn_seq_add_null(AsnSeq* seq, u8 value);
