@@ -53,7 +53,13 @@ is_prime(u64 n) {
 }
 
 bool
-genrsa(void) {
+genrsa(GenRsaOptions* options) {
+    int out_fd = get_outfile_fd(options->output_file);
+    if (out_fd == -1) {
+        print_error();
+        goto genrsa_error;
+    }
+
     Random rng;
     if (!random_init(&rng)) {
         dprintf(STDERR_FILENO, "%s: failed to init rng\n", progname);
@@ -80,13 +86,6 @@ genrsa(void) {
     u64 exp1 = d % (p - 1);
     u64 exp2 = d % (q - 1);
     u64 coef = inverse_mod(q, p);
-
-    dprintf(STDERR_FILENO, "p: %" PRIu64 "\n", p);
-    dprintf(STDERR_FILENO, "q: %" PRIu64 "\n", q);
-    dprintf(STDERR_FILENO, "n: %" PRIu64 "\n", n);
-    dprintf(STDERR_FILENO, "phi: %" PRIu64 "\n", phi);
-    dprintf(STDERR_FILENO, "e: %" PRIu64 "\n", e);
-    dprintf(STDERR_FILENO, "d: %" PRIu64 "\n", d);
 
     AsnSeq ctx = asn_seq_init();
 
@@ -115,13 +114,16 @@ genrsa(void) {
 
     Buffer encoded = base64_encode(buf(ctx.buffer, ctx.len));
 
-    int file = open("test_me.pem", O_WRONLY | O_CREAT | O_TRUNC, S_IRWXU | S_IRGRP | S_IROTH);
     Buffer begin = str("-----BEGIN RSA PRIVATE KEY-----\n");
     Buffer end = str("\n-----END RSA PRIVATE KEY-----\n");
-    write(file, begin.ptr, begin.len);
-    write(file, encoded.ptr, encoded.len);
-    write(file, end.ptr, end.len);
-    close(file);
+    write(out_fd, begin.ptr, begin.len);
+    write(out_fd, encoded.ptr, encoded.len);
+    write(out_fd, end.ptr, end.len);
 
+    if (options->output_file && out_fd != -1) close(out_fd);
     return true;
+
+genrsa_error:
+    if (options->output_file && out_fd != -1) close(out_fd);
+    return false;
 }

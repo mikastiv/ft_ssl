@@ -1,6 +1,4 @@
 #include "arena.h"
-#include "bignum.h"
-#include "cipher.h"
 #include "parse.h"
 #include "ssl.h"
 #include "standard.h"
@@ -41,10 +39,15 @@ main(int in_argc, const char* const* in_argv) {
         return EXIT_FAILURE;
     }
 
-    genrsa();
-
     int result = EXIT_SUCCESS;
     switch (cmd) {
+        case Command_GenRsa: {
+            GenRsaOptions options = { 0 };
+            parse_options(cmd, &options);
+
+            bool success = genrsa(&options);
+            if (!success) result = EXIT_FAILURE;
+        } break;
         case Command_Md5:
         case Command_Sha256:
         case Command_Sha224:
@@ -88,7 +91,7 @@ main(int in_argc, const char* const* in_argv) {
         } break;
     }
 
-    arena_log_watermark(&arena);
+    // arena_log_watermark(&arena);
     arena_free(&arena);
 
     return result;

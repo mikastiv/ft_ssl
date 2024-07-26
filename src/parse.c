@@ -10,6 +10,7 @@
 
 static const char* cmd_names[] = {
     [Command_None] = "none",
+    [Command_GenRsa] = "genrsa",
     [Command_Md5] = "md5",
     [Command_Sha256] = "sha256",
     [Command_Sha224] = "sha224",
@@ -71,27 +72,37 @@ void
 print_help(Command cmd) {
 
     switch (cmd) {
-        case Command_None:
-            usage(0);
+        case Command_None: {
             dprintf(STDERR_FILENO, "\nGeneral flags:\n");
             print_flag("h", "print help");
 
+            dprintf(STDERR_FILENO, "\nStandard commands:\n");
+            for (u64 i = Command_None + 1; i <= Command_LastStandard; i++) {
+                dprintf(STDERR_FILENO, "    %s\n", cmd_names[i]);
+            }
             dprintf(STDERR_FILENO, "\nMessage Digest commands:\n");
-            for (u64 i = Command_None + 1; i <= Command_LastDigest; i++) {
+            for (u64 i = Command_LastStandard + 1; i <= Command_LastDigest; i++) {
                 dprintf(STDERR_FILENO, "    %s\n", cmd_names[i]);
             }
             dprintf(STDERR_FILENO, "\nCipher commands:\n");
             for (u64 i = Command_LastDigest + 1; i < array_len(cmd_names); i++) {
                 dprintf(STDERR_FILENO, "    %s\n", cmd_names[i]);
             }
-            break;
+        } break;
+        case Command_GenRsa: {
+            dprintf(STDERR_FILENO, "usage: %s %s [flags]\n", progname, cmd_names[cmd]);
+
+            dprintf(STDERR_FILENO, "\nFlags:\n");
+            print_flag("i <filename>", "input file");
+            print_flag("o <filename>", "output file");
+        } break;
         case Command_Md5:
         case Command_Sha256:
         case Command_Sha224:
         case Command_Sha512:
         case Command_Sha384:
-        case Command_Whirlpool:
-            usage(cmd_names[cmd]);
+        case Command_Whirlpool: {
+            dprintf(STDERR_FILENO, "usage: %s %s [flags] [files]\n", progname, cmd_names[cmd]);
 
             dprintf(STDERR_FILENO, "\nFlags:\n");
             print_flag("h", "print help");
@@ -99,9 +110,9 @@ print_help(Command cmd) {
             print_flag("q", "quiet mode");
             print_flag("r", "reverse the format of the output");
             print_flag("s <string>", "print the sum of the given string");
-            break;
-        case Command_Base64:
-            usage(cmd_names[cmd]);
+        } break;
+        case Command_Base64: {
+            dprintf(STDERR_FILENO, "usage: %s %s [flags]\n", progname, cmd_names[cmd]);
 
             dprintf(STDERR_FILENO, "\nFlags:\n");
             print_flag("h", "print help");
@@ -109,7 +120,7 @@ print_help(Command cmd) {
             print_flag("e", "encode mode (default)");
             print_flag("i <filename>", "input file for message");
             print_flag("o <filename>", "output file for message");
-            break;
+        } break;
         case Command_Des:
         case Command_DesEcb:
         case Command_DesCbc:
@@ -121,8 +132,8 @@ print_help(Command cmd) {
         case Command_Des3Cbc:
         case Command_Des3Ofb:
         case Command_Des3Cfb:
-        case Command_Des3Pcbc:
-            usage(cmd_names[cmd]);
+        case Command_Des3Pcbc: {
+            dprintf(STDERR_FILENO, "usage: %s %s [flags]\n", progname, cmd_names[cmd]);
 
             dprintf(STDERR_FILENO, "\nFlags:\n");
             print_flag("h", "print help");
@@ -135,7 +146,7 @@ print_help(Command cmd) {
             print_flag("s <hex salt>", "salt in hex");
             print_flag("v <hex iv>", "initialization vector in hex");
             print_flag("p <password>", "password");
-            break;
+        } break;
     }
 }
 
@@ -163,7 +174,7 @@ duplicate_flag(char flag) {
 }
 
 static bool
-parse_flag(const char flag, const Option* options, u64 size, u32* index) {
+parse_flags(const char flag, const Option* options, u64 size, u32* index) {
     for (u32 j = 0; j < size; j++) {
         Option op = options[j];
         if (flag == op.flag) {
@@ -202,6 +213,28 @@ parse_options(Command cmd, void* out_options) {
         }
 
         switch (cmd) {
+            case Command_GenRsa: {
+                GenRsaOptions* options = out_options;
+                const Option genrsa_options[] = {
+                    {
+                     .name = "input file",
+                     .flag = 'i',
+                     .type = OptionType_String,
+                     .value = &options->input_file,
+                     },
+                    {
+                     .name = "output file",
+                     .flag = 'o',
+                     .type = OptionType_String,
+                     .value = &options->output_file,
+                     },
+                };
+
+                bool found = parse_flags(flag, genrsa_options, array_len(genrsa_options), &i);
+                if (!found) {
+                    unknown_flag(argv[i]);
+                }
+            } break;
             case Command_Md5:
             case Command_Sha256:
             case Command_Sha224:
@@ -236,7 +269,7 @@ parse_options(Command cmd, void* out_options) {
                      },
                 };
 
-                bool found = parse_flag(flag, digest_options, array_len(digest_options), &i);
+                bool found = parse_flags(flag, digest_options, array_len(digest_options), &i);
                 if (!found) {
                     unknown_flag(argv[i]);
                 }
@@ -270,7 +303,7 @@ parse_options(Command cmd, void* out_options) {
                      },
                 };
 
-                bool found = parse_flag(flag, base64_options, array_len(base64_options), &i);
+                bool found = parse_flags(flag, base64_options, array_len(base64_options), &i);
                 if (!found) {
                     unknown_flag(argv[i]);
                 }
@@ -345,7 +378,7 @@ parse_options(Command cmd, void* out_options) {
                      },
                 };
 
-                bool found = parse_flag(flag, des_options, array_len(des_options), &i);
+                bool found = parse_flags(flag, des_options, array_len(des_options), &i);
                 if (!found) {
                     unknown_flag(argv[i]);
                 }

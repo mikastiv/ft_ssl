@@ -23,9 +23,6 @@ base64_encode(Buffer input);
 Buffer
 base64_decode(Buffer input);
 
-bool
-base64(Base64Options* options);
-
 typedef Buffer (*DesFunc)(Buffer, Buffer, Des64);
 
 Buffer
@@ -90,6 +87,3 @@ des3_pcbc_decrypt(Buffer ciphertext, Buffer key, Des64 iv);
 
 void
 pbkdf2_generate(Buffer password, Buffer salt, Buffer out);
-
-bool
-cipher(Command cmd, DesOptions* options);

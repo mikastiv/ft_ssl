@@ -42,8 +42,15 @@ typedef struct {
     const char* hex_iv;
 } DesOptions;
 
+typedef struct {
+    const char* input_file;
+    const char* output_file;
+} GenRsaOptions;
+
 typedef enum {
     Command_None,
+    Command_GenRsa,
+    Command_LastStandard = Command_GenRsa,
     Command_Md5,
     Command_Sha256,
     Command_Sha224,
@@ -64,7 +71,14 @@ typedef enum {
     Command_Des3Ofb,
     Command_Des3Cfb,
     Command_Des3Pcbc,
+    Command_LastCipher = Command_Des3Pcbc,
 } Command;
 
 bool
 digest(u32 first_input, Command cmd, DigestOptions options);
+
+bool
+base64(Base64Options* options);
+
+bool
+cipher(Command cmd, DesOptions* options);
