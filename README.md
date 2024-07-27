@@ -4,6 +4,10 @@ a reimplemetation project of part of the OpenSSL program
 
 ## Features
 
+#### Standard
+
+- GenRsa
+
 #### Hashing
 
 - MD5
