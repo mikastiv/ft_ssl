@@ -67,3 +67,21 @@ asn_seq_add_bit_str_seq(AsnSeq* seq, AsnSeq* value);
 
 void
 asn_seq_add_seq(AsnSeq* parent, AsnSeq* seq);
+
+bool
+asn_seq_init_seq(AsnSeq* seq, Buffer input);
+
+bool
+asn_seq_read_seq(AsnSeq* seq, u64* index, AsnSeq* out);
+
+bool
+asn_seq_read_integer(AsnSeq* seq, u64* index, u64* value);
+
+bool
+asn_seq_read_object_ident(AsnSeq* seq, u64* index, Buffer* value);
+
+bool
+asn_seq_read_null_value(AsnSeq* seq, u64* index, u64* value);
+
+bool
+asn_seq_read_octet_str(AsnSeq* seq, u64* index, Buffer* out);

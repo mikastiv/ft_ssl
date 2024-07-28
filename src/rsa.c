@@ -244,6 +244,42 @@ read_public_key(Buffer input, PemKeyType* out) {
     return base64_key;
 }
 
+static bool
+decode_private_key(Buffer input, Rsa* rsa) {
+    AsnSeq ctx = asn_seq_init();
+
+    if (!asn_seq_init_seq(&ctx, input)) return false;
+
+    u64 index = 0;
+    u64 version = 0;
+    if (!asn_seq_read_integer(&ctx, &index, &version)) return false;
+
+    {
+        AsnSeq rsa_algo = asn_seq_init();
+        if (!asn_seq_read_seq(&ctx, &index, &rsa_algo)) return false;
+
+        u64 rsa_index = 0;
+        Buffer rsa_ident = { 0 };
+
+        if (!asn_seq_read_object_ident(&rsa_algo, &rsa_index, &rsa_ident)) return false;
+        if (!ft_memcmp(rsa_ident, str(ASN_RSA_ENCRYPTION))) return false;
+
+        u64 null_value = 0;
+        if (!asn_seq_read_null_value(&rsa_algo, &rsa_index, &null_value)) return false;
+
+        if (null_value != 0) return false;
+
+        index += rsa_index;
+    }
+
+    Buffer private_key_str = { 0 };
+    if (!asn_seq_read_octet_str(&ctx, &index, &private_key_str)) return false;
+
+    (void)rsa;
+
+    return true;
+}
+
 bool
 genrsa(GenRsaOptions* options) {
     int out_fd = get_outfile_fd(options->output_file);
@@ -312,6 +348,9 @@ rsa(RsaOptions* options) {
         dprintf(STDERR_FILENO, "%s: invalid base64 input\n", progname);
         goto rsa_err;
     }
+
+    Rsa rsa = { 0 };
+    decode_private_key(decoded, &rsa);
 
     if (options->input_file && in_fd != -1) close(in_fd);
     return true;
