@@ -246,34 +246,43 @@ read_public_key(Buffer input, PemKeyType* out) {
 
 static bool
 decode_private_key(Buffer input, Rsa* rsa) {
-    AsnSeq ctx = asn_seq_init();
+    // AsnSeq ctx = asn_seq_init();
 
-    if (!asn_seq_init_seq(&ctx, input)) return false;
+    // if (!asn_seq_init_seq(&ctx, input)) return false;
 
-    u64 index = 0;
-    u64 version = 0;
-    if (!asn_seq_read_integer(&ctx, &index, &version)) return false;
+    // u64 index = 0;
+    // u64 version = 0;
+    // if (!asn_seq_read_integer(&ctx, &index, &version)) return false;
 
-    {
-        AsnSeq rsa_algo = asn_seq_init();
-        if (!asn_seq_read_seq(&ctx, &index, &rsa_algo)) return false;
+    // {
+    //     AsnSeq rsa_algo = asn_seq_init();
+    //     if (!asn_seq_read_seq(&ctx, &index, &rsa_algo)) return false;
 
-        u64 rsa_index = 0;
-        Buffer rsa_ident = { 0 };
+    //     u64 rsa_index = 0;
+    //     Buffer rsa_ident = { 0 };
 
-        if (!asn_seq_read_object_ident(&rsa_algo, &rsa_index, &rsa_ident)) return false;
-        if (!ft_memcmp(rsa_ident, str(ASN_RSA_ENCRYPTION))) return false;
+    //     if (!asn_seq_read_object_ident(&rsa_algo, &rsa_index, &rsa_ident)) return false;
+    //     if (!ft_memcmp(rsa_ident, str(ASN_RSA_ENCRYPTION))) return false;
 
-        u64 null_value = 0;
-        if (!asn_seq_read_null_value(&rsa_algo, &rsa_index, &null_value)) return false;
+    //     u64 null_value = 0;
+    //     if (!asn_seq_read_null_value(&rsa_algo, &rsa_index, &null_value)) return false;
 
-        if (null_value != 0) return false;
+    //     if (null_value != 0) return false;
 
-        index += rsa_index;
-    }
+    //     index += rsa_index;
+    // }
 
-    Buffer private_key_str = { 0 };
-    if (!asn_seq_read_octet_str(&ctx, &index, &private_key_str)) return false;
+    // Buffer private_key_str = { 0 };
+    // if (!asn_seq_read_octet_str(&ctx, &index, &private_key_str)) return false;
+
+    // AsnSeq rsa_private_key = asn_seq_init();
+    // if (!asn_seq_init_seq(&rsa_private_key, private_key_str)) return false;
+
+    // u64 rsa_version = 0;
+    // u64 rsa_index = 0;
+    // if (!asn_seq_read_integer(&rsa_private_key, &rsa_index, &rsa_version)) return false;
+
+    // read larger integers
 
     (void)rsa;
 

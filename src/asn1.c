@@ -165,6 +165,26 @@ asn_seq_add_seq(AsnSeq* parent, AsnSeq* seq) {
 }
 
 bool
+asn_next_entry(Buffer input, u64 index, AsnEntry* out) {
+    if (index >= input.len) return false;
+
+    u64 offset = index;
+    AsnOctet1 oct1 = { .raw = input.ptr[index++] };
+
+    u64 len = 0;
+    if (!asn_read_length(input, &index, &len)) return false;
+
+    if (len > input.len - index) return false;
+
+    out->tag = oct1.tag_type;
+    out->offset = index;
+    out->len_size = index - offset;
+    out->data = (Buffer){ .ptr = &input.ptr[index], .len = len };
+
+    return true;
+}
+
+bool
 asn_seq_init_seq(AsnSeq* seq, Buffer input) {
     u64 index = 0;
     if (index >= input.len) return false;

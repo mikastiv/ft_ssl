@@ -68,6 +68,16 @@ asn_seq_add_bit_str_seq(AsnSeq* seq, AsnSeq* value);
 void
 asn_seq_add_seq(AsnSeq* parent, AsnSeq* seq);
 
+typedef struct {
+    AsnTag tag;
+    u64 offset;
+    u64 len_size;
+    Buffer data;
+} AsnEntry;
+
+bool
+asn_next_entry(Buffer input, u64 index, AsnEntry* out);
+
 bool
 asn_seq_init_seq(AsnSeq* seq, Buffer input);
 
