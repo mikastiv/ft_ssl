@@ -177,123 +177,39 @@ asn_next_entry(Buffer input, u64 index, AsnEntry* out) {
     if (len > input.len - index) return false;
 
     out->tag = oct1.tag_type;
-    out->offset = index;
-    out->len_size = index - offset;
+    out->offset = offset;
+    out->len_size = index - offset - 1; // Tag is one byte
     out->data = (Buffer){ .ptr = &input.ptr[index], .len = len };
 
     return true;
 }
 
 bool
-asn_seq_init_seq(AsnSeq* seq, Buffer input) {
-    u64 index = 0;
-    if (index >= input.len) return false;
+asn_integer_to_u64(Buffer integer, u64* out) {
+    *out = 0;
 
-    AsnOctet1 oct1 = { .raw = input.ptr[index++] };
-    if (oct1.tag_type != AsnSequence) return false;
+    u64 i = 0;
+    // skip leading zeroes
+    while (i < integer.len && integer.ptr[i] == 0) {
+        i++;
+    }
 
-    u64 len = 0;
-    if (!asn_read_length(input, &index, &len)) return false;
+    if (integer.len - i > sizeof(u64)) return false;
 
-    if (len > input.len - index) return false;
-
-    input = buf(input.ptr + index, len);
-    ft_memcpy(buf(seq->buffer, len), input);
-    seq->len = len;
-
-    return true;
-}
-
-bool
-asn_seq_read_seq(AsnSeq* seq, u64* index, AsnSeq* out) {
-    if (*index >= seq->len) return false;
-
-    AsnOctet1 oct1 = { .raw = seq->buffer[(*index)++] };
-    if (oct1.tag_type != AsnSequence) return false;
-
-    u64 len = 0;
-    if (!asn_read_length(buf(seq->buffer, seq->len), index, &len)) return false;
-
-    if (len > seq->len - *index) return false;
-
-    Buffer sub_seq = buf(&seq->buffer[*index], len);
-    ft_memcpy(buf(out->buffer, len), sub_seq);
-    out->len = len;
-
-    return true;
-}
-
-bool
-asn_seq_read_integer(AsnSeq* seq, u64* index, u64* value) {
-    if (*index >= seq->len) return false;
-
-    AsnOctet1 oct1 = { .raw = seq->buffer[(*index)++] };
-    if (oct1.tag_type != AsnInteger) return false;
-
-    u64 len = 0;
-    if (!asn_read_length(buf(seq->buffer, seq->len), index, &len)) return false;
-
-    if (len > seq->len - *index) return false;
-
-    *value = 0;
-    while (len--) {
-        *value <<= 8;
-        *value |= seq->buffer[(*index)++];
+    for (; i < integer.len; i++) {
+        *out <<= 8;
+        *out |= integer.ptr[i];
     }
 
     return true;
 }
 
-bool
-asn_seq_read_object_ident(AsnSeq* seq, u64* index, Buffer* value) {
-    if (*index >= seq->len) return false;
-
-    AsnOctet1 oct1 = { .raw = seq->buffer[(*index)++] };
-    if (oct1.tag_type != AsnObjectIdentifier) return false;
-
-    u64 len = 0;
-    if (!asn_read_length(buf(seq->buffer, seq->len), index, &len)) return false;
-
-    if (len > seq->len - *index) return false;
-
-    value->ptr = &seq->buffer[*index];
-    value->len = len;
-
-    *index += len;
-
-    return true;
+u64
+asn_next_entry_offset(AsnEntry entry) {
+    return 1 + entry.len_size + entry.data.len + entry.offset; // Tag is one byte
 }
 
-bool
-asn_seq_read_null_value(AsnSeq* seq, u64* index, u64* value) {
-    if (*index >= seq->len) return false;
-
-    AsnOctet1 oct1 = { .raw = seq->buffer[(*index)++] };
-    if (oct1.tag_type != AsnNull) return false;
-
-    if (*index >= seq->len) return false;
-
-    *value = seq->buffer[(*index)++];
-
-    return true;
-}
-
-bool
-asn_seq_read_octet_str(AsnSeq* seq, u64* index, Buffer* value) {
-    if (*index >= seq->len) return false;
-
-    AsnOctet1 oct1 = { .raw = seq->buffer[(*index)++] };
-    if (oct1.tag_type != AsnOctetString) return false;
-
-    u64 len = 0;
-    if (!asn_read_length(buf(seq->buffer, seq->len), index, &len)) return false;
-
-    if (len > seq->len - *index) return false;
-
-    value->ptr = &seq->buffer[*index];
-    value->len = len;
-
-    *index += len;
-
-    return true;
+u64
+asn_seq_first_entry(AsnEntry entry) {
+    return 1 + entry.len_size + entry.offset; // Tag is one byte
 }

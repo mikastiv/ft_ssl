@@ -71,7 +71,7 @@ generate_prime(Random* rng, u64* first_prime) {
     return prime;
 }
 
-static Rsa
+static Rsa64
 rsa_generate(Random* rng) {
     u64 p = generate_prime(rng, 0);
     u64 q = generate_prime(rng, &p);
@@ -83,11 +83,10 @@ rsa_generate(Random* rng) {
     u64 exp2 = d % (q - 1);
     u64 coef = inverse_mod(q, p);
 
-    return (Rsa){
+    return (Rsa64){
         .prime1 = p,
         .prime2 = q,
         .modulus = n,
-        .phi = phi,
         .pub_exponent = e,
         .priv_exponent = d,
         .exp1 = exp1,
@@ -97,7 +96,7 @@ rsa_generate(Random* rng) {
 }
 
 static void
-output_private_key(Rsa rsa, int fd) {
+output_private_key(Rsa64 rsa, int fd) {
     AsnSeq ctx = asn_seq_init();
 
     AsnSeq private_key = asn_seq_init();
@@ -133,7 +132,7 @@ output_private_key(Rsa rsa, int fd) {
 }
 
 static void
-output_public_key(Rsa rsa, int fd) {
+output_public_key(Rsa64 rsa, int fd) {
     AsnSeq ctx = asn_seq_init();
 
     AsnSeq public_key = asn_seq_init();
@@ -246,45 +245,98 @@ read_public_key(Buffer input, PemKeyType* out) {
 
 static bool
 decode_private_key(Buffer input, Rsa* rsa) {
-    // AsnSeq ctx = asn_seq_init();
+    AsnEntry main_seq = { 0 };
+    if (!asn_next_entry(input, 0, &main_seq)) return false;
+    if (main_seq.tag != AsnSequence) return false;
 
-    // if (!asn_seq_init_seq(&ctx, input)) return false;
+    AsnEntry version = { 0 };
+    if (!asn_next_entry(input, asn_seq_first_entry(main_seq), &version)) return false;
+    if (version.tag != AsnInteger) return false;
 
-    // u64 index = 0;
-    // u64 version = 0;
-    // if (!asn_seq_read_integer(&ctx, &index, &version)) return false;
+    {
+        u64 version_u64 = 0;
+        if (!asn_integer_to_u64(version.data, &version_u64)) return false;
+        if (version_u64 != 0) return false;
+    }
 
-    // {
-    //     AsnSeq rsa_algo = asn_seq_init();
-    //     if (!asn_seq_read_seq(&ctx, &index, &rsa_algo)) return false;
+    AsnEntry key_algo = { 0 };
+    if (!asn_next_entry(input, asn_next_entry_offset(version), &key_algo)) return false;
+    if (key_algo.tag != AsnSequence) return false;
 
-    //     u64 rsa_index = 0;
-    //     Buffer rsa_ident = { 0 };
+    {
+        AsnEntry algo_identifier = { 0 };
+        if (!asn_next_entry(input, asn_seq_first_entry(key_algo), &algo_identifier)) return false;
+        if (algo_identifier.tag != AsnObjectIdentifier) return false;
 
-    //     if (!asn_seq_read_object_ident(&rsa_algo, &rsa_index, &rsa_ident)) return false;
-    //     if (!ft_memcmp(rsa_ident, str(ASN_RSA_ENCRYPTION))) return false;
+        if (!ft_memcmp(algo_identifier.data, str(ASN_RSA_ENCRYPTION))) return false;
 
-    //     u64 null_value = 0;
-    //     if (!asn_seq_read_null_value(&rsa_algo, &rsa_index, &null_value)) return false;
+        AsnEntry algo_params = { 0 };
+        if (!asn_next_entry(input, asn_next_entry_offset(algo_identifier), &algo_params))
+            return false;
+        if (algo_params.tag != AsnNull) return false;
+        if (algo_params.data.len != 0) return false;
+    }
 
-    //     if (null_value != 0) return false;
+    AsnEntry private_key = { 0 };
+    if (!asn_next_entry(input, asn_next_entry_offset(key_algo), &private_key)) return true;
+    if (private_key.tag != AsnOctetString) return false;
 
-    //     index += rsa_index;
-    // }
+    AsnEntry key_data_sequence = { 0 };
+    if (!asn_next_entry(input, asn_seq_first_entry(private_key), &key_data_sequence)) return false;
+    if (key_data_sequence.tag != AsnSequence) return false;
 
-    // Buffer private_key_str = { 0 };
-    // if (!asn_seq_read_octet_str(&ctx, &index, &private_key_str)) return false;
+    AsnEntry key_version = { 0 };
+    if (!asn_next_entry(input, asn_seq_first_entry(key_data_sequence), &key_version)) return false;
+    if (key_version.tag != AsnInteger) return false;
 
-    // AsnSeq rsa_private_key = asn_seq_init();
-    // if (!asn_seq_init_seq(&rsa_private_key, private_key_str)) return false;
+    {
+        u64 key_version_u64 = 0;
+        if (!asn_integer_to_u64(key_version.data, &key_version_u64)) return false;
+        if (key_version_u64 != 0) return false; // version 0 only
+    }
 
-    // u64 rsa_version = 0;
-    // u64 rsa_index = 0;
-    // if (!asn_seq_read_integer(&rsa_private_key, &rsa_index, &rsa_version)) return false;
+    AsnEntry modulus = { 0 };
+    if (!asn_next_entry(input, asn_next_entry_offset(key_version), &modulus)) return false;
+    if (modulus.tag != AsnInteger) return false;
 
-    // read larger integers
+    AsnEntry e = { 0 };
+    if (!asn_next_entry(input, asn_next_entry_offset(modulus), &e)) return false;
+    if (e.tag != AsnInteger) return false;
 
-    (void)rsa;
+    AsnEntry d = { 0 };
+    if (!asn_next_entry(input, asn_next_entry_offset(e), &d)) return false;
+    if (d.tag != AsnInteger) return false;
+
+    AsnEntry p = { 0 };
+    if (!asn_next_entry(input, asn_next_entry_offset(d), &p)) return false;
+    if (p.tag != AsnInteger) return false;
+
+    AsnEntry q = { 0 };
+    if (!asn_next_entry(input, asn_next_entry_offset(p), &q)) return false;
+    if (q.tag != AsnInteger) return false;
+
+    AsnEntry exp1 = { 0 };
+    if (!asn_next_entry(input, asn_next_entry_offset(q), &exp1)) return false;
+    if (exp1.tag != AsnInteger) return false;
+
+    AsnEntry exp2 = { 0 };
+    if (!asn_next_entry(input, asn_next_entry_offset(exp1), &exp2)) return false;
+    if (exp2.tag != AsnInteger) return false;
+
+    AsnEntry coef = { 0 };
+    if (!asn_next_entry(input, asn_next_entry_offset(exp2), &coef)) return false;
+    if (coef.tag != AsnInteger) return false;
+
+    *rsa = (Rsa){
+        .modulus = modulus.data,
+        .pub_exponent = e.data,
+        .priv_exponent = d.data,
+        .prime1 = p.data,
+        .prime2 = q.data,
+        .exp1 = exp1.data,
+        .exp2 = exp2.data,
+        .coefficient = coef.data,
+    };
 
     return true;
 }
@@ -305,7 +357,7 @@ genrsa(GenRsaOptions* options) {
 
     dprintf(STDERR_FILENO, "Generating RSA key with 64 bits\n");
 
-    Rsa rsa = rsa_generate(&rng);
+    Rsa64 rsa = rsa_generate(&rng);
 
     dprintf(STDERR_FILENO, "e is %" PRIu64 " (%#" PRIx64 ")\n", rsa.pub_exponent, rsa.pub_exponent);
 
@@ -318,6 +370,36 @@ genrsa(GenRsaOptions* options) {
 genrsa_error:
     if (options->output_file && out_fd != -1) close(out_fd);
     return false;
+}
+
+static void
+print_bigint(Buffer bigint, bool hex) {
+    u64 i = 0;
+    while (i < bigint.len && bigint.ptr[i] == 0) {
+        i++;
+    }
+
+    // print at least one 0
+    if (i == bigint.len && i > 0) {
+        i--;
+    }
+
+    if (hex) {
+        dprintf(STDERR_FILENO, "(0x");
+
+        if (i < bigint.len && (bigint.ptr[i] & 0xF0) == 0) {
+            dprintf(STDERR_FILENO, "%x", bigint.ptr[i]);
+            i++;
+        }
+
+        for (; i < bigint.len; i++) {
+            dprintf(STDERR_FILENO, "%02x", bigint.ptr[i]);
+        }
+
+        dprintf(STDERR_FILENO, ")");
+    } else {
+    }
+    dprintf(STDERR_FILENO, "\n");
 }
 
 bool
@@ -360,6 +442,15 @@ rsa(RsaOptions* options) {
 
     Rsa rsa = { 0 };
     decode_private_key(decoded, &rsa);
+
+    if (options->print_key_text) {
+        if (options->public_key_in) {
+            dprintf(STDERR_FILENO, "Public-Key: (64 bit)\n");
+            dprintf(STDERR_FILENO, "Modulus: ");
+        } else {
+            dprintf(STDERR_FILENO, "Private-Key: (64 bit, 2 primes)\n");
+        }
+    }
 
     if (options->input_file && in_fd != -1) close(in_fd);
     return true;

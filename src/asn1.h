@@ -79,19 +79,10 @@ bool
 asn_next_entry(Buffer input, u64 index, AsnEntry* out);
 
 bool
-asn_seq_init_seq(AsnSeq* seq, Buffer input);
+asn_integer_to_u64(Buffer integer, u64* out);
 
-bool
-asn_seq_read_seq(AsnSeq* seq, u64* index, AsnSeq* out);
+u64
+asn_next_entry_offset(AsnEntry entry);
 
-bool
-asn_seq_read_integer(AsnSeq* seq, u64* index, u64* value);
-
-bool
-asn_seq_read_object_ident(AsnSeq* seq, u64* index, Buffer* value);
-
-bool
-asn_seq_read_null_value(AsnSeq* seq, u64* index, u64* value);
-
-bool
-asn_seq_read_octet_str(AsnSeq* seq, u64* index, Buffer* out);
+u64
+asn_seq_first_entry(AsnEntry entry);
