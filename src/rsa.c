@@ -373,7 +373,30 @@ genrsa_error:
 }
 
 static void
-print_bigint(Buffer bigint, bool hex) {
+print_bigint_dec(Buffer bigint, i64 index) {
+    assert((bigint.len & 0x8000000000000000) == 0);
+
+    if (index < 0 || index >= (i64)bigint.len) return;
+}
+
+static void
+print_bigint_hex(Buffer bigint) {
+    dprintf(STDERR_FILENO, "(0x");
+
+    u64 i = 0;
+    if (i < bigint.len && (bigint.ptr[i] & 0xF0) == 0) {
+        dprintf(STDERR_FILENO, "%x", bigint.ptr[i]);
+        i++;
+    }
+
+    for (; i < bigint.len; i++) {
+        dprintf(STDERR_FILENO, "%02x", bigint.ptr[i]);
+    }
+    dprintf(STDERR_FILENO, ")");
+}
+
+static void
+print_bigint(const char* name, Buffer bigint) {
     u64 i = 0;
     while (i < bigint.len && bigint.ptr[i] == 0) {
         i++;
@@ -384,22 +407,23 @@ print_bigint(Buffer bigint, bool hex) {
         i--;
     }
 
-    if (hex) {
-        dprintf(STDERR_FILENO, "(0x");
-
-        if (i < bigint.len && (bigint.ptr[i] & 0xF0) == 0) {
-            dprintf(STDERR_FILENO, "%x", bigint.ptr[i]);
-            i++;
-        }
-
-        for (; i < bigint.len; i++) {
-            dprintf(STDERR_FILENO, "%02x", bigint.ptr[i]);
-        }
-
-        dprintf(STDERR_FILENO, ")");
-    } else {
-    }
+    bigint = buf(bigint.ptr + i, bigint.len - i);
+    dprintf(STDERR_FILENO, "%s: ", name);
+    print_bigint_dec(bigint, bigint.len > 0 ? bigint.len - 1 : 0);
+    dprintf(STDERR_FILENO, " ");
+    print_bigint_hex(bigint);
     dprintf(STDERR_FILENO, "\n");
+}
+
+static void
+print_rsa_error(RsaOptions* options, int in_fd) {
+    dprintf(
+        STDERR_FILENO,
+        "%s: could not read %s key from %s\n",
+        progname,
+        options->public_key_in ? "public" : "private",
+        in_fd == STDIN_FILENO ? "<stdin>" : options->input_file
+    );
 }
 
 bool
@@ -421,18 +445,9 @@ rsa(RsaOptions* options) {
     }
 
     if (!base64_key.ptr) {
-        dprintf(
-            STDERR_FILENO,
-            "%s: could not read %s key from %s\n",
-            progname,
-            options->public_key_in ? "public" : "private",
-            in_fd == STDIN_FILENO ? "<stdin>" : options->input_file
-        );
+        print_rsa_error(options, in_fd);
         goto rsa_err;
     }
-
-    dprintf(STDERR_FILENO, "Type: %d\n", key_type);
-    write(STDERR_FILENO, base64_key.ptr, base64_key.len);
 
     Buffer decoded = base64_decode(base64_key);
     if (!decoded.ptr) {
@@ -441,14 +456,27 @@ rsa(RsaOptions* options) {
     }
 
     Rsa rsa = { 0 };
-    decode_private_key(decoded, &rsa);
+    if (!decode_private_key(decoded, &rsa)) {
+        print_rsa_error(options, in_fd);
+        goto rsa_err;
+    }
 
     if (options->print_key_text) {
         if (options->public_key_in) {
             dprintf(STDERR_FILENO, "Public-Key: (64 bit)\n");
             dprintf(STDERR_FILENO, "Modulus: ");
+            print_bigint("Modulus", rsa.modulus);
+            print_bigint("Exponent", rsa.pub_exponent);
         } else {
             dprintf(STDERR_FILENO, "Private-Key: (64 bit, 2 primes)\n");
+            print_bigint("modulus", rsa.modulus);
+            print_bigint("publicExponent", rsa.pub_exponent);
+            print_bigint("privateExponent", rsa.priv_exponent);
+            print_bigint("prime1", rsa.prime1);
+            print_bigint("prime2", rsa.prime2);
+            print_bigint("exponent1", rsa.exp1);
+            print_bigint("exponent2", rsa.exp2);
+            print_bigint("coefficient", rsa.coefficient);
         }
     }
 
