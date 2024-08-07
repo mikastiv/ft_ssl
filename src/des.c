@@ -182,7 +182,7 @@ generate_subkeys(Des64 key, Subkeys out) {
 }
 
 static Des64
-feistel(Des64 halfblock, Subkey subkey) {
+f(Des64 halfblock, Subkey subkey) {
     Des64 expanded = permute(halfblock, e, array_len(e));
     expanded.raw ^= subkey.raw;
 
@@ -223,7 +223,7 @@ process_block(Des64 block, Subkeys subkeys) {
 
     for (u64 i = 0; i < 16; i++) {
         Des64 tmp = right;
-        right = feistel(right, subkeys[i]);
+        right = f(right, subkeys[i]);
         right.raw ^= left.raw;
         left = tmp;
     }
