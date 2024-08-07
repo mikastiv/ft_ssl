@@ -109,7 +109,8 @@ digest(u32 first_input, Command cmd, DigestOptions options) {
         u64 size_hint = get_filesize(STDIN_FILENO);
         Buffer input = read_all_fd(STDIN_FILENO, size_hint);
         if (input.ptr) {
-            if (options.echo_stdin) write(STDOUT_FILENO, input.ptr, input.len);
+            if (options.echo_stdin) (void)write(STDOUT_FILENO, input.ptr, input.len);
+
             hasher_str(input, out);
             print_hash(out, cmd, false, "stdin", options);
         }

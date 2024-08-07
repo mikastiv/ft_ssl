@@ -308,8 +308,8 @@ cipher(Command cmd, DesOptions* options) {
         }
     }
 
-    write(out_fd, res.ptr, res.len);
-    if (options->encrypt && options->use_base64) write(out_fd, "\n", 1);
+    (void)write(out_fd, res.ptr, res.len);
+    if (options->encrypt && options->use_base64) (void)write(out_fd, "\n", 1);
     if (options->output_file && out_fd != -1) close(out_fd);
     if (options->input_file && in_fd != -1) close(in_fd);
     return true;

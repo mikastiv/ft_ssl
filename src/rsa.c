@@ -126,9 +126,9 @@ output_private_key(Rsa64 rsa, int fd) {
 
     Buffer begin = str("-----BEGIN RSA PRIVATE KEY-----\n");
     Buffer end = str("\n-----END RSA PRIVATE KEY-----\n");
-    write(fd, begin.ptr, begin.len);
-    write(fd, encoded.ptr, encoded.len);
-    write(fd, end.ptr, end.len);
+    (void)write(fd, begin.ptr, begin.len);
+    (void)write(fd, encoded.ptr, encoded.len);
+    (void)write(fd, end.ptr, end.len);
 }
 
 static void
@@ -156,9 +156,9 @@ output_public_key(Rsa64 rsa, int fd) {
 
     Buffer begin = str("-----BEGIN RSA PUBLIC KEY-----\n");
     Buffer end = str("\n-----END RSA PUBLIC KEY-----\n");
-    write(fd, begin.ptr, begin.len);
-    write(fd, encoded.ptr, encoded.len);
-    write(fd, end.ptr, end.len);
+    (void)write(fd, begin.ptr, begin.len);
+    (void)write(fd, encoded.ptr, encoded.len);
+    (void)write(fd, end.ptr, end.len);
 }
 
 typedef enum {
