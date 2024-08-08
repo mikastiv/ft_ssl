@@ -95,6 +95,17 @@ rsa_generate(Random* rng) {
     };
 }
 
+static const char* public_key_begin = "-----BEGIN PUBLIC KEY-----\n";
+static const char* public_key_end = "\n-----END PUBLIC KEY-----\n";
+static const char* public_key_begin_rsa = "-----BEGIN RSA PUBLIC KEY-----\n";
+static const char* public_key_end_rsa = "\n-----END RSA PUBLIC KEY-----\n";
+static const char* private_key_begin = "-----BEGIN PRIVATE KEY-----\n";
+static const char* private_key_end = "\n-----END PRIVATE KEY-----\n";
+static const char* private_key_begin_rsa = "-----BEGIN RSA PRIVATE KEY-----\n";
+static const char* private_key_end_rsa = "\n-----END RSA PRIVATE KEY-----\n";
+static const char* private_key_begin_enc = "-----BEGIN ENCRYPTED PRIVATE KEY-----\n";
+static const char* private_key_end_enc = "\n-----END ENCRYPTED PRIVATE KEY-----\n";
+
 static void
 output_private_key(Rsa64 rsa, int fd) {
     AsnSeq ctx = asn_seq_init();
@@ -124,8 +135,8 @@ output_private_key(Rsa64 rsa, int fd) {
 
     Buffer encoded = base64_encode(buf(ctx.buffer, ctx.len));
 
-    Buffer begin = str("-----BEGIN RSA PRIVATE KEY-----\n");
-    Buffer end = str("\n-----END RSA PRIVATE KEY-----\n");
+    Buffer begin = str(private_key_begin_rsa);
+    Buffer end = str(private_key_end_rsa);
     (void)write(fd, begin.ptr, begin.len);
     (void)write(fd, encoded.ptr, encoded.len);
     (void)write(fd, end.ptr, end.len);
@@ -150,12 +161,10 @@ output_public_key(Rsa64 rsa, int fd) {
     asn_seq_add_bit_str_seq(&public_key, &rsa_public_key);
     asn_seq_add_seq(&ctx, &public_key);
 
-    // write(fd, ctx.buffer, ctx.len);
-
     Buffer encoded = base64_encode(buf(ctx.buffer, ctx.len));
 
-    Buffer begin = str("-----BEGIN RSA PUBLIC KEY-----\n");
-    Buffer end = str("\n-----END RSA PUBLIC KEY-----\n");
+    Buffer begin = str(public_key_begin_rsa);
+    Buffer end = str(public_key_end_rsa);
     (void)write(fd, begin.ptr, begin.len);
     (void)write(fd, encoded.ptr, encoded.len);
     (void)write(fd, end.ptr, end.len);
@@ -169,17 +178,6 @@ typedef enum {
     PemRsaPrivate,
     PemEncPrivate,
 } PemKeyType;
-
-static const char* public_key_begin = "-----BEGIN PUBLIC KEY-----\n";
-static const char* public_key_end = "-----END PUBLIC KEY-----\n";
-static const char* public_key_begin_rsa = "-----BEGIN RSA PUBLIC KEY-----\n";
-static const char* public_key_end_rsa = "-----END RSA PUBLIC KEY-----\n";
-static const char* private_key_begin = "-----BEGIN PRIVATE KEY-----\n";
-static const char* private_key_end = "-----END PRIVATE KEY-----\n";
-static const char* private_key_begin_rsa = "-----BEGIN RSA PRIVATE KEY-----\n";
-static const char* private_key_end_rsa = "-----END RSA PRIVATE KEY-----\n";
-static const char* private_key_begin_enc = "-----BEGIN ENCRYPTED PRIVATE KEY-----\n";
-static const char* private_key_end_enc = "-----END ENCRYPTED PRIVATE KEY-----\n";
 
 static Buffer
 read_pem_key(Buffer input, Buffer begin, Buffer end) {
@@ -341,6 +339,13 @@ decode_private_key(Buffer input, Rsa* rsa) {
     return true;
 }
 
+static bool
+decode_public_key(Buffer input, Rsa* rsa) {
+    (void)input;
+    (void)rsa;
+    return true;
+}
+
 bool
 genrsa(GenRsaOptions* options) {
     int out_fd = get_outfile_fd(options->output_file);
@@ -372,11 +377,48 @@ genrsa_error:
     return false;
 }
 
+static bool
+number_too_big(Buffer bigint) {
+    i64 index = bigint.len > 0 ? (i64)bigint.len - 1 : 0;
+    u8 bytes = 0;
+
+    while (index >= 0) {
+        if (bytes >= sizeof(u64)) {
+            return true;
+        }
+
+        index--;
+        bytes++;
+    }
+
+    return false;
+}
+
 static void
-print_bigint_dec(Buffer bigint, i64 index) {
+print_bigint_dec(Buffer bigint) {
     assert((bigint.len & 0x8000000000000000) == 0);
 
-    if (index < 0 || index >= (i64)bigint.len) return;
+    i64 index = 0;
+    u64 value = 0;
+
+    assert(!number_too_big(bigint));
+
+    while (index < (i64)bigint.len) {
+        value *= 256;
+        value += bigint.ptr[index];
+        index++;
+    }
+
+    u8 buffer[512];
+    index = 0;
+    while (value > 0) {
+        buffer[index++] = value % 10;
+        value /= 10;
+    }
+    while (index > 0) {
+        index--;
+        dprintf(STDERR_FILENO, "%u", buffer[index]);
+    };
 }
 
 static void
@@ -395,7 +437,7 @@ print_bigint_hex(Buffer bigint) {
     dprintf(STDERR_FILENO, ")");
 }
 
-static void
+static bool
 print_bigint(const char* name, Buffer bigint) {
     u64 i = 0;
     while (i < bigint.len && bigint.ptr[i] == 0) {
@@ -408,11 +450,15 @@ print_bigint(const char* name, Buffer bigint) {
     }
 
     bigint = buf(bigint.ptr + i, bigint.len - i);
+    if (number_too_big(bigint)) return false;
+
     dprintf(STDERR_FILENO, "%s: ", name);
-    print_bigint_dec(bigint, bigint.len > 0 ? bigint.len - 1 : 0);
+    print_bigint_dec(bigint);
     dprintf(STDERR_FILENO, " ");
     print_bigint_hex(bigint);
     dprintf(STDERR_FILENO, "\n");
+
+    return true;
 }
 
 static void
@@ -456,27 +502,49 @@ rsa(RsaOptions* options) {
     }
 
     Rsa rsa = { 0 };
-    if (!decode_private_key(decoded, &rsa)) {
-        print_rsa_error(options, in_fd);
-        goto rsa_err;
+    switch (key_type) {
+        case PemPublic:
+        case PemRsaPublic: {
+            if (!decode_public_key(decoded, &rsa)) {
+                print_rsa_error(options, in_fd);
+                goto rsa_err;
+            }
+        } break;
+        case PemPrivate:
+        case PemRsaPrivate: {
+            if (!decode_private_key(decoded, &rsa)) {
+                print_rsa_error(options, in_fd);
+                goto rsa_err;
+            }
+        } break;
+        case PemEncPrivate: {
+        } break;
+        case PemNone: {
+            print_rsa_error(options, in_fd);
+        } break;
     }
 
     if (options->print_key_text) {
+        bool success = true;
         if (options->public_key_in) {
             dprintf(STDERR_FILENO, "Public-Key: (64 bit)\n");
             dprintf(STDERR_FILENO, "Modulus: ");
-            print_bigint("Modulus", rsa.modulus);
-            print_bigint("Exponent", rsa.pub_exponent);
+            success &= print_bigint("Modulus", rsa.modulus);
+            success &= print_bigint("Exponent", rsa.pub_exponent);
         } else {
             dprintf(STDERR_FILENO, "Private-Key: (64 bit, 2 primes)\n");
-            print_bigint("modulus", rsa.modulus);
-            print_bigint("publicExponent", rsa.pub_exponent);
-            print_bigint("privateExponent", rsa.priv_exponent);
-            print_bigint("prime1", rsa.prime1);
-            print_bigint("prime2", rsa.prime2);
-            print_bigint("exponent1", rsa.exp1);
-            print_bigint("exponent2", rsa.exp2);
-            print_bigint("coefficient", rsa.coefficient);
+            success &= print_bigint("modulus", rsa.modulus);
+            success &= print_bigint("publicExponent", rsa.pub_exponent);
+            success &= print_bigint("privateExponent", rsa.priv_exponent);
+            success &= print_bigint("prime1", rsa.prime1);
+            success &= print_bigint("prime2", rsa.prime2);
+            success &= print_bigint("exponent1", rsa.exp1);
+            success &= print_bigint("exponent2", rsa.exp2);
+            success &= print_bigint("coefficient", rsa.coefficient);
+        }
+        if (!success) {
+            dprintf(STDERR_FILENO, "%s: numbers greater than 64bits are not supported\n", progname);
+            goto rsa_err;
         }
     }
 
