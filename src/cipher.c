@@ -163,6 +163,8 @@ get_cipher_mode_name(Command cmd) {
 
 bool
 cipher(Command cmd, DesOptions* options) {
+    bool result = false;
+
     if (options->decrypt && options->encrypt) {
         dprintf(STDERR_FILENO, "%s: cannot encrypt and decrypt at the same time\n", progname);
         return false;
@@ -310,12 +312,11 @@ cipher(Command cmd, DesOptions* options) {
 
     (void)write(out_fd, res.ptr, res.len);
     if (options->encrypt && options->use_base64) (void)write(out_fd, "\n", 1);
-    if (options->output_file && out_fd != -1) close(out_fd);
-    if (options->input_file && in_fd != -1) close(in_fd);
-    return true;
+
+    result = true;
 
 cipher_err:
     if (options->output_file && out_fd != -1) close(out_fd);
     if (options->input_file && in_fd != -1) close(in_fd);
-    return false;
+    return result;
 }
