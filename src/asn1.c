@@ -21,14 +21,17 @@ asn_read_length(Buffer input, u64* index, u64* len) {
     AsnLength asn_len = { .raw = input.ptr[(*index)++] };
     if (asn_len.more) {
         u64 bytes = asn_len.length;
-        if (bytes != 2) return false; // Not supporting more than 2 bytes length
+        if (bytes > 2) return false; // Not supporting more than 2 bytes length
 
         *len = 0;
         if (*index >= input.len) return false;
-        *len = (u64)input.ptr[(*index)++] << 8;
+        *len = (u64)input.ptr[(*index)++];
 
-        if (*index >= input.len) return false;
-        *len |= (u64)input.ptr[(*index)++];
+        if (bytes > 1) {
+            *len <<= 8;
+            if (*index >= input.len) return false;
+            *len |= (u64)input.ptr[(*index)++];
+        }
     } else {
         *len = asn_len.length;
     }
