@@ -341,8 +341,52 @@ decode_private_key(Buffer input, Rsa* rsa) {
 
 static bool
 decode_public_key(Buffer input, Rsa* rsa) {
-    (void)input;
-    (void)rsa;
+    AsnEntry main_seq = { 0 };
+    if (!asn_next_entry(input, 0, &main_seq)) return false;
+    if (main_seq.tag != AsnSequence) return false;
+
+    AsnEntry key_algo = { 0 };
+    if (!asn_next_entry(input, asn_seq_first_entry(main_seq), &key_algo)) return false;
+    if (key_algo.tag != AsnSequence) return false;
+
+    {
+        AsnEntry algo_identifier = { 0 };
+        if (!asn_next_entry(input, asn_seq_first_entry(key_algo), &algo_identifier)) return false;
+        if (algo_identifier.tag != AsnObjectIdentifier) return false;
+
+        if (!ft_memcmp(algo_identifier.data, str(ASN_RSA_ENCRYPTION))) return false;
+
+        AsnEntry algo_params = { 0 };
+        if (!asn_next_entry(input, asn_next_entry_offset(algo_identifier), &algo_params))
+            return false;
+        if (algo_params.tag != AsnNull) return false;
+        if (algo_params.data.len != 0) return false;
+    }
+
+    AsnEntry public_key = { 0 };
+    if (!asn_next_entry(input, asn_next_entry_offset(key_algo), &public_key)) return true;
+    if (public_key.tag != AsnBitString) return false;
+
+    AsnEntry key_data_sequence = { 0 };
+    u64 bitstring_start = asn_seq_first_entry(public_key);
+    assert(input.ptr[bitstring_start] % 8 == 0);
+    bitstring_start++; // Skip unused bits value, should be multiple of 8
+    if (!asn_next_entry(input, bitstring_start, &key_data_sequence)) return false;
+    if (key_data_sequence.tag != AsnSequence) return false;
+
+    AsnEntry modulus = { 0 };
+    if (!asn_next_entry(input, asn_seq_first_entry(key_data_sequence), &modulus)) return false;
+    if (modulus.tag != AsnInteger) return false;
+
+    AsnEntry e = { 0 };
+    if (!asn_next_entry(input, asn_next_entry_offset(modulus), &e)) return false;
+    if (e.tag != AsnInteger) return false;
+
+    *rsa = (Rsa){
+        .modulus = modulus.data,
+        .pub_exponent = e.data,
+    };
+
     return true;
 }
 

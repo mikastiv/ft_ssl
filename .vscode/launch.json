@@ -12,7 +12,8 @@
             "args": [
                 "rsa",
                 "-in",
-                "priv.pem"
+                "pub.pem",
+                "-pubin"
             ],
             "cwd": "${workspaceFolder}"
         }
