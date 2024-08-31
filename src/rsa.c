@@ -526,6 +526,23 @@ rsa(RsaOptions* options) {
 
     Buffer input = read_all_fd(in_fd, get_filesize(in_fd));
 
+    if (!options->input_format) options->input_format = "PEM";
+    if (ft_strcmp(options->input_format, "PEM") != 0) {
+        dprintf(STDERR_FILENO, "%s: invalid input format: '%s'\n", progname, options->input_format);
+        goto rsa_err;
+    }
+
+    if (!options->output_format) options->output_format = "PEM";
+    if (ft_strcmp(options->output_format, "PEM") != 0) {
+        dprintf(
+            STDERR_FILENO,
+            "%s: invalid output format: '%s'\n",
+            progname,
+            options->output_format
+        );
+        goto rsa_err;
+    }
+
     PemKeyType key_type = PemNone;
     Buffer base64_key = { 0 };
     if (options->public_key_in) {
