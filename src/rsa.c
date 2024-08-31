@@ -600,7 +600,6 @@ rsa(RsaOptions* options) {
         bool success = true;
         if (options->public_key_in) {
             dprintf(STDERR_FILENO, "Public-Key: (64 bit)\n");
-            dprintf(STDERR_FILENO, "Modulus: ");
             success &= print_bigint("Modulus", rsa.modulus);
             success &= print_bigint("Exponent", rsa.pub_exponent);
         } else {
