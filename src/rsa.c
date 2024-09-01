@@ -630,7 +630,6 @@ rsa(RsaOptions* options) {
     if (rsa.coefficient.len) rsa64.coefficient = buffer_to_u64(rsa.coefficient);
 
     if (options->public_key_out || key_type == PemPublic || key_type == PemRsaPublic) {
-        // TODO: fix this
         output_public_key(rsa64, out_fd);
     } else {
         output_private_key(rsa64, out_fd);
