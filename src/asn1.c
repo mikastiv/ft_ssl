@@ -58,7 +58,7 @@ asn_seq_write_length(AsnSeq* seq, u64 len) {
 }
 
 void
-asn_seq_add_integer(AsnSeq* seq, u64 value, u64 bitsize) {
+asn_seq_add_integer(AsnSeq* seq, u64 value) {
     AsnOctet1 oct1 = { 0 };
     oct1.tag_type = AsnInteger;
 
@@ -71,6 +71,7 @@ asn_seq_add_integer(AsnSeq* seq, u64 value, u64 bitsize) {
     if (value > 0xFFFFFFFFFFFF) len++;
     if (value > 0xFFFFFFFFFFFFFF) len++;
 
+    u64 bitsize = len * 8;
     if (value & (1ull << (bitsize - 1))) {
         len++;
     }

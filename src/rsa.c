@@ -111,7 +111,7 @@ output_private_key(Rsa64 rsa, int fd) {
     AsnSeq ctx = asn_seq_init();
 
     AsnSeq private_key = asn_seq_init();
-    asn_seq_add_integer(&private_key, 0, 32); // version
+    asn_seq_add_integer(&private_key, 0); // version
 
     AsnSeq rsa_algo = asn_seq_init();
     asn_seq_add_object_ident(&rsa_algo, str(ASN_RSA_ENCRYPTION));
@@ -120,15 +120,15 @@ output_private_key(Rsa64 rsa, int fd) {
     asn_seq_add_seq(&private_key, &rsa_algo);
 
     AsnSeq rsa_private_key = asn_seq_init();
-    asn_seq_add_integer(&rsa_private_key, 0, 32);
-    asn_seq_add_integer(&rsa_private_key, rsa.modulus, 64);
-    asn_seq_add_integer(&rsa_private_key, rsa.pub_exponent, 64);
-    asn_seq_add_integer(&rsa_private_key, rsa.priv_exponent, 64);
-    asn_seq_add_integer(&rsa_private_key, rsa.prime1, 32);
-    asn_seq_add_integer(&rsa_private_key, rsa.prime2, 32);
-    asn_seq_add_integer(&rsa_private_key, rsa.exp1, 32);
-    asn_seq_add_integer(&rsa_private_key, rsa.exp2, 32);
-    asn_seq_add_integer(&rsa_private_key, rsa.coefficient, 32);
+    asn_seq_add_integer(&rsa_private_key, 0);
+    asn_seq_add_integer(&rsa_private_key, rsa.modulus);
+    asn_seq_add_integer(&rsa_private_key, rsa.pub_exponent);
+    asn_seq_add_integer(&rsa_private_key, rsa.priv_exponent);
+    asn_seq_add_integer(&rsa_private_key, rsa.prime1);
+    asn_seq_add_integer(&rsa_private_key, rsa.prime2);
+    asn_seq_add_integer(&rsa_private_key, rsa.exp1);
+    asn_seq_add_integer(&rsa_private_key, rsa.exp2);
+    asn_seq_add_integer(&rsa_private_key, rsa.coefficient);
 
     asn_seq_add_octet_str_seq(&private_key, &rsa_private_key);
     asn_seq_add_seq(&ctx, &private_key);
@@ -155,8 +155,8 @@ output_public_key(Rsa64 rsa, int fd) {
     asn_seq_add_seq(&public_key, &rsa_algo);
 
     AsnSeq rsa_public_key = asn_seq_init();
-    asn_seq_add_integer(&rsa_public_key, rsa.modulus, 64);
-    asn_seq_add_integer(&rsa_public_key, rsa.pub_exponent, 64);
+    asn_seq_add_integer(&rsa_public_key, rsa.modulus);
+    asn_seq_add_integer(&rsa_public_key, rsa.pub_exponent);
 
     asn_seq_add_bit_str_seq(&public_key, &rsa_public_key);
     asn_seq_add_seq(&ctx, &public_key);
@@ -414,7 +414,6 @@ genrsa(GenRsaOptions* options) {
     dprintf(STDERR_FILENO, "e is %" PRIu64 " (%#" PRIx64 ")\n", rsa.pub_exponent, rsa.pub_exponent);
 
     output_private_key(rsa, out_fd);
-    output_public_key(rsa, STDOUT_FILENO);
 
     if (options->output_file && out_fd != -1) close(out_fd);
     return true;
@@ -613,10 +612,28 @@ rsa(RsaOptions* options) {
             success &= print_bigint("exponent2", rsa.exp2);
             success &= print_bigint("coefficient", rsa.coefficient);
         }
+
         if (!success) {
             dprintf(STDERR_FILENO, "%s: numbers greater than 64bits are not supported\n", progname);
             goto rsa_err;
         }
+    }
+
+    Rsa64 rsa64 = (Rsa64){ 0 };
+    if (rsa.modulus.len) rsa64.modulus = buffer_to_u64(rsa.modulus);
+    if (rsa.pub_exponent.len) rsa64.pub_exponent = buffer_to_u64(rsa.pub_exponent);
+    if (rsa.priv_exponent.len) rsa64.priv_exponent = buffer_to_u64(rsa.priv_exponent);
+    if (rsa.prime1.len) rsa64.prime1 = buffer_to_u64(rsa.prime1);
+    if (rsa.prime2.len) rsa64.prime2 = buffer_to_u64(rsa.prime2);
+    if (rsa.exp1.len) rsa64.exp1 = buffer_to_u64(rsa.exp1);
+    if (rsa.exp2.len) rsa64.exp2 = buffer_to_u64(rsa.exp2);
+    if (rsa.coefficient.len) rsa64.coefficient = buffer_to_u64(rsa.coefficient);
+
+    if (options->public_key_out || key_type == PemPublic || key_type == PemRsaPublic) {
+        // TODO: fix this
+        output_public_key(rsa64, out_fd);
+    } else {
+        output_private_key(rsa64, out_fd);
     }
 
     result = true;

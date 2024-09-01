@@ -304,6 +304,24 @@ read_u16_be(u8* buffer) {
     return out;
 }
 
+u64
+buffer_to_u64(Buffer buffer) {
+    u64 result = 0;
+
+    u64 i = 0;
+    while (i < buffer.len && buffer.ptr[i] == 0) {
+        i++;
+    }
+
+    u64 end = (buffer.len - i) > 8 ? (i + 8) : buffer.len;
+    for (; i < end; i++) {
+        result <<= 8;
+        result |= buffer.ptr[i];
+    }
+
+    return result;
+}
+
 void
 print_error(void) {
     dprintf(STDERR_FILENO, "%s: %s\n", progname, strerror(errno));
@@ -465,34 +483,6 @@ random_number(Random* random, u64 min, u64 max) {
     num += min;
 
     return num;
-}
-
-u32
-clz(u32 x) {
-    if (x == 0) return 32;
-
-    u32 n = 0;
-    if (x <= 0x0000FFFF) {
-        n += 16;
-        x <<= 16;
-    }
-    if (x <= 0x00FFFFFF) {
-        n += 8;
-        x <<= 8;
-    }
-    if (x <= 0x0FFFFFFF) {
-        n += 4;
-        x <<= 4;
-    }
-    if (x <= 0x3FFFFFFF) {
-        n += 2;
-        x <<= 2;
-    }
-    if (x <= 0x7FFFFFFF) {
-        n += 1;
-    }
-
-    return n;
 }
 
 static u64

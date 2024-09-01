@@ -79,6 +79,9 @@ read_u24_be(u8* buffer);
 u32
 read_u16_be(u8* buffer);
 
+u64
+buffer_to_u64(Buffer buffer);
+
 void
 print_error(void);
 
@@ -126,6 +129,3 @@ power_mod(u64 x, u64 y, u64 mod);
 
 u64
 inverse_mod(u64 x, u64 y);
-
-u32
-clz(u32 value);
