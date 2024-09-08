@@ -518,6 +518,7 @@ extended_gcd(u64 a, u64 b, i64* x, i64* y) {
     }
 }
 
+// x ^ -1 mod y
 u64
 inverse_mod(u64 x, u64 y) {
     i64 a;

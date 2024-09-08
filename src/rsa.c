@@ -393,6 +393,46 @@ decode_public_key(Buffer input, Rsa* rsa) {
     return true;
 }
 
+static bool
+decode_encrypted_private_key(Buffer input, Rsa* rsa) {
+    AsnEntry main_seq = { 0 };
+    if (!asn_next_entry(input, 0, &main_seq)) return false;
+    if (main_seq.tag != AsnSequence) return false;
+
+    AsnEntry encryption_algo = { 0 };
+    if (!asn_next_entry(input, asn_seq_first_entry(main_seq), &encryption_algo)) return false;
+    if (encryption_algo.tag != AsnSequence) return false;
+
+    AsnEntry salt = { 0 }; // Is it the salt?
+    {
+        AsnEntry algo_identifier = { 0 };
+        if (!asn_next_entry(input, asn_seq_first_entry(encryption_algo), &algo_identifier))
+            return false;
+        if (algo_identifier.tag != AsnObjectIdentifier) return false;
+
+        if (!ft_memcmp(algo_identifier.data, str(ASN_PKCS5_PBES2))) return false;
+
+        AsnEntry algo_params = { 0 };
+        if (!asn_next_entry(input, asn_next_entry_offset(algo_identifier), &algo_params))
+            return false;
+        if (algo_params.tag != AsnSequence) return false;
+
+        AsnEntry algo_param_seq = { 0 };
+        if (!asn_next_entry(input, asn_seq_first_entry(algo_params), &algo_param_seq)) return false;
+        if (algo_param_seq.tag != AsnSequence) return false;
+
+        if (!asn_next_entry(input, asn_seq_first_entry(algo_param_seq), &algo_identifier))
+            return false;
+        if (algo_identifier.tag != AsnObjectIdentifier) return false;
+
+        if (!ft_memcmp(algo_identifier.data, str(ASN_PKCS5_PBKF2))) return false;
+
+        if (!asn_next_entry(input, asn_next_entry_offset(algo_identifier), &algo_params)) return false;
+        if (algo_params.tag != AsnSequence) return false;
+
+    }
+}
+
 bool
 genrsa(GenRsaOptions* options) {
     int out_fd = get_outfile_fd(options->output_file);
