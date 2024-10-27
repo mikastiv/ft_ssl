@@ -2,29 +2,29 @@
 
 #include "types.h"
 
-#define digest_declare_interface(prefix)                                                           \
-    bool prefix##_hash_fd(int fd, Buffer out);                                                     \
+#define digest_declare_interface(prefix)                                                                               \
+    bool prefix##_hash_fd(int fd, Buffer out);                                                                         \
     void prefix##_hash_str(Buffer in, Buffer out)
 
-#define digest_implement_interface(Type, prefix)                                                   \
-    void prefix##_hash_str(Buffer in, Buffer out) {                                                \
-        Type hasher = prefix##_init();                                                             \
-        prefix##_update(&hasher, in);                                                              \
-        prefix##_final(&hasher, out);                                                              \
-    }                                                                                              \
-                                                                                                   \
-    bool prefix##_hash_fd(int fd, Buffer out) {                                                    \
-        Type hasher = prefix##_init();                                                             \
-        u8 buffer[4096];                                                                           \
-        i64 bytes = sizeof(buffer);                                                                \
-        while (true) {                                                                             \
-            bytes = read(fd, buffer, sizeof(buffer));                                              \
-            if (bytes < 0) return false;                                                           \
-            if (bytes == 0) break;                                                                 \
-            prefix##_update(&hasher, (Buffer){ .ptr = buffer, .len = (u64)bytes });                \
-        }                                                                                          \
-        prefix##_final(&hasher, out);                                                              \
-        return true;                                                                               \
+#define digest_implement_interface(Type, prefix)                                                                       \
+    void prefix##_hash_str(Buffer in, Buffer out) {                                                                    \
+        Type hasher = prefix##_init();                                                                                 \
+        prefix##_update(&hasher, in);                                                                                  \
+        prefix##_final(&hasher, out);                                                                                  \
+    }                                                                                                                  \
+                                                                                                                       \
+    bool prefix##_hash_fd(int fd, Buffer out) {                                                                        \
+        Type hasher = prefix##_init();                                                                                 \
+        u8 buffer[4096];                                                                                               \
+        i64 bytes = sizeof(buffer);                                                                                    \
+        while (true) {                                                                                                 \
+            bytes = read(fd, buffer, sizeof(buffer));                                                                  \
+            if (bytes < 0) return false;                                                                               \
+            if (bytes == 0) break;                                                                                     \
+            prefix##_update(&hasher, (Buffer){ .ptr = buffer, .len = (u64)bytes });                                    \
+        }                                                                                                              \
+        prefix##_final(&hasher, out);                                                                                  \
+        return true;                                                                                                   \
     }
 
 typedef bool (*HasherFd)(int, Buffer);

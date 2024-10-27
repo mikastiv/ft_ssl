@@ -45,6 +45,11 @@ typedef union {
 #define ASN_PKCS5_PBKF2 "\x2A\x86\x48\x86\xF7\x0D\x01\x05\x0C"
 
 typedef struct {
+    Buffer data;
+    bool valid;
+} AsnParser;
+
+typedef struct {
     u8 buffer[ASN_SEQ_MAXSIZE];
     u64 len;
 } AsnSeq;
@@ -78,7 +83,13 @@ typedef struct {
 } AsnEntry;
 
 bool
-asn_next_entry(Buffer input, u64 index, AsnEntry* out);
+asn_next_entry(AsnParser* parser, u64 index, AsnEntry* out);
+
+bool
+asn_is_tag(AsnParser* parser, AsnEntry entry, AsnTag tag);
+
+bool
+asn_next_entry_and_is_tag(AsnParser* parser, u64 index, AsnTag tag, AsnEntry* out);
 
 bool
 asn_integer_to_u64(Buffer integer, u64* out);

@@ -250,11 +250,7 @@ cipher(Command cmd, DesOptions* options) {
             ivlen = DES_BLOCK_SIZE;
         }
 
-        pbkdf2_generate(
-            str(options->password),
-            buf(salt, PBKDF2_SALT_SIZE),
-            buf(key, keylen + ivlen)
-        );
+        pbkdf2_generate(str(options->password), buf(salt, PBKDF2_SALT_SIZE), buf(key, keylen + ivlen));
 
         if (ivlen) {
             ft_memcpy(buf(iv, DES_BLOCK_SIZE), buf(key + keylen, DES_BLOCK_SIZE));
@@ -272,12 +268,7 @@ cipher(Command cmd, DesOptions* options) {
         }
     } else if (des_requires_iv(cmd) && !options->hex_iv) {
         const char* mode = get_cipher_mode_name(cmd);
-        dprintf(
-            STDERR_FILENO,
-            "%s: initialization vector is required for %s mode\n",
-            progname,
-            mode
-        );
+        dprintf(STDERR_FILENO, "%s: initialization vector is required for %s mode\n", progname, mode);
         goto cipher_err;
     }
 

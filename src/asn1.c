@@ -15,22 +15,22 @@ asn_seq_write_byte(AsnSeq* seq, u8 byte) {
 }
 
 static bool
-asn_read_length(Buffer input, u64* index, u64* len) {
-    if (*index >= input.len) return false;
+asn_read_length(AsnParser* parser, u64* index, u64* len) {
+    if (*index >= parser->data.len) return false;
 
-    AsnLength asn_len = { .raw = input.ptr[(*index)++] };
+    AsnLength asn_len = { .raw = parser->data.ptr[(*index)++] };
     if (asn_len.more) {
         u64 bytes = asn_len.length;
         if (bytes > 2) return false; // Not supporting more than 2 bytes length
 
         *len = 0;
-        if (*index >= input.len) return false;
-        *len = (u64)input.ptr[(*index)++];
+        if (*index >= parser->data.len) return false;
+        *len = (u64)parser->data.ptr[(*index)++];
 
         if (bytes > 1) {
             *len <<= 8;
-            if (*index >= input.len) return false;
-            *len |= (u64)input.ptr[(*index)++];
+            if (*index >= parser->data.len) return false;
+            *len |= (u64)parser->data.ptr[(*index)++];
         }
     } else {
         *len = asn_len.length;
@@ -169,23 +169,42 @@ asn_seq_add_seq(AsnSeq* parent, AsnSeq* seq) {
 }
 
 bool
-asn_next_entry(Buffer input, u64 index, AsnEntry* out) {
-    if (index >= input.len) return false;
+asn_next_entry(AsnParser* parser, u64 index, AsnEntry* out) {
+
+    if (!parser->valid || index >= parser->data.len) {
+        return parser->valid = false;
+    }
 
     u64 offset = index;
-    AsnOctet1 oct1 = { .raw = input.ptr[index++] };
+    AsnOctet1 oct1 = { .raw = parser->data.ptr[index++] };
 
     u64 len = 0;
-    if (!asn_read_length(input, &index, &len)) return false;
+    if (!asn_read_length(parser, &index, &len)) {
+        return parser->valid = false;
+    }
 
-    if (len > input.len - index) return false;
+    if (len > parser->data.len - index) {
+        return parser->valid = false;
+    }
 
     out->tag = oct1.tag_type;
     out->offset = offset;
     out->len_size = index - offset - 1; // Tag is one byte
-    out->data = (Buffer){ .ptr = &input.ptr[index], .len = len };
+    out->data = (Buffer){ .ptr = &parser->data.ptr[index], .len = len };
 
     return true;
+}
+
+bool
+asn_is_tag(AsnParser* parser, AsnEntry entry, AsnTag tag) {
+    if (!parser->valid) return false;
+    return entry.tag == tag;
+}
+
+bool
+asn_next_entry_and_is_tag(AsnParser* parser, u64 index, AsnTag tag, AsnEntry* out) {
+    if (!asn_next_entry(parser, index, out)) return false;
+    return asn_is_tag(parser, *out, tag);
 }
 
 bool

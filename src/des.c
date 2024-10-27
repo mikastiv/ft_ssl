@@ -10,9 +10,8 @@
 
 // Permuted choice 1
 const static u8 pc1[] = {
-    57, 49, 41, 33, 25, 17, 9,  1,  58, 50, 42, 34, 26, 18, 10, 2,  59, 51, 43,
-    35, 27, 19, 11, 3,  60, 52, 44, 36, 63, 55, 47, 39, 31, 23, 15, 7,  62, 54,
-    46, 38, 30, 22, 14, 6,  61, 53, 45, 37, 29, 21, 13, 5,  28, 20, 12, 4,
+    57, 49, 41, 33, 25, 17, 9,  1, 58, 50, 42, 34, 26, 18, 10, 2, 59, 51, 43, 35, 27, 19, 11, 3, 60, 52, 44, 36,
+    63, 55, 47, 39, 31, 23, 15, 7, 62, 54, 46, 38, 30, 22, 14, 6, 61, 53, 45, 37, 29, 21, 13, 5, 28, 20, 12, 4,
 };
 
 // Permuted choice 2
@@ -286,10 +285,7 @@ des_init_ctx(DesCtx* ctx, Buffer key, Des64 iv) {
     ft_memcpy(buf((u8*)&des_key, DES_KEY_SIZE), key);
 
     generate_subkeys(des_key, ctx->subkeys);
-    ft_memcpy(
-        buf((u8*)ctx->inversed_subkeys, DES_KEY_SIZE * 16),
-        buf((u8*)ctx->subkeys, DES_KEY_SIZE * 16)
-    );
+    ft_memcpy(buf((u8*)ctx->inversed_subkeys, DES_KEY_SIZE * 16), buf((u8*)ctx->subkeys, DES_KEY_SIZE * 16));
     inverse_subkeys(ctx->inversed_subkeys);
     ctx->iv = iv;
 }
@@ -306,18 +302,9 @@ des3_init_ctx(Des3Ctx* ctx, Buffer key, Des64 iv) {
     generate_subkeys(key1, ctx->subkeys1);
     generate_subkeys(key2, ctx->subkeys2);
     generate_subkeys(key3, ctx->subkeys3);
-    ft_memcpy(
-        buf((u8*)ctx->inversed_subkeys1, DES_KEY_SIZE * 16),
-        buf((u8*)ctx->subkeys1, DES_KEY_SIZE * 16)
-    );
-    ft_memcpy(
-        buf((u8*)ctx->inversed_subkeys2, DES_KEY_SIZE * 16),
-        buf((u8*)ctx->subkeys2, DES_KEY_SIZE * 16)
-    );
-    ft_memcpy(
-        buf((u8*)ctx->inversed_subkeys3, DES_KEY_SIZE * 16),
-        buf((u8*)ctx->subkeys3, DES_KEY_SIZE * 16)
-    );
+    ft_memcpy(buf((u8*)ctx->inversed_subkeys1, DES_KEY_SIZE * 16), buf((u8*)ctx->subkeys1, DES_KEY_SIZE * 16));
+    ft_memcpy(buf((u8*)ctx->inversed_subkeys2, DES_KEY_SIZE * 16), buf((u8*)ctx->subkeys2, DES_KEY_SIZE * 16));
+    ft_memcpy(buf((u8*)ctx->inversed_subkeys3, DES_KEY_SIZE * 16), buf((u8*)ctx->subkeys3, DES_KEY_SIZE * 16));
     inverse_subkeys(ctx->inversed_subkeys1);
     inverse_subkeys(ctx->inversed_subkeys2);
     inverse_subkeys(ctx->inversed_subkeys3);

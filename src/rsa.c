@@ -243,13 +243,13 @@ read_public_key(Buffer input, PemKeyType* out) {
 
 static bool
 decode_private_key(Buffer input, Rsa* rsa) {
+    AsnParser parser = { .data = input, .valid = true };
+
     AsnEntry main_seq = { 0 };
-    if (!asn_next_entry(input, 0, &main_seq)) return false;
-    if (main_seq.tag != AsnSequence) return false;
+    if (!asn_next_entry_and_is_tag(&parser, 0, AsnSequence, &main_seq)) return false;
 
     AsnEntry version = { 0 };
-    if (!asn_next_entry(input, asn_seq_first_entry(main_seq), &version)) return false;
-    if (version.tag != AsnInteger) return false;
+    if (!asn_next_entry_and_is_tag(&parser, asn_seq_first_entry(main_seq), AsnInteger, &version)) return false;
 
     {
         u64 version_u64 = 0;
@@ -258,34 +258,30 @@ decode_private_key(Buffer input, Rsa* rsa) {
     }
 
     AsnEntry key_algo = { 0 };
-    if (!asn_next_entry(input, asn_next_entry_offset(version), &key_algo)) return false;
-    if (key_algo.tag != AsnSequence) return false;
+    if (!asn_next_entry_and_is_tag(&parser, asn_next_entry_offset(version), AsnSequence, &key_algo)) return false;
 
     {
         AsnEntry algo_identifier = { 0 };
-        if (!asn_next_entry(input, asn_seq_first_entry(key_algo), &algo_identifier)) return false;
-        if (algo_identifier.tag != AsnObjectIdentifier) return false;
-
+        if (!asn_next_entry_and_is_tag(&parser, asn_seq_first_entry(key_algo), AsnObjectIdentifier, &algo_identifier))
+            return false;
         if (!ft_memcmp(algo_identifier.data, str(ASN_RSA_ENCRYPTION))) return false;
 
         AsnEntry algo_params = { 0 };
-        if (!asn_next_entry(input, asn_next_entry_offset(algo_identifier), &algo_params))
+        if (!asn_next_entry_and_is_tag(&parser, asn_next_entry_offset(algo_identifier), AsnNull, &algo_params))
             return false;
-        if (algo_params.tag != AsnNull) return false;
         if (algo_params.data.len != 0) return false;
     }
 
     AsnEntry private_key = { 0 };
-    if (!asn_next_entry(input, asn_next_entry_offset(key_algo), &private_key)) return true;
-    if (private_key.tag != AsnOctetString) return false;
+    if (!asn_next_entry_and_is_tag(&parser, asn_next_entry_offset(key_algo), AsnOctetString, &private_key)) return true;
 
     AsnEntry key_data_sequence = { 0 };
-    if (!asn_next_entry(input, asn_seq_first_entry(private_key), &key_data_sequence)) return false;
-    if (key_data_sequence.tag != AsnSequence) return false;
+    if (!asn_next_entry_and_is_tag(&parser, asn_seq_first_entry(private_key), AsnSequence, &key_data_sequence))
+        return false;
 
     AsnEntry key_version = { 0 };
-    if (!asn_next_entry(input, asn_seq_first_entry(key_data_sequence), &key_version)) return false;
-    if (key_version.tag != AsnInteger) return false;
+    if (!asn_next_entry_and_is_tag(&parser, asn_seq_first_entry(key_data_sequence), AsnInteger, &key_version))
+        return false;
 
     {
         u64 key_version_u64 = 0;
@@ -294,36 +290,28 @@ decode_private_key(Buffer input, Rsa* rsa) {
     }
 
     AsnEntry modulus = { 0 };
-    if (!asn_next_entry(input, asn_next_entry_offset(key_version), &modulus)) return false;
-    if (modulus.tag != AsnInteger) return false;
+    if (!asn_next_entry_and_is_tag(&parser, asn_next_entry_offset(key_version), AsnInteger, &modulus)) return false;
 
     AsnEntry e = { 0 };
-    if (!asn_next_entry(input, asn_next_entry_offset(modulus), &e)) return false;
-    if (e.tag != AsnInteger) return false;
+    if (!asn_next_entry_and_is_tag(&parser, asn_next_entry_offset(modulus), AsnInteger, &e)) return false;
 
     AsnEntry d = { 0 };
-    if (!asn_next_entry(input, asn_next_entry_offset(e), &d)) return false;
-    if (d.tag != AsnInteger) return false;
+    if (!asn_next_entry_and_is_tag(&parser, asn_next_entry_offset(e), AsnInteger, &d)) return false;
 
     AsnEntry p = { 0 };
-    if (!asn_next_entry(input, asn_next_entry_offset(d), &p)) return false;
-    if (p.tag != AsnInteger) return false;
+    if (!asn_next_entry_and_is_tag(&parser, asn_next_entry_offset(d), AsnInteger, &p)) return false;
 
     AsnEntry q = { 0 };
-    if (!asn_next_entry(input, asn_next_entry_offset(p), &q)) return false;
-    if (q.tag != AsnInteger) return false;
+    if (!asn_next_entry_and_is_tag(&parser, asn_next_entry_offset(p), AsnInteger, &q)) return false;
 
     AsnEntry exp1 = { 0 };
-    if (!asn_next_entry(input, asn_next_entry_offset(q), &exp1)) return false;
-    if (exp1.tag != AsnInteger) return false;
+    if (!asn_next_entry_and_is_tag(&parser, asn_next_entry_offset(q), AsnInteger, &exp1)) return false;
 
     AsnEntry exp2 = { 0 };
-    if (!asn_next_entry(input, asn_next_entry_offset(exp1), &exp2)) return false;
-    if (exp2.tag != AsnInteger) return false;
+    if (!asn_next_entry_and_is_tag(&parser, asn_next_entry_offset(exp1), AsnInteger, &exp2)) return false;
 
     AsnEntry coef = { 0 };
-    if (!asn_next_entry(input, asn_next_entry_offset(exp2), &coef)) return false;
-    if (coef.tag != AsnInteger) return false;
+    if (!asn_next_entry_and_is_tag(&parser, asn_next_entry_offset(exp2), AsnInteger, &coef)) return false;
 
     *rsa = (Rsa){
         .modulus = modulus.data,
@@ -341,49 +329,43 @@ decode_private_key(Buffer input, Rsa* rsa) {
 
 static bool
 decode_public_key(Buffer input, Rsa* rsa) {
+    AsnParser parser = { .data = input, .valid = true };
+
     AsnEntry main_seq = { 0 };
-    if (!asn_next_entry(input, 0, &main_seq)) return false;
-    if (main_seq.tag != AsnSequence) return false;
+    if (!asn_next_entry_and_is_tag(&parser, 0, AsnSequence, &main_seq)) return false;
 
     AsnEntry key_algo = { 0 };
-    if (!asn_next_entry(input, asn_seq_first_entry(main_seq), &key_algo)) return false;
-    if (key_algo.tag != AsnSequence) return false;
+    if (!asn_next_entry_and_is_tag(&parser, asn_seq_first_entry(main_seq), AsnSequence, &key_algo)) return false;
 
     {
         AsnEntry algo_identifier = { 0 };
-        if (!asn_next_entry(input, asn_seq_first_entry(key_algo), &algo_identifier)) return false;
-        if (algo_identifier.tag != AsnObjectIdentifier) return false;
+        if (!asn_next_entry_and_is_tag(&parser, asn_seq_first_entry(key_algo), AsnObjectIdentifier, &algo_identifier))
+            return false;
 
         if (!ft_memcmp(algo_identifier.data, str(ASN_RSA_ENCRYPTION))) return false;
 
         AsnEntry algo_params = { 0 };
-        if (!asn_next_entry(input, asn_next_entry_offset(algo_identifier), &algo_params))
+        if (!asn_next_entry_and_is_tag(&parser, asn_next_entry_offset(algo_identifier), AsnNull, &algo_params))
             return false;
-        if (algo_params.tag != AsnNull) return false;
         if (algo_params.data.len != 0) return false;
     }
 
     AsnEntry public_key = { 0 };
-    if (!asn_next_entry(input, asn_next_entry_offset(key_algo), &public_key)) return true;
-    if (public_key.tag != AsnBitString) return false;
+    if (!asn_next_entry_and_is_tag(&parser, asn_next_entry_offset(key_algo), AsnBitString, &public_key)) return false;
 
-    AsnEntry key_data_sequence = { 0 };
     u64 bitstring_start = asn_seq_first_entry(public_key);
-
     u8 unused_bits = input.ptr[bitstring_start++];
     assert(unused_bits == 0);
     (void)unused_bits;
 
-    if (!asn_next_entry(input, bitstring_start, &key_data_sequence)) return false;
-    if (key_data_sequence.tag != AsnSequence) return false;
+    AsnEntry key_data_sequence = { 0 };
+    if (!asn_next_entry_and_is_tag(&parser, bitstring_start, AsnSequence, &key_data_sequence)) return false;
 
     AsnEntry modulus = { 0 };
-    if (!asn_next_entry(input, asn_seq_first_entry(key_data_sequence), &modulus)) return false;
-    if (modulus.tag != AsnInteger) return false;
+    if (!asn_next_entry_and_is_tag(&parser, asn_seq_first_entry(key_data_sequence), AsnInteger, &modulus)) return false;
 
     AsnEntry e = { 0 };
-    if (!asn_next_entry(input, asn_next_entry_offset(modulus), &e)) return false;
-    if (e.tag != AsnInteger) return false;
+    if (!asn_next_entry_and_is_tag(&parser, asn_next_entry_offset(modulus), AsnInteger, &e)) return false;
 
     *rsa = (Rsa){
         .modulus = modulus.data,
@@ -393,45 +375,41 @@ decode_public_key(Buffer input, Rsa* rsa) {
     return true;
 }
 
-static bool
-decode_encrypted_private_key(Buffer input, Rsa* rsa) {
-    AsnEntry main_seq = { 0 };
-    if (!asn_next_entry(input, 0, &main_seq)) return false;
-    if (main_seq.tag != AsnSequence) return false;
+// static bool
+// decode_encrypted_private_key(Buffer input, Rsa* rsa) {
+//     AsnEntry main_seq = { 0 };
+//     if (!asn_next_entry(input, 0, &main_seq)) return false;
+//     if (main_seq.tag != AsnSequence) return false;
 
-    AsnEntry encryption_algo = { 0 };
-    if (!asn_next_entry(input, asn_seq_first_entry(main_seq), &encryption_algo)) return false;
-    if (encryption_algo.tag != AsnSequence) return false;
+//     AsnEntry encryption_algo = { 0 };
+//     if (!asn_next_entry(input, asn_seq_first_entry(main_seq), &encryption_algo)) return false;
+//     if (encryption_algo.tag != AsnSequence) return false;
 
-    AsnEntry salt = { 0 }; // Is it the salt?
-    {
-        AsnEntry algo_identifier = { 0 };
-        if (!asn_next_entry(input, asn_seq_first_entry(encryption_algo), &algo_identifier))
-            return false;
-        if (algo_identifier.tag != AsnObjectIdentifier) return false;
+//     AsnEntry salt = { 0 }; // Is it the salt?
+//     {
+//         AsnEntry algo_identifier = { 0 };
+//         if (!asn_next_entry(input, asn_seq_first_entry(encryption_algo), &algo_identifier)) return false;
+//         if (algo_identifier.tag != AsnObjectIdentifier) return false;
 
-        if (!ft_memcmp(algo_identifier.data, str(ASN_PKCS5_PBES2))) return false;
+//         if (!ft_memcmp(algo_identifier.data, str(ASN_PKCS5_PBES2))) return false;
 
-        AsnEntry algo_params = { 0 };
-        if (!asn_next_entry(input, asn_next_entry_offset(algo_identifier), &algo_params))
-            return false;
-        if (algo_params.tag != AsnSequence) return false;
+//         AsnEntry algo_params = { 0 };
+//         if (!asn_next_entry(input, asn_next_entry_offset(algo_identifier), &algo_params)) return false;
+//         if (algo_params.tag != AsnSequence) return false;
 
-        AsnEntry algo_param_seq = { 0 };
-        if (!asn_next_entry(input, asn_seq_first_entry(algo_params), &algo_param_seq)) return false;
-        if (algo_param_seq.tag != AsnSequence) return false;
+//         AsnEntry algo_param_seq = { 0 };
+//         if (!asn_next_entry(input, asn_seq_first_entry(algo_params), &algo_param_seq)) return false;
+//         if (algo_param_seq.tag != AsnSequence) return false;
 
-        if (!asn_next_entry(input, asn_seq_first_entry(algo_param_seq), &algo_identifier))
-            return false;
-        if (algo_identifier.tag != AsnObjectIdentifier) return false;
+//         if (!asn_next_entry(input, asn_seq_first_entry(algo_param_seq), &algo_identifier)) return false;
+//         if (algo_identifier.tag != AsnObjectIdentifier) return false;
 
-        if (!ft_memcmp(algo_identifier.data, str(ASN_PKCS5_PBKF2))) return false;
+//         if (!ft_memcmp(algo_identifier.data, str(ASN_PKCS5_PBKF2))) return false;
 
-        if (!asn_next_entry(input, asn_next_entry_offset(algo_identifier), &algo_params)) return false;
-        if (algo_params.tag != AsnSequence) return false;
-
-    }
-}
+//         if (!asn_next_entry(input, asn_next_entry_offset(algo_identifier), &algo_params)) return false;
+//         if (algo_params.tag != AsnSequence) return false;
+//     }
+// }
 
 bool
 genrsa(GenRsaOptions* options) {
@@ -584,12 +562,7 @@ rsa(RsaOptions* options) {
 
     if (!options->output_format) options->output_format = "PEM";
     if (ft_strcmp(options->output_format, "PEM") != 0) {
-        dprintf(
-            STDERR_FILENO,
-            "%s: invalid output format: '%s'\n",
-            progname,
-            options->output_format
-        );
+        dprintf(STDERR_FILENO, "%s: invalid output format: '%s'\n", progname, options->output_format);
         goto rsa_err;
     }
 

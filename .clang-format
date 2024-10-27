@@ -20,7 +20,7 @@ BreakBeforeBraces: Attach
 BreakBeforeConceptDeclarations: true
 BreakConstructorInitializers: BeforeColon
 BreakInheritanceList: BeforeColon
-ColumnLimit: 100
+ColumnLimit: 120
 Cpp11BracedListStyle: false
 EmptyLineBeforeAccessModifier: Always
 FixNamespaceComments: true

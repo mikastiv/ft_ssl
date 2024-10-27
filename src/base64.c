@@ -8,8 +8,7 @@
 #include <stdio.h>
 #include <unistd.h>
 
-static const char* base64_alpha =
-    "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
+static const char* base64_alpha = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
 static const char padding = '=';
 
 static u32
