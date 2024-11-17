@@ -380,15 +380,10 @@ typedef enum {
     EncryptionDesEde3,
 } EncryptionAlgo;
 
-typedef enum {
-    CipherModeCbc,
-} CipherMode;
-
 typedef struct {
     Buffer pbkdf2_salt;
     u64 pbkdf2_iterations;
     EncryptionAlgo algo;
-    CipherMode mode;
     Buffer iv;
     Buffer encrypted_data;
 } EncryptedKey;
@@ -408,6 +403,7 @@ decode_encrypted_private_key(Buffer input, EncryptedKey* out) {
     AsnEntry pbkdf2_iterations = { 0 };
     AsnEntry encryption_identifier = { 0 };
     AsnEntry encryption_iv = { 0 };
+    EncryptionAlgo algo = EncryptionDes;
     {
         AsnEntry algo_identifier = { 0 };
         if (!asn_next_entry_and_is_tag(
@@ -473,7 +469,13 @@ decode_encrypted_private_key(Buffer input, EncryptedKey* out) {
                 &encryption_identifier
             ))
             return false;
-        if (!ft_memcmp(encryption_identifier.data, str(ASN_DES_EDE3_CBC))) return false;
+        if (ft_memcmp(encryption_identifier.data, str(ASN_DES_CBC))) {
+            algo = EncryptionDes;
+        } else if (ft_memcmp(encryption_identifier.data, str(ASN_DES_EDE3_CBC))) {
+            algo = EncryptionDesEde3;
+        } else {
+            return false;
+        }
 
         if (!asn_next_entry_and_is_tag(
                 &parser,
@@ -496,8 +498,7 @@ decode_encrypted_private_key(Buffer input, EncryptedKey* out) {
     *out = (EncryptedKey){
         .pbkdf2_salt = pbkdf2_salt.data,
         .pbkdf2_iterations = buffer_to_u64(pbkdf2_iterations.data),
-        .algo = EncryptionDesEde3,
-        .mode = CipherModeCbc,
+        .algo = algo,
         .iv = encryption_iv.data,
         .encrypted_data = encrypted_data.data,
     };
@@ -737,18 +738,10 @@ rsa(RsaOptions* options) {
             Buffer decrypted = { 0 };
             switch (enc_key.algo) {
                 case EncryptionDes: {
-                    switch (enc_key.mode) {
-                        case CipherModeCbc: {
-                            decrypted = des_cbc_decrypt(enc_key.encrypted_data, buf(key, keylen), iv);
-                        } break;
-                    }
+                    decrypted = des_cbc_decrypt(enc_key.encrypted_data, buf(key, keylen), iv);
                 } break;
                 case EncryptionDesEde3: {
-                    switch (enc_key.mode) {
-                        case CipherModeCbc: {
-                            decrypted = des3_cbc_decrypt(enc_key.encrypted_data, buf(key, keylen), iv);
-                        } break;
-                    }
+                    decrypted = des3_cbc_decrypt(enc_key.encrypted_data, buf(key, keylen), iv);
                 } break;
             }
 
