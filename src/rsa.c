@@ -390,6 +390,7 @@ typedef struct {
     EncryptionAlgo algo;
     CipherMode mode;
     Buffer iv;
+    Buffer encrypted_data;
 } EncryptedKey;
 
 static bool
@@ -498,6 +499,7 @@ decode_encrypted_private_key(Buffer input, EncryptedKey* out) {
         .algo = EncryptionDesEde3,
         .mode = CipherModeCbc,
         .iv = encryption_iv.data,
+        .encrypted_data = encrypted_data.data,
     };
 
     return true;
@@ -695,9 +697,24 @@ rsa(RsaOptions* options) {
         } break;
         case PemEncPrivate: {
             EncryptedKey enc_key = { 0 };
+            Buffer passwd = str("test");
             if (!decode_encrypted_private_key(decoded, &enc_key)) {
                 print_rsa_error(options, in_fd);
                 goto rsa_err;
+            }
+
+            u8 key[24] = { 0 };
+            pbkdf2_generate(passwd, enc_key.pbkdf2_salt, enc_key.pbkdf2_iterations, buf(key, sizeof(key)));
+
+            Des64 iv;
+            ft_memcpy(buf(iv.block, DES_BLOCK_SIZE), enc_key.iv);
+            Buffer decrypted = des3_cbc_decrypt(enc_key.encrypted_data, buf(key, sizeof(key)), iv);
+
+            if (decrypted.ptr) {
+                if (!decode_private_key(decrypted, &rsa)) {
+                    print_rsa_error(options, in_fd);
+                    goto rsa_err;
+                }
             }
         } break;
         case PemNone: {
