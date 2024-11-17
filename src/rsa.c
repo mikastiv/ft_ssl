@@ -697,24 +697,68 @@ rsa(RsaOptions* options) {
         } break;
         case PemEncPrivate: {
             EncryptedKey enc_key = { 0 };
-            Buffer passwd = str("test");
             if (!decode_encrypted_private_key(decoded, &enc_key)) {
                 print_rsa_error(options, in_fd);
                 goto rsa_err;
             }
 
-            u8 key[24] = { 0 };
-            pbkdf2_generate(passwd, enc_key.pbkdf2_salt, enc_key.pbkdf2_iterations, buf(key, sizeof(key)));
-
-            Des64 iv;
-            ft_memcpy(buf(iv.block, DES_BLOCK_SIZE), enc_key.iv);
-            Buffer decrypted = des3_cbc_decrypt(enc_key.encrypted_data, buf(key, sizeof(key)), iv);
-
-            if (decrypted.ptr) {
-                if (!decode_private_key(decrypted, &rsa)) {
-                    print_rsa_error(options, in_fd);
+            char password[MAX_PASSWORD_SIZE];
+            if (!options->input_passphrase) {
+                if (!read_password(buf((u8*)password, MAX_PASSWORD_SIZE), false)) {
+                    dprintf(STDERR_FILENO, "%s: error reading password\n", progname);
                     goto rsa_err;
                 }
+
+                options->input_passphrase = password;
+            }
+
+            u8 key[DES_KEY_SIZE * 3] = { 0 };
+            u64 keylen = DES_KEY_SIZE;
+            switch (enc_key.algo) {
+                case EncryptionDes: {
+                    keylen = DES_KEY_SIZE;
+                } break;
+                case EncryptionDesEde3: {
+                    keylen = DES_KEY_SIZE * 3;
+                } break;
+            }
+
+            pbkdf2_generate(
+                str(options->input_passphrase),
+                enc_key.pbkdf2_salt,
+                enc_key.pbkdf2_iterations,
+                buf(key, keylen)
+            );
+
+            Des64 iv;
+            assert(enc_key.iv.len == DES_BLOCK_SIZE);
+            ft_memcpy(buf(iv.block, DES_BLOCK_SIZE), enc_key.iv);
+
+            Buffer decrypted = { 0 };
+            switch (enc_key.algo) {
+                case EncryptionDes: {
+                    switch (enc_key.mode) {
+                        case CipherModeCbc: {
+                            decrypted = des_cbc_decrypt(enc_key.encrypted_data, buf(key, keylen), iv);
+                        } break;
+                    }
+                } break;
+                case EncryptionDesEde3: {
+                    switch (enc_key.mode) {
+                        case CipherModeCbc: {
+                            decrypted = des3_cbc_decrypt(enc_key.encrypted_data, buf(key, keylen), iv);
+                        } break;
+                    }
+                } break;
+            }
+
+            if (!decrypted.ptr) {
+                goto rsa_err;
+            }
+
+            if (!decode_private_key(decrypted, &rsa)) {
+                print_rsa_error(options, in_fd);
+                goto rsa_err;
             }
         } break;
         case PemNone: {
