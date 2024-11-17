@@ -799,6 +799,8 @@ rsa(RsaOptions* options) {
         output_private_key(rsa64, out_fd);
     }
 
+    // TODO: -des, -passin, -passout, -noout, -modulus, -check
+
     result = true;
 
 rsa_err:
