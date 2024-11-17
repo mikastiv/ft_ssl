@@ -69,15 +69,14 @@ pbkdf2_hmac_sha256_f(Buffer password, Buffer salt, u64 iter, u32 block_num, Buff
 }
 
 void
-pbkdf2_generate(Buffer password, Buffer salt, Buffer out) {
+pbkdf2_generate(Buffer password, Buffer salt, u64 iterations, Buffer out) {
     assert(salt.len == PBKDF2_SALT_SIZE);
-    // OpenSSL's default iterations is 10000 and SHA256 is the default hasher
 
     u64 block_count = (out.len + (SHA256_DIGEST_SIZE - 1)) / SHA256_DIGEST_SIZE;
 
     for (u64 i = 0; i < block_count; i++) {
         u8 buffer[SHA256_DIGEST_SIZE];
-        pbkdf2_hmac_sha256_f(password, salt, 10000, i + 1, buf(buffer, SHA256_DIGEST_SIZE));
+        pbkdf2_hmac_sha256_f(password, salt, iterations, i + 1, buf(buffer, SHA256_DIGEST_SIZE));
 
         u64 offset = SHA256_DIGEST_SIZE * i;
         u64 len = out.len - offset;

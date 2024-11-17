@@ -250,7 +250,7 @@ cipher(Command cmd, DesOptions* options) {
             ivlen = DES_BLOCK_SIZE;
         }
 
-        pbkdf2_generate(str(options->password), buf(salt, PBKDF2_SALT_SIZE), buf(key, keylen + ivlen));
+        pbkdf2_generate(str(options->password), buf(salt, PBKDF2_SALT_SIZE), 10000, buf(key, keylen + ivlen));
 
         if (ivlen) {
             ft_memcpy(buf(iv, DES_BLOCK_SIZE), buf(key + keylen, DES_BLOCK_SIZE));

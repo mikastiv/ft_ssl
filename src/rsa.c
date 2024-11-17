@@ -375,8 +375,25 @@ decode_public_key(Buffer input, Rsa* rsa) {
     return true;
 }
 
+typedef enum {
+    EncryptionDes,
+    EncryptionDesEde3,
+} EncryptionAlgo;
+
+typedef enum {
+    CipherModeCbc,
+} CipherMode;
+
+typedef struct {
+    Buffer pbkdf2_salt;
+    u64 pbkdf2_iterations;
+    EncryptionAlgo algo;
+    CipherMode mode;
+    Buffer iv;
+} EncryptedKey;
+
 static bool
-decode_encrypted_private_key(Buffer input, Rsa* rsa) {
+decode_encrypted_private_key(Buffer input, EncryptedKey* out) {
     AsnParser parser = { .data = input, .valid = true };
 
     AsnEntry main_seq = { 0 };
@@ -386,10 +403,10 @@ decode_encrypted_private_key(Buffer input, Rsa* rsa) {
     if (!asn_next_entry_and_is_tag(&parser, asn_seq_first_entry(main_seq), AsnSequence, &encryption_algo_seq))
         return false;
 
-    AsnEntry pbkdf2_salt = { 0 };    // Is it the salt or key?
-    AsnEntry pbkdf2_bitsize = { 0 }; // ?
+    AsnEntry pbkdf2_salt = { 0 };
+    AsnEntry pbkdf2_iterations = { 0 };
     AsnEntry encryption_identifier = { 0 };
-    AsnEntry encryption_salt = { 0 }; // Salt or key ?
+    AsnEntry encryption_iv = { 0 };
     {
         AsnEntry algo_identifier = { 0 };
         if (!asn_next_entry_and_is_tag(
@@ -422,11 +439,11 @@ decode_encrypted_private_key(Buffer input, Rsa* rsa) {
             if (!asn_next_entry_and_is_tag(&parser, asn_seq_first_entry(pbkdf2_params), AsnOctetString, &pbkdf2_salt))
                 return false;
 
-            if (!asn_next_entry_and_is_tag(&parser, asn_next_entry_offset(pbkdf2_salt), AsnInteger, &pbkdf2_bitsize))
+            if (!asn_next_entry_and_is_tag(&parser, asn_next_entry_offset(pbkdf2_salt), AsnInteger, &pbkdf2_iterations))
                 return false;
 
             AsnEntry hmac_algo = { 0 };
-            if (!asn_next_entry_and_is_tag(&parser, asn_next_entry_offset(pbkdf2_bitsize), AsnSequence, &hmac_algo))
+            if (!asn_next_entry_and_is_tag(&parser, asn_next_entry_offset(pbkdf2_iterations), AsnSequence, &hmac_algo))
                 return false;
 
             AsnEntry hmac_identifier = { 0 };
@@ -461,7 +478,7 @@ decode_encrypted_private_key(Buffer input, Rsa* rsa) {
                 &parser,
                 asn_next_entry_offset(encryption_identifier),
                 AsnOctetString,
-                &encryption_salt
+                &encryption_iv
             ))
             return false;
     }
@@ -475,7 +492,14 @@ decode_encrypted_private_key(Buffer input, Rsa* rsa) {
         ))
         return false;
 
-    (void)rsa;
+    *out = (EncryptedKey){
+        .pbkdf2_salt = pbkdf2_salt.data,
+        .pbkdf2_iterations = buffer_to_u64(pbkdf2_iterations.data),
+        .algo = EncryptionDesEde3,
+        .mode = CipherModeCbc,
+        .iv = encryption_iv.data,
+    };
+
     return true;
 }
 
@@ -670,7 +694,8 @@ rsa(RsaOptions* options) {
             }
         } break;
         case PemEncPrivate: {
-            if (!decode_encrypted_private_key(decoded, &rsa)) {
+            EncryptedKey enc_key = { 0 };
+            if (!decode_encrypted_private_key(decoded, &enc_key)) {
                 print_rsa_error(options, in_fd);
                 goto rsa_err;
             }

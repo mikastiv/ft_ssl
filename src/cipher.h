@@ -87,4 +87,4 @@ Buffer
 des3_pcbc_decrypt(Buffer ciphertext, Buffer key, Des64 iv);
 
 void
-pbkdf2_generate(Buffer password, Buffer salt, Buffer out);
+pbkdf2_generate(Buffer password, Buffer salt, u64 iterations, Buffer out);
