@@ -819,12 +819,24 @@ rsa(RsaOptions* options) {
     if (!options->no_print_key) {
         if (options->public_key_out || key_type == PemPublic || key_type == PemRsaPublic) {
             output_public_key(rsa64, out_fd);
+        } else if (options->use_des) {
+            char password[MAX_PASSWORD_SIZE];
+            if (!options->input_passphrase) {
+                if (!read_password(buf((u8*)password, MAX_PASSWORD_SIZE), false)) {
+                    dprintf(STDERR_FILENO, "%s: error reading password\n", progname);
+                    goto rsa_err;
+                }
+
+                options->output_passphrase = password;
+            }
+
+            // encrypted out
         } else {
             output_private_key(rsa64, out_fd);
         }
     }
 
-    // TODO: -des, -passout, -check
+    // TODO: -des, -check
 
     result = true;
 
