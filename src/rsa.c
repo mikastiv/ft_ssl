@@ -375,41 +375,109 @@ decode_public_key(Buffer input, Rsa* rsa) {
     return true;
 }
 
-// static bool
-// decode_encrypted_private_key(Buffer input, Rsa* rsa) {
-//     AsnEntry main_seq = { 0 };
-//     if (!asn_next_entry(input, 0, &main_seq)) return false;
-//     if (main_seq.tag != AsnSequence) return false;
+static bool
+decode_encrypted_private_key(Buffer input, Rsa* rsa) {
+    AsnParser parser = { .data = input, .valid = true };
 
-//     AsnEntry encryption_algo = { 0 };
-//     if (!asn_next_entry(input, asn_seq_first_entry(main_seq), &encryption_algo)) return false;
-//     if (encryption_algo.tag != AsnSequence) return false;
+    AsnEntry main_seq = { 0 };
+    if (!asn_next_entry_and_is_tag(&parser, 0, AsnSequence, &main_seq)) return false;
 
-//     AsnEntry salt = { 0 }; // Is it the salt?
-//     {
-//         AsnEntry algo_identifier = { 0 };
-//         if (!asn_next_entry(input, asn_seq_first_entry(encryption_algo), &algo_identifier)) return false;
-//         if (algo_identifier.tag != AsnObjectIdentifier) return false;
+    AsnEntry encryption_algo_seq = { 0 };
+    if (!asn_next_entry_and_is_tag(&parser, asn_seq_first_entry(main_seq), AsnSequence, &encryption_algo_seq))
+        return false;
 
-//         if (!ft_memcmp(algo_identifier.data, str(ASN_PKCS5_PBES2))) return false;
+    AsnEntry pbkdf2_salt = { 0 };    // Is it the salt or key?
+    AsnEntry pbkdf2_bitsize = { 0 }; // ?
+    AsnEntry encryption_identifier = { 0 };
+    AsnEntry encryption_salt = { 0 }; // Salt or key ?
+    {
+        AsnEntry algo_identifier = { 0 };
+        if (!asn_next_entry_and_is_tag(
+                &parser,
+                asn_seq_first_entry(encryption_algo_seq),
+                AsnObjectIdentifier,
+                &algo_identifier
+            ))
+            return false;
+        if (!ft_memcmp(algo_identifier.data, str(ASN_PKCS5_PBES2))) return false;
 
-//         AsnEntry algo_params = { 0 };
-//         if (!asn_next_entry(input, asn_next_entry_offset(algo_identifier), &algo_params)) return false;
-//         if (algo_params.tag != AsnSequence) return false;
+        AsnEntry algo_params = { 0 };
+        if (!asn_next_entry_and_is_tag(&parser, asn_next_entry_offset(algo_identifier), AsnSequence, &algo_params))
+            return false;
 
-//         AsnEntry algo_param_seq = { 0 };
-//         if (!asn_next_entry(input, asn_seq_first_entry(algo_params), &algo_param_seq)) return false;
-//         if (algo_param_seq.tag != AsnSequence) return false;
+        AsnEntry algo_param_seq = { 0 };
+        if (!asn_next_entry_and_is_tag(&parser, asn_seq_first_entry(algo_params), AsnSequence, &algo_param_seq))
+            return false;
+        {
 
-//         if (!asn_next_entry(input, asn_seq_first_entry(algo_param_seq), &algo_identifier)) return false;
-//         if (algo_identifier.tag != AsnObjectIdentifier) return false;
+            AsnEntry pbkdf2 = { 0 };
+            if (!asn_next_entry_and_is_tag(&parser, asn_seq_first_entry(algo_param_seq), AsnObjectIdentifier, &pbkdf2))
+                return false;
+            if (!ft_memcmp(pbkdf2.data, str(ASN_PKCS5_PBKF2))) return false;
 
-//         if (!ft_memcmp(algo_identifier.data, str(ASN_PKCS5_PBKF2))) return false;
+            AsnEntry pbkdf2_params = { 0 };
+            if (!asn_next_entry_and_is_tag(&parser, asn_next_entry_offset(pbkdf2), AsnSequence, &pbkdf2_params))
+                return false;
 
-//         if (!asn_next_entry(input, asn_next_entry_offset(algo_identifier), &algo_params)) return false;
-//         if (algo_params.tag != AsnSequence) return false;
-//     }
-// }
+            if (!asn_next_entry_and_is_tag(&parser, asn_seq_first_entry(pbkdf2_params), AsnOctetString, &pbkdf2_salt))
+                return false;
+
+            if (!asn_next_entry_and_is_tag(&parser, asn_next_entry_offset(pbkdf2_salt), AsnInteger, &pbkdf2_bitsize))
+                return false;
+
+            AsnEntry hmac_algo = { 0 };
+            if (!asn_next_entry_and_is_tag(&parser, asn_next_entry_offset(pbkdf2_bitsize), AsnSequence, &hmac_algo))
+                return false;
+
+            AsnEntry hmac_identifier = { 0 };
+            if (!asn_next_entry_and_is_tag(
+                    &parser,
+                    asn_seq_first_entry(hmac_algo),
+                    AsnObjectIdentifier,
+                    &hmac_identifier
+                ))
+                return false;
+            if (!ft_memcmp(hmac_identifier.data, str(ASN_HMAC_SHA256))) return false;
+
+            AsnEntry hmac_null = { 0 };
+            if (!asn_next_entry_and_is_tag(&parser, asn_next_entry_offset(hmac_identifier), AsnNull, &hmac_null))
+                return false;
+        }
+
+        AsnEntry encryption_algo = { 0 };
+        if (!asn_next_entry_and_is_tag(&parser, asn_next_entry_offset(algo_param_seq), AsnSequence, &encryption_algo))
+            return false;
+
+        if (!asn_next_entry_and_is_tag(
+                &parser,
+                asn_seq_first_entry(encryption_algo),
+                AsnObjectIdentifier,
+                &encryption_identifier
+            ))
+            return false;
+        if (!ft_memcmp(encryption_identifier.data, str(ASN_DES_EDE3_CBC))) return false;
+
+        if (!asn_next_entry_and_is_tag(
+                &parser,
+                asn_next_entry_offset(encryption_identifier),
+                AsnOctetString,
+                &encryption_salt
+            ))
+            return false;
+    }
+
+    AsnEntry encrypted_data = { 0 };
+    if (!asn_next_entry_and_is_tag(
+            &parser,
+            asn_next_entry_offset(encryption_algo_seq),
+            AsnOctetString,
+            &encrypted_data
+        ))
+        return false;
+
+    (void)rsa;
+    return true;
+}
 
 bool
 genrsa(GenRsaOptions* options) {
@@ -602,6 +670,10 @@ rsa(RsaOptions* options) {
             }
         } break;
         case PemEncPrivate: {
+            if (!decode_encrypted_private_key(decoded, &rsa)) {
+                print_rsa_error(options, in_fd);
+                goto rsa_err;
+            }
         } break;
         case PemNone: {
             print_rsa_error(options, in_fd);

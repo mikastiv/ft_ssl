@@ -12,8 +12,8 @@
             "args": [
                 "rsa",
                 "-in",
-                "pub.pem",
-                "-pubin"
+                "enc.pem",
+                "-text"
             ],
             "cwd": "${workspaceFolder}"
         }
