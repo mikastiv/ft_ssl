@@ -581,23 +581,31 @@ print_bigint_dec(Buffer bigint) {
 }
 
 static void
-print_bigint_hex(Buffer bigint) {
-    dprintf(STDERR_FILENO, "(0x");
+print_bigint_hex(Buffer bigint, bool text_out) {
+    if (text_out) dprintf(STDERR_FILENO, "(0x");
 
     u64 i = 0;
     if (i < bigint.len && (bigint.ptr[i] & 0xF0) == 0) {
-        dprintf(STDERR_FILENO, "%x", bigint.ptr[i]);
+        if (text_out) {
+            dprintf(STDERR_FILENO, "%x", bigint.ptr[i]);
+        } else {
+            dprintf(STDERR_FILENO, "%X", bigint.ptr[i]);
+        }
         i++;
     }
 
     for (; i < bigint.len; i++) {
-        dprintf(STDERR_FILENO, "%02x", bigint.ptr[i]);
+        if (text_out) {
+            dprintf(STDERR_FILENO, "%02x", bigint.ptr[i]);
+        } else {
+            dprintf(STDERR_FILENO, "%02X", bigint.ptr[i]);
+        }
     }
-    dprintf(STDERR_FILENO, ")");
+    if (text_out) dprintf(STDERR_FILENO, ")");
 }
 
 static bool
-print_bigint(const char* name, Buffer bigint) {
+print_bigint(const char* name, Buffer bigint, bool text_out) {
     u64 i = 0;
     while (i < bigint.len && bigint.ptr[i] == 0) {
         i++;
@@ -611,10 +619,17 @@ print_bigint(const char* name, Buffer bigint) {
     bigint = buf(bigint.ptr + i, bigint.len - i);
     if (number_too_big(bigint)) return false;
 
-    dprintf(STDERR_FILENO, "%s: ", name);
-    print_bigint_dec(bigint);
-    dprintf(STDERR_FILENO, " ");
-    print_bigint_hex(bigint);
+    if (text_out) {
+        dprintf(STDERR_FILENO, "%s: ", name);
+    } else {
+        dprintf(STDERR_FILENO, "%s=", name);
+    }
+
+    if (text_out) {
+        print_bigint_dec(bigint);
+        dprintf(STDERR_FILENO, " ");
+    }
+    print_bigint_hex(bigint, text_out);
     dprintf(STDERR_FILENO, "\n");
 
     return true;
@@ -763,20 +778,28 @@ rsa(RsaOptions* options) {
         bool success = true;
         if (options->public_key_in) {
             dprintf(STDERR_FILENO, "Public-Key: (64 bit)\n");
-            success &= print_bigint("Modulus", rsa.modulus);
-            success &= print_bigint("Exponent", rsa.pub_exponent);
+            success &= print_bigint("Modulus", rsa.modulus, true);
+            success &= print_bigint("Exponent", rsa.pub_exponent, true);
         } else {
             dprintf(STDERR_FILENO, "Private-Key: (64 bit, 2 primes)\n");
-            success &= print_bigint("modulus", rsa.modulus);
-            success &= print_bigint("publicExponent", rsa.pub_exponent);
-            success &= print_bigint("privateExponent", rsa.priv_exponent);
-            success &= print_bigint("prime1", rsa.prime1);
-            success &= print_bigint("prime2", rsa.prime2);
-            success &= print_bigint("exponent1", rsa.exp1);
-            success &= print_bigint("exponent2", rsa.exp2);
-            success &= print_bigint("coefficient", rsa.coefficient);
+            success &= print_bigint("modulus", rsa.modulus, true);
+            success &= print_bigint("publicExponent", rsa.pub_exponent, true);
+            success &= print_bigint("privateExponent", rsa.priv_exponent, true);
+            success &= print_bigint("prime1", rsa.prime1, true);
+            success &= print_bigint("prime2", rsa.prime2, true);
+            success &= print_bigint("exponent1", rsa.exp1, true);
+            success &= print_bigint("exponent2", rsa.exp2, true);
+            success &= print_bigint("coefficient", rsa.coefficient, true);
         }
 
+        if (!success) {
+            dprintf(STDERR_FILENO, "%s: numbers greater than 64bits are not supported\n", progname);
+            goto rsa_err;
+        }
+    }
+
+    if (options->print_modulus) {
+        bool success = print_bigint("Modulus", rsa.modulus, false);
         if (!success) {
             dprintf(STDERR_FILENO, "%s: numbers greater than 64bits are not supported\n", progname);
             goto rsa_err;
@@ -793,13 +816,15 @@ rsa(RsaOptions* options) {
     if (rsa.exp2.len) rsa64.exp2 = buffer_to_u64(rsa.exp2);
     if (rsa.coefficient.len) rsa64.coefficient = buffer_to_u64(rsa.coefficient);
 
-    if (options->public_key_out || key_type == PemPublic || key_type == PemRsaPublic) {
-        output_public_key(rsa64, out_fd);
-    } else {
-        output_private_key(rsa64, out_fd);
+    if (!options->no_print_key) {
+        if (options->public_key_out || key_type == PemPublic || key_type == PemRsaPublic) {
+            output_public_key(rsa64, out_fd);
+        } else {
+            output_private_key(rsa64, out_fd);
+        }
     }
 
-    // TODO: -des, -passin, -passout, -noout, -modulus, -check
+    // TODO: -des, -passout, -check
 
     result = true;
 

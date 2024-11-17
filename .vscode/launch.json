@@ -13,7 +13,9 @@
                 "rsa",
                 "-in",
                 "enc.pem",
-                "-text"
+                "-passin",
+                "test",
+                "-modulus",
             ],
             "cwd": "${workspaceFolder}"
         }
