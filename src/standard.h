@@ -23,6 +23,7 @@ typedef struct {
     Buffer exp1;
     Buffer exp2;
     Buffer coefficient;
+    bool private_key;
 } Rsa;
 
 bool

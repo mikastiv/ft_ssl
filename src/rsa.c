@@ -424,6 +424,7 @@ decode_private_key(Buffer input, Rsa* rsa) {
         .exp1 = exp1.data,
         .exp2 = exp2.data,
         .coefficient = coef.data,
+        .private_key = true,
     };
 
     return true;
@@ -472,6 +473,7 @@ decode_public_key(Buffer input, Rsa* rsa) {
     *rsa = (Rsa){
         .modulus = modulus.data,
         .pub_exponent = e.data,
+        .private_key = false,
     };
 
     return true;
@@ -732,15 +734,136 @@ print_bigint(int fd, const char* name, Buffer bigint, bool text_out) {
     return true;
 }
 
+typedef struct {
+    Buffer input;
+    const char* input_file;
+    const char* passphrase;
+    int in_fd;
+    bool public_key_in;
+    bool can_use_stdin;
+} RsaParseInput;
+
 static void
-print_rsa_error(RsaOptions* options, int in_fd) {
+print_rsa_error(RsaParseInput* input) {
     dprintf(
         STDERR_FILENO,
         "%s: could not read %s key from %s\n",
         progname,
-        options->public_key_in ? "public" : "private",
-        in_fd == STDIN_FILENO ? "<stdin>" : options->input_file
+        input->public_key_in ? "public" : "private",
+        input->in_fd == STDIN_FILENO ? "<stdin>" : input->input_file
     );
+}
+
+static bool
+parse_rsa(RsaParseInput* input, Rsa* rsa, PemKeyType* key_type) {
+    *key_type = PemNone;
+    Buffer base64_key = { 0 };
+    if (input->public_key_in) {
+        base64_key = read_public_key(input->input, key_type);
+    } else {
+        base64_key = read_private_key(input->input, key_type);
+    }
+
+    if (!base64_key.ptr) {
+        print_rsa_error(input);
+        return false;
+    }
+
+    Buffer decoded = base64_decode(base64_key);
+    if (!decoded.ptr) {
+        dprintf(STDERR_FILENO, "%s: invalid base64 input\n", progname);
+        return false;
+    }
+
+    *rsa = (Rsa){ 0 };
+    switch (*key_type) {
+        case PemPublic:
+        case PemRsaPublic: {
+            if (!decode_public_key(decoded, rsa)) {
+                print_rsa_error(input);
+                return false;
+            }
+        } break;
+        case PemPrivate:
+        case PemRsaPrivate: {
+            if (!decode_private_key(decoded, rsa)) {
+                print_rsa_error(input);
+                return false;
+            }
+        } break;
+        case PemEncPrivate: {
+            EncryptedKey enc_key = { 0 };
+            if (!decode_encrypted_private_key(decoded, &enc_key)) {
+                print_rsa_error(input);
+                return false;
+            }
+
+            char password[MAX_PASSWORD_SIZE];
+            if (!input->passphrase) {
+                if (!read_password(buf((u8*)password, MAX_PASSWORD_SIZE), false)) {
+                    dprintf(STDERR_FILENO, "%s: error reading password\n", progname);
+                    return false;
+                }
+
+                input->passphrase = password;
+            }
+
+            u8 key[DES_KEY_SIZE * 3] = { 0 };
+            u64 keylen = DES_KEY_SIZE;
+            switch (enc_key.algo) {
+                case EncryptionDes: {
+                    keylen = DES_KEY_SIZE;
+                } break;
+                case EncryptionDesEde3: {
+                    keylen = DES_KEY_SIZE * 3;
+                } break;
+            }
+
+            pbkdf2_generate(str(input->passphrase), enc_key.pbkdf2_salt, enc_key.pbkdf2_iterations, buf(key, keylen));
+
+            Des64 iv;
+            assert(enc_key.iv.len == DES_BLOCK_SIZE);
+            ft_memcpy(buf(iv.block, DES_BLOCK_SIZE), enc_key.iv);
+
+            Buffer decrypted = { 0 };
+            switch (enc_key.algo) {
+                case EncryptionDes: {
+                    decrypted = des_cbc_decrypt(enc_key.encrypted_data, buf(key, keylen), iv);
+                } break;
+                case EncryptionDesEde3: {
+                    decrypted = des3_cbc_decrypt(enc_key.encrypted_data, buf(key, keylen), iv);
+                } break;
+            }
+
+            if (!decrypted.ptr) {
+                return false;
+            }
+
+            if (!decode_private_key(decrypted, rsa)) {
+                print_rsa_error(input);
+                return false;
+            }
+        } break;
+        case PemNone: {
+            print_rsa_error(input);
+        } break;
+    }
+
+    return true;
+}
+
+static Rsa64
+parse_rsa64(Rsa* rsa) {
+    Rsa64 rsa64 = (Rsa64){ 0 };
+    if (rsa->modulus.len) rsa64.modulus = buffer_to_u64(rsa->modulus);
+    if (rsa->pub_exponent.len) rsa64.pub_exponent = buffer_to_u64(rsa->pub_exponent);
+    if (rsa->priv_exponent.len) rsa64.priv_exponent = buffer_to_u64(rsa->priv_exponent);
+    if (rsa->prime1.len) rsa64.prime1 = buffer_to_u64(rsa->prime1);
+    if (rsa->prime2.len) rsa64.prime2 = buffer_to_u64(rsa->prime2);
+    if (rsa->exp1.len) rsa64.exp1 = buffer_to_u64(rsa->exp1);
+    if (rsa->exp2.len) rsa64.exp2 = buffer_to_u64(rsa->exp2);
+    if (rsa->coefficient.len) rsa64.coefficient = buffer_to_u64(rsa->coefficient);
+    return rsa64;
 }
 
 bool
@@ -773,102 +896,19 @@ rsa(RsaOptions* options) {
         goto rsa_err;
     }
 
-    PemKeyType key_type = PemNone;
-    Buffer base64_key = { 0 };
-    if (options->public_key_in) {
-        base64_key = read_public_key(input, &key_type);
-    } else {
-        base64_key = read_private_key(input, &key_type);
-    }
-
-    if (!base64_key.ptr) {
-        print_rsa_error(options, in_fd);
-        goto rsa_err;
-    }
-
-    Buffer decoded = base64_decode(base64_key);
-    if (!decoded.ptr) {
-        dprintf(STDERR_FILENO, "%s: invalid base64 input\n", progname);
-        goto rsa_err;
-    }
-
+    RsaParseInput parse_input = {
+        .input = input,
+        .in_fd = in_fd,
+        .passphrase = options->input_passphrase,
+        .input_file = options->input_file,
+        .public_key_in = options->public_key_in,
+        .can_use_stdin = true,
+    };
     Rsa rsa = { 0 };
-    switch (key_type) {
-        case PemPublic:
-        case PemRsaPublic: {
-            if (!decode_public_key(decoded, &rsa)) {
-                print_rsa_error(options, in_fd);
-                goto rsa_err;
-            }
-        } break;
-        case PemPrivate:
-        case PemRsaPrivate: {
-            if (!decode_private_key(decoded, &rsa)) {
-                print_rsa_error(options, in_fd);
-                goto rsa_err;
-            }
-        } break;
-        case PemEncPrivate: {
-            EncryptedKey enc_key = { 0 };
-            if (!decode_encrypted_private_key(decoded, &enc_key)) {
-                print_rsa_error(options, in_fd);
-                goto rsa_err;
-            }
+    PemKeyType key_type = PemNone;
 
-            char password[MAX_PASSWORD_SIZE];
-            if (!options->input_passphrase) {
-                if (!read_password(buf((u8*)password, MAX_PASSWORD_SIZE), false)) {
-                    dprintf(STDERR_FILENO, "%s: error reading password\n", progname);
-                    goto rsa_err;
-                }
-
-                options->input_passphrase = password;
-            }
-
-            u8 key[DES_KEY_SIZE * 3] = { 0 };
-            u64 keylen = DES_KEY_SIZE;
-            switch (enc_key.algo) {
-                case EncryptionDes: {
-                    keylen = DES_KEY_SIZE;
-                } break;
-                case EncryptionDesEde3: {
-                    keylen = DES_KEY_SIZE * 3;
-                } break;
-            }
-
-            pbkdf2_generate(
-                str(options->input_passphrase),
-                enc_key.pbkdf2_salt,
-                enc_key.pbkdf2_iterations,
-                buf(key, keylen)
-            );
-
-            Des64 iv;
-            assert(enc_key.iv.len == DES_BLOCK_SIZE);
-            ft_memcpy(buf(iv.block, DES_BLOCK_SIZE), enc_key.iv);
-
-            Buffer decrypted = { 0 };
-            switch (enc_key.algo) {
-                case EncryptionDes: {
-                    decrypted = des_cbc_decrypt(enc_key.encrypted_data, buf(key, keylen), iv);
-                } break;
-                case EncryptionDesEde3: {
-                    decrypted = des3_cbc_decrypt(enc_key.encrypted_data, buf(key, keylen), iv);
-                } break;
-            }
-
-            if (!decrypted.ptr) {
-                goto rsa_err;
-            }
-
-            if (!decode_private_key(decrypted, &rsa)) {
-                print_rsa_error(options, in_fd);
-                goto rsa_err;
-            }
-        } break;
-        case PemNone: {
-            print_rsa_error(options, in_fd);
-        } break;
+    if (!parse_rsa(&parse_input, &rsa, &key_type)) {
+        goto rsa_err;
     }
 
     if (options->print_key_text) {
@@ -903,15 +943,7 @@ rsa(RsaOptions* options) {
         }
     }
 
-    Rsa64 rsa64 = (Rsa64){ 0 };
-    if (rsa.modulus.len) rsa64.modulus = buffer_to_u64(rsa.modulus);
-    if (rsa.pub_exponent.len) rsa64.pub_exponent = buffer_to_u64(rsa.pub_exponent);
-    if (rsa.priv_exponent.len) rsa64.priv_exponent = buffer_to_u64(rsa.priv_exponent);
-    if (rsa.prime1.len) rsa64.prime1 = buffer_to_u64(rsa.prime1);
-    if (rsa.prime2.len) rsa64.prime2 = buffer_to_u64(rsa.prime2);
-    if (rsa.exp1.len) rsa64.exp1 = buffer_to_u64(rsa.exp1);
-    if (rsa.exp2.len) rsa64.exp2 = buffer_to_u64(rsa.exp2);
-    if (rsa.coefficient.len) rsa64.coefficient = buffer_to_u64(rsa.coefficient);
+    Rsa64 rsa64 = parse_rsa64(&rsa);
 
     if (options->verify_key) {
         u64 phi = (rsa64.prime1 - 1) * (rsa64.prime2 - 1);
@@ -972,6 +1004,11 @@ bool
 rsautl(RsaUtlOptions* options) {
     bool result = false;
 
+    if (!options->input_key) {
+        dprintf(STDERR_FILENO, "%s: input key is required\n", progname);
+        goto rsautl_err;
+    }
+
     int in_fd = get_infile_fd(options->input_file);
     if (in_fd < 0) {
         print_error();
@@ -983,6 +1020,34 @@ rsautl(RsaUtlOptions* options) {
         print_error();
         goto rsautl_err;
     }
+
+    int key_fd = open(options->input_key, O_RDONLY);
+    if (key_fd < 0) {
+        print_error();
+        goto rsautl_err;
+    }
+
+    Buffer key_input = read_all_fd(key_fd, get_filesize(key_fd));
+    Buffer input = read_all_fd(in_fd, get_filesize(in_fd));
+
+    RsaParseInput parse_input = {
+        .input = key_input,
+        .in_fd = key_fd,
+        .input_file = options->input_key,
+        .passphrase = NULL,
+        .public_key_in = options->public_key_in,
+        .can_use_stdin = false,
+    };
+    Rsa rsa = { 0 };
+    PemKeyType key_type = PemNone;
+    if (!parse_rsa(&parse_input, &rsa, &key_type)) {
+        goto rsautl_err;
+    }
+
+    Rsa64 rsa64 = parse_rsa64(&rsa);
+
+    (void)input;
+    (void)rsa64;
 
 rsautl_err:
     if (options->input_file && in_fd != -1) close(in_fd);
