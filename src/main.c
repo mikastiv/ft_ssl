@@ -59,6 +59,8 @@ main(int in_argc, const char* const* in_argv) {
             RsaUtlOptions options = { 0 };
             parse_options(cmd, &options);
 
+            bool success = rsautl(&options);
+            if (success) result = EXIT_FAILURE;
         } break;
         case Command_Md5:
         case Command_Sha256:

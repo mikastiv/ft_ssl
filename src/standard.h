@@ -30,3 +30,6 @@ genrsa(GenRsaOptions* options);
 
 bool
 rsa(RsaOptions* options);
+
+bool
+rsautl(RsaUtlOptions* options);

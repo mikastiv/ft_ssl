@@ -967,3 +967,25 @@ rsa_err:
     if (options->output_file && out_fd != -1) close(out_fd);
     return result;
 }
+
+bool
+rsautl(RsaUtlOptions* options) {
+    bool result = false;
+
+    int in_fd = get_infile_fd(options->input_file);
+    if (in_fd < 0) {
+        print_error();
+        goto rsautl_err;
+    }
+
+    int out_fd = get_outfile_fd(options->output_file);
+    if (out_fd < 0) {
+        print_error();
+        goto rsautl_err;
+    }
+
+rsautl_err:
+    if (options->input_file && in_fd != -1) close(in_fd);
+    if (options->output_file && out_fd != -1) close(out_fd);
+    return result;
+}
