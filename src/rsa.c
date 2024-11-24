@@ -182,12 +182,13 @@ typedef enum {
 } EncryptionAlgo;
 
 static void
-output_encoded_private_key(Rsa64 rsa, int fd, const char* password, EncryptionAlgo algo) {
+output_encoded_private_key(Rsa64 rsa, int fd, const char* password, Buffer salt, EncryptionAlgo algo) {
+    assert(salt.len == PBKDF2_SALT_SIZE);
+
     u8 key[PBKDF2_MAX_KEY_SIZE + DES_BLOCK_SIZE] = { 0 };
     u8 iv[DES_BLOCK_SIZE] = { 0 };
     u64 keylen = DES_KEY_SIZE;
     u64 ivlen = DES_BLOCK_SIZE;
-    u8 salt[PBKDF2_SALT_SIZE + 1] = { 0 };
     u64 iterations = 2048;
     Buffer algo_ident = str(ASN_DES_CBC);
 
@@ -205,17 +206,9 @@ output_encoded_private_key(Rsa64 rsa, int fd, const char* password, EncryptionAl
             return;
     }
 
-    bool success = get_random_bytes(buf(salt, PBKDF2_SALT_SIZE));
-    if (!success) {
-        dprintf(STDERR_FILENO, "%s: error generating salt\n", progname);
-        return;
-    }
-
-    pbkdf2_generate(str(password), buf(salt, PBKDF2_SALT_SIZE), iterations, buf(key, keylen + ivlen));
-
-    ft_memcpy(buf(iv, ivlen), buf(key + keylen, ivlen));
-
     Des64 des_iv;
+    pbkdf2_generate(str(password), salt, iterations, buf(key, keylen + ivlen));
+    ft_memcpy(buf(iv, ivlen), buf(key + keylen, ivlen));
     ft_memcpy(buf(des_iv.block, ivlen), buf(iv, ivlen));
 
     AsnSeq ctx = create_private_key(rsa);
@@ -233,7 +226,7 @@ output_encoded_private_key(Rsa64 rsa, int fd, const char* password, EncryptionAl
     asn_seq_add_object_ident(&algo_params_seq, str(ASN_PKCS5_PBKF2));
 
     AsnSeq pbkdf2_params = asn_seq_init();
-    asn_seq_add_octet_str(&pbkdf2_params, buf(salt, PBKDF2_SALT_SIZE));
+    asn_seq_add_octet_str(&pbkdf2_params, salt);
     asn_seq_add_integer(&pbkdf2_params, iterations);
 
     AsnSeq hmac = asn_seq_init();
@@ -920,7 +913,21 @@ rsa(RsaOptions* options) {
     if (rsa.exp2.len) rsa64.exp2 = buffer_to_u64(rsa.exp2);
     if (rsa.coefficient.len) rsa64.coefficient = buffer_to_u64(rsa.coefficient);
 
+    if (options->verify_key) {
+        u64 phi = (rsa64.prime1 - 1) * (rsa64.prime2 - 1);
+        bool modulus_ok = rsa64.prime1 * rsa64.prime2 == rsa64.modulus;
+        bool priv_exp_ok = inverse_mod(rsa64.pub_exponent, phi) == rsa64.priv_exponent;
+
+        if (modulus_ok && priv_exp_ok) {
+            dprintf(out_fd, "RSA key ok\n");
+        } else {
+            dprintf(out_fd, "RSA key not ok\n");
+        }
+    }
+
     if (!options->no_print_key) {
+        dprintf(STDERR_FILENO, "writing RSA key\n");
+
         if (options->public_key_out || key_type == PemPublic || key_type == PemRsaPublic) {
             output_public_key(rsa64, out_fd);
         } else if (options->use_des) {
@@ -934,13 +941,24 @@ rsa(RsaOptions* options) {
                 options->output_passphrase = password;
             }
 
-            output_encoded_private_key(rsa64, out_fd, options->output_passphrase, EncryptionDesEde3);
+            u8 salt[PBKDF2_SALT_SIZE + 1] = { 0 };
+            bool success = get_random_bytes(buf(salt, PBKDF2_SALT_SIZE));
+            if (!success) {
+                dprintf(STDERR_FILENO, "%s: error generating salt\n", progname);
+                goto rsa_err;
+            }
+
+            output_encoded_private_key(
+                rsa64,
+                out_fd,
+                options->output_passphrase,
+                buf(salt, PBKDF2_SALT_SIZE),
+                EncryptionDesEde3
+            );
         } else {
             output_private_key(rsa64, out_fd);
         }
     }
-
-    // TODO: -check
 
     result = true;
 
