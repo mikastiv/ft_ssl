@@ -73,6 +73,9 @@ void
 asn_seq_add_octet_str_seq(AsnSeq* seq, AsnSeq* value);
 
 void
+asn_seq_add_octet_str(AsnSeq* seq, Buffer value);
+
+void
 asn_seq_add_bit_str_seq(AsnSeq* seq, AsnSeq* value);
 
 void

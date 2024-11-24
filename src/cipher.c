@@ -109,7 +109,7 @@ get_key_length(Command cmd) {
         case Command_DesCfb:
         case Command_DesPcbc:
         case Command_DesEcb: {
-            key_len = DES_BLOCK_SIZE;
+            key_len = DES_KEY_SIZE;
         } break;
         case Command_Des3:
         case Command_Des3Cbc:
@@ -117,7 +117,7 @@ get_key_length(Command cmd) {
         case Command_Des3Cfb:
         case Command_Des3Pcbc:
         case Command_Des3Ecb: {
-            key_len = DES_BLOCK_SIZE * 3;
+            key_len = DES_KEY_SIZE * 3;
         } break;
         default:
             break;

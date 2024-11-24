@@ -15,7 +15,9 @@
                 "enc.pem",
                 "-passin",
                 "test",
-                "-modulus",
+                "-des",
+                "-passout",
+                "test"
             ],
             "cwd": "${workspaceFolder}"
         }

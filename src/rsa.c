@@ -106,8 +106,8 @@ static const char* private_key_end_rsa = "\n-----END RSA PRIVATE KEY-----\n";
 static const char* private_key_begin_enc = "-----BEGIN ENCRYPTED PRIVATE KEY-----\n";
 static const char* private_key_end_enc = "\n-----END ENCRYPTED PRIVATE KEY-----\n";
 
-static void
-output_private_key(Rsa64 rsa, int fd) {
+static AsnSeq
+create_private_key(Rsa64 rsa) {
     AsnSeq ctx = asn_seq_init();
 
     AsnSeq private_key = asn_seq_init();
@@ -133,6 +133,12 @@ output_private_key(Rsa64 rsa, int fd) {
     asn_seq_add_octet_str_seq(&private_key, &rsa_private_key);
     asn_seq_add_seq(&ctx, &private_key);
 
+    return ctx;
+}
+
+static void
+output_private_key(Rsa64 rsa, int fd) {
+    AsnSeq ctx = create_private_key(rsa);
     Buffer encoded = base64_encode(buf(ctx.buffer, ctx.len));
 
     Buffer begin = str(private_key_begin_rsa);
@@ -165,6 +171,109 @@ output_public_key(Rsa64 rsa, int fd) {
 
     Buffer begin = str(public_key_begin_rsa);
     Buffer end = str(public_key_end_rsa);
+    (void)write(fd, begin.ptr, begin.len);
+    (void)write(fd, encoded.ptr, encoded.len);
+    (void)write(fd, end.ptr, end.len);
+}
+
+typedef enum {
+    EncryptionDes,
+    EncryptionDesEde3,
+} EncryptionAlgo;
+
+static void
+output_encoded_private_key(Rsa64 rsa, int fd, const char* password, EncryptionAlgo algo) {
+    u8 key[PBKDF2_MAX_KEY_SIZE + DES_BLOCK_SIZE] = { 0 };
+    u8 iv[DES_BLOCK_SIZE] = { 0 };
+    u64 keylen = DES_KEY_SIZE;
+    u64 ivlen = DES_BLOCK_SIZE;
+    u8 salt[PBKDF2_SALT_SIZE + 1] = { 0 };
+    u64 iterations = 2048;
+    Buffer algo_ident = str(ASN_DES_CBC);
+
+    switch (algo) {
+        case EncryptionDes: {
+            keylen = DES_KEY_SIZE;
+            algo_ident = str(ASN_DES_CBC);
+        } break;
+        case EncryptionDesEde3: {
+            keylen = DES_KEY_SIZE * 3;
+            algo_ident = str(ASN_DES_EDE3_CBC);
+        } break;
+        default:
+            dprintf(STDERR_FILENO, "%s: unknown encryption algo\n", progname);
+            return;
+    }
+
+    bool success = get_random_bytes(buf(salt, PBKDF2_SALT_SIZE));
+    if (!success) {
+        dprintf(STDERR_FILENO, "%s: error generating salt\n", progname);
+        return;
+    }
+
+    pbkdf2_generate(str(password), buf(salt, PBKDF2_SALT_SIZE), iterations, buf(key, keylen + ivlen));
+
+    ft_memcpy(buf(iv, ivlen), buf(key + keylen, ivlen));
+
+    Des64 des_iv;
+    ft_memcpy(buf(des_iv.block, ivlen), buf(iv, ivlen));
+
+    AsnSeq ctx = create_private_key(rsa);
+
+    AsnSeq enc_ctx = asn_seq_init();
+
+    AsnSeq enc_key = asn_seq_init();
+
+    AsnSeq enc_algo = asn_seq_init();
+    asn_seq_add_object_ident(&enc_algo, str(ASN_PKCS5_PBES2));
+
+    AsnSeq algo_params = asn_seq_init();
+
+    AsnSeq algo_params_seq = asn_seq_init();
+    asn_seq_add_object_ident(&algo_params_seq, str(ASN_PKCS5_PBKF2));
+
+    AsnSeq pbkdf2_params = asn_seq_init();
+    asn_seq_add_octet_str(&pbkdf2_params, buf(salt, PBKDF2_SALT_SIZE));
+    asn_seq_add_integer(&pbkdf2_params, iterations);
+
+    AsnSeq hmac = asn_seq_init();
+    asn_seq_add_object_ident(&hmac, str(ASN_HMAC_SHA256));
+    asn_seq_add_null(&hmac, 0);
+
+    asn_seq_add_seq(&pbkdf2_params, &hmac);
+
+    asn_seq_add_seq(&algo_params_seq, &pbkdf2_params);
+
+    asn_seq_add_seq(&algo_params, &algo_params_seq);
+
+    AsnSeq rsa_algo = asn_seq_init();
+    asn_seq_add_object_ident(&rsa_algo, algo_ident);
+    asn_seq_add_octet_str(&rsa_algo, buf(iv, ivlen));
+
+    asn_seq_add_seq(&algo_params, &rsa_algo);
+
+    asn_seq_add_seq(&enc_algo, &algo_params);
+
+    asn_seq_add_seq(&enc_key, &enc_algo);
+
+    Buffer des;
+    switch (algo) {
+        case EncryptionDes:
+            des = des_cbc_encrypt(buf(ctx.buffer, ctx.len), buf(key, keylen), des_iv);
+            break;
+        case EncryptionDesEde3:
+            des = des3_cbc_encrypt(buf(ctx.buffer, ctx.len), buf(key, keylen), des_iv);
+            break;
+    }
+
+    asn_seq_add_octet_str(&enc_key, des);
+
+    asn_seq_add_seq(&enc_ctx, &enc_key);
+
+    Buffer encoded = base64_encode(buf(enc_ctx.buffer, enc_ctx.len));
+
+    Buffer begin = str(private_key_begin_enc);
+    Buffer end = str(private_key_end_enc);
     (void)write(fd, begin.ptr, begin.len);
     (void)write(fd, encoded.ptr, encoded.len);
     (void)write(fd, end.ptr, end.len);
@@ -375,11 +484,6 @@ decode_public_key(Buffer input, Rsa* rsa) {
     return true;
 }
 
-typedef enum {
-    EncryptionDes,
-    EncryptionDesEde3,
-} EncryptionAlgo;
-
 typedef struct {
     Buffer pbkdf2_salt;
     u64 pbkdf2_iterations;
@@ -554,7 +658,7 @@ number_too_big(Buffer bigint) {
 }
 
 static void
-print_bigint_dec(Buffer bigint) {
+print_bigint_dec(int fd, Buffer bigint) {
     assert((bigint.len & 0x8000000000000000) == 0);
 
     i64 index = 0;
@@ -576,36 +680,36 @@ print_bigint_dec(Buffer bigint) {
     }
     while (index > 0) {
         index--;
-        dprintf(STDERR_FILENO, "%u", buffer[index]);
+        dprintf(fd, "%u", buffer[index]);
     };
 }
 
 static void
-print_bigint_hex(Buffer bigint, bool text_out) {
-    if (text_out) dprintf(STDERR_FILENO, "(0x");
+print_bigint_hex(int fd, Buffer bigint, bool text_out) {
+    if (text_out) dprintf(fd, "(0x");
 
     u64 i = 0;
     if (i < bigint.len && (bigint.ptr[i] & 0xF0) == 0) {
         if (text_out) {
-            dprintf(STDERR_FILENO, "%x", bigint.ptr[i]);
+            dprintf(fd, "%x", bigint.ptr[i]);
         } else {
-            dprintf(STDERR_FILENO, "%X", bigint.ptr[i]);
+            dprintf(fd, "%X", bigint.ptr[i]);
         }
         i++;
     }
 
     for (; i < bigint.len; i++) {
         if (text_out) {
-            dprintf(STDERR_FILENO, "%02x", bigint.ptr[i]);
+            dprintf(fd, "%02x", bigint.ptr[i]);
         } else {
-            dprintf(STDERR_FILENO, "%02X", bigint.ptr[i]);
+            dprintf(fd, "%02X", bigint.ptr[i]);
         }
     }
-    if (text_out) dprintf(STDERR_FILENO, ")");
+    if (text_out) dprintf(fd, ")");
 }
 
 static bool
-print_bigint(const char* name, Buffer bigint, bool text_out) {
+print_bigint(int fd, const char* name, Buffer bigint, bool text_out) {
     u64 i = 0;
     while (i < bigint.len && bigint.ptr[i] == 0) {
         i++;
@@ -620,17 +724,17 @@ print_bigint(const char* name, Buffer bigint, bool text_out) {
     if (number_too_big(bigint)) return false;
 
     if (text_out) {
-        dprintf(STDERR_FILENO, "%s: ", name);
+        dprintf(fd, "%s: ", name);
     } else {
-        dprintf(STDERR_FILENO, "%s=", name);
+        dprintf(fd, "%s=", name);
     }
 
     if (text_out) {
-        print_bigint_dec(bigint);
-        dprintf(STDERR_FILENO, " ");
+        print_bigint_dec(fd, bigint);
+        dprintf(fd, " ");
     }
-    print_bigint_hex(bigint, text_out);
-    dprintf(STDERR_FILENO, "\n");
+    print_bigint_hex(fd, bigint, text_out);
+    dprintf(fd, "\n");
 
     return true;
 }
@@ -777,19 +881,19 @@ rsa(RsaOptions* options) {
     if (options->print_key_text) {
         bool success = true;
         if (options->public_key_in) {
-            dprintf(STDERR_FILENO, "Public-Key: (64 bit)\n");
-            success &= print_bigint("Modulus", rsa.modulus, true);
-            success &= print_bigint("Exponent", rsa.pub_exponent, true);
+            dprintf(out_fd, "Public-Key: (64 bit)\n");
+            success &= print_bigint(out_fd, "Modulus", rsa.modulus, true);
+            success &= print_bigint(out_fd, "Exponent", rsa.pub_exponent, true);
         } else {
-            dprintf(STDERR_FILENO, "Private-Key: (64 bit, 2 primes)\n");
-            success &= print_bigint("modulus", rsa.modulus, true);
-            success &= print_bigint("publicExponent", rsa.pub_exponent, true);
-            success &= print_bigint("privateExponent", rsa.priv_exponent, true);
-            success &= print_bigint("prime1", rsa.prime1, true);
-            success &= print_bigint("prime2", rsa.prime2, true);
-            success &= print_bigint("exponent1", rsa.exp1, true);
-            success &= print_bigint("exponent2", rsa.exp2, true);
-            success &= print_bigint("coefficient", rsa.coefficient, true);
+            dprintf(out_fd, "Private-Key: (64 bit, 2 primes)\n");
+            success &= print_bigint(out_fd, "modulus", rsa.modulus, true);
+            success &= print_bigint(out_fd, "publicExponent", rsa.pub_exponent, true);
+            success &= print_bigint(out_fd, "privateExponent", rsa.priv_exponent, true);
+            success &= print_bigint(out_fd, "prime1", rsa.prime1, true);
+            success &= print_bigint(out_fd, "prime2", rsa.prime2, true);
+            success &= print_bigint(out_fd, "exponent1", rsa.exp1, true);
+            success &= print_bigint(out_fd, "exponent2", rsa.exp2, true);
+            success &= print_bigint(out_fd, "coefficient", rsa.coefficient, true);
         }
 
         if (!success) {
@@ -799,7 +903,7 @@ rsa(RsaOptions* options) {
     }
 
     if (options->print_modulus) {
-        bool success = print_bigint("Modulus", rsa.modulus, false);
+        bool success = print_bigint(out_fd, "Modulus", rsa.modulus, false);
         if (!success) {
             dprintf(STDERR_FILENO, "%s: numbers greater than 64bits are not supported\n", progname);
             goto rsa_err;
@@ -821,7 +925,7 @@ rsa(RsaOptions* options) {
             output_public_key(rsa64, out_fd);
         } else if (options->use_des) {
             char password[MAX_PASSWORD_SIZE];
-            if (!options->input_passphrase) {
+            if (!options->output_passphrase) {
                 if (!read_password(buf((u8*)password, MAX_PASSWORD_SIZE), false)) {
                     dprintf(STDERR_FILENO, "%s: error reading password\n", progname);
                     goto rsa_err;
@@ -830,13 +934,13 @@ rsa(RsaOptions* options) {
                 options->output_passphrase = password;
             }
 
-            // encrypted out
+            output_encoded_private_key(rsa64, out_fd, options->output_passphrase, EncryptionDesEde3);
         } else {
             output_private_key(rsa64, out_fd);
         }
     }
 
-    // TODO: -des, -check
+    // TODO: -check
 
     result = true;
 

@@ -81,6 +81,7 @@ asn_seq_add_integer(AsnSeq* seq, u64 value) {
 
     if (value & (1ull << (bitsize - 1))) {
         asn_seq_write_byte(seq, 0);
+        len--;
     }
 
     if (value == 0) {
@@ -93,10 +94,9 @@ asn_seq_add_integer(AsnSeq* seq, u64 value) {
         value >>= 8;
     }
 
-    while (true) {
+    while (len--) {
         asn_seq_write_byte(seq, (u8)value);
         value >>= 8;
-        if (!value) break;
     }
 }
 
@@ -137,6 +137,21 @@ asn_seq_add_octet_str_seq(AsnSeq* seq, AsnSeq* value) {
     asn_seq_write_length(seq, octet_str_len);
 
     asn_seq_add_seq(seq, value);
+}
+
+void
+asn_seq_add_octet_str(AsnSeq* seq, Buffer value) {
+    AsnOctet1 oct1 = { 0 };
+    oct1.tag_type = AsnOctetString;
+
+    u64 len = value.len;
+
+    asn_seq_write_byte(seq, oct1.raw);
+    asn_seq_write_length(seq, len);
+
+    for (u64 i = 0; i < value.len; i++) {
+        asn_seq_write_byte(seq, value.ptr[i]);
+    }
 }
 
 void
