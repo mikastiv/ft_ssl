@@ -1060,8 +1060,8 @@ rsautl(RsaUtlOptions* options) {
     Rsa64 rsa64 = parse_rsa64(&rsa);
 
     Buffer input = read_all_fd(in_fd, get_filesize(in_fd));
-    if (input.len != sizeof(u64)) {
-        dprintf(STDERR_FILENO, "%s: message must be 8 bytes\n", progname);
+    if (input.len > sizeof(u64)) {
+        dprintf(STDERR_FILENO, "%s: message must be <= 8 bytes\n", progname);
         goto rsautl_err;
     }
 
