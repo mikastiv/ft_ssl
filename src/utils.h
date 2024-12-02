@@ -128,4 +128,7 @@ u64
 power_mod(u64 x, u64 y, u64 mod);
 
 u64
+mul_mod(u64 x, u64 y, u64 mod);
+
+u64
 inverse_mod(u64 x, u64 y);

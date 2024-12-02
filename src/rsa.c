@@ -1000,6 +1000,13 @@ rsa_err:
     return result;
 }
 
+u64
+rsa_encrypt(Buffer input, u64 modulus, u64 exponent) {
+    u64 data = buffer_to_u64(input);
+    u64 result = power_mod(data, exponent, modulus);
+    return result;
+}
+
 bool
 rsautl(RsaUtlOptions* options) {
     bool result = false;
@@ -1008,6 +1015,13 @@ rsautl(RsaUtlOptions* options) {
         dprintf(STDERR_FILENO, "%s: input key is required\n", progname);
         goto rsautl_err;
     }
+
+    if (options->encrypt && options->decrypt) {
+        dprintf(STDERR_FILENO, "%s: cannot encrypt and decrypt at the same time\n", progname);
+        goto rsautl_err;
+    }
+
+    if (!options->encrypt && !options->decrypt) options->encrypt = true;
 
     int in_fd = get_infile_fd(options->input_file);
     if (in_fd < 0) {
@@ -1028,7 +1042,6 @@ rsautl(RsaUtlOptions* options) {
     }
 
     Buffer key_input = read_all_fd(key_fd, get_filesize(key_fd));
-    Buffer input = read_all_fd(in_fd, get_filesize(in_fd));
 
     RsaParseInput parse_input = {
         .input = key_input,
@@ -1046,8 +1059,15 @@ rsautl(RsaUtlOptions* options) {
 
     Rsa64 rsa64 = parse_rsa64(&rsa);
 
-    (void)input;
-    (void)rsa64;
+    Buffer input = read_all_fd(in_fd, get_filesize(in_fd));
+    if (input.len != sizeof(u64)) {
+        dprintf(STDERR_FILENO, "%s: message must be 8 bytes\n", progname);
+        goto rsautl_err;
+    }
+
+    u64 rsa_output = rsa_encrypt(input, rsa64.modulus, options->decrypt ? rsa64.priv_exponent : rsa64.pub_exponent);
+    rsa_output = byte_swap64(rsa_output);
+    (void)write(out_fd, &rsa_output, sizeof(rsa_output));
 
 rsautl_err:
     if (options->input_file && in_fd != -1) close(in_fd);

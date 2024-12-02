@@ -444,13 +444,19 @@ power_mod(u64 x, u64 exp, u64 mod) {
 
     u64 result = 1;
     while (exp > 0) {
-        if (exp & 1) result = (result * x) % mod;
+        if (exp & 1) result = mul_mod(result, x, mod);
 
         exp /= 2;
-        x = (x * x) % mod;
+        x = mul_mod(x, x, mod);
     }
 
     return result;
+}
+
+u64
+mul_mod(u64 x, u64 y, u64 mod) {
+    __uint128_t result = (__uint128_t)x * y;
+    return (u64)(result % mod);
 }
 
 bool

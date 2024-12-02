@@ -10,12 +10,29 @@
             "name": "Debug",
             "program": "${workspaceFolder}/ft_ssl",
             "args": [
-                "rsa",
+                "rsautl",
                 "-in",
-                "enc.pem",
-                "-passin",
-                "test",
-                "-check"
+                "tmp",
+                "-inkey",
+                "priv.pem",
+                "-decrypt"
+            ],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug2",
+            "program": "${workspaceFolder}/ft_ssl",
+            "args": [
+                "rsautl",
+                "-in",
+                "tmp2",
+                "-inkey",
+                "priv.pem",
+                "-encrypt",
+                "-out",
+                "tmp"
             ],
             "cwd": "${workspaceFolder}"
         }
