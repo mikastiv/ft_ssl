@@ -7,6 +7,8 @@ a reimplemetation project of part of the OpenSSL program
 #### Standard
 
 - GenRsa
+- Rsa
+- RsaUtl
 
 #### Hashing
 
