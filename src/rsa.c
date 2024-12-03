@@ -1000,11 +1000,49 @@ rsa_err:
     return result;
 }
 
-u64
+static u64
 rsa_encrypt(Buffer input, u64 modulus, u64 exponent) {
     u64 data = buffer_to_u64(input);
     u64 result = power_mod(data, exponent, modulus);
     return result;
+}
+
+static void
+hexdump(Buffer data, int fd, bool decrypt) {
+    u32 i = 0;
+    if (decrypt) {
+        while (data.ptr[i] == 0) {
+            i++;
+        }
+    }
+
+    for (; i < data.len; i += 16) {
+        dprintf(fd, "%04x - ", i / 16 * 16);
+
+        u32 j = 0;
+        for (; i + j < data.len; j++) {
+            dprintf(fd, "%02x ", data.ptr[i + j]);
+        }
+        for (; j < 16; j++) {
+            dprintf(fd, "   ");
+        }
+
+        dprintf(fd, "  ");
+
+        j = 0;
+        for (; i + j < data.len; j++) {
+            char c = '.';
+            if (ft_isprint(data.ptr[i + j])) {
+                c = data.ptr[i + j];
+            }
+            dprintf(fd, "%c", c);
+        }
+        for (; j < 16; j++) {
+            dprintf(fd, " ");
+        }
+
+        dprintf(fd, "\n");
+    }
 }
 
 bool
@@ -1067,7 +1105,12 @@ rsautl(RsaUtlOptions* options) {
 
     u64 rsa_output = rsa_encrypt(input, rsa64.modulus, options->decrypt ? rsa64.priv_exponent : rsa64.pub_exponent);
     rsa_output = byte_swap64(rsa_output);
-    (void)write(out_fd, &rsa_output, sizeof(rsa_output));
+
+    if (options->hexdump) {
+        hexdump(buf((u8*)&rsa_output, sizeof(rsa_output)), out_fd, options->decrypt);
+    } else {
+        (void)write(out_fd, &rsa_output, sizeof(rsa_output));
+    }
 
 rsautl_err:
     if (options->input_file && in_fd != -1) close(in_fd);

@@ -15,7 +15,8 @@
                 "tmp",
                 "-inkey",
                 "priv.pem",
-                "-decrypt"
+                "-decrypt",
+                "-hexdump"
             ],
             "cwd": "${workspaceFolder}"
         },

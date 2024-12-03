@@ -537,3 +537,8 @@ inverse_mod(u64 x, u64 y) {
 
     return a;
 }
+
+bool
+ft_isprint(char c) {
+    return c >= ' ' && c <= '~';
+}
