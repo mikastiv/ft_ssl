@@ -801,7 +801,6 @@ parse_rsa(RsaParseInput* input, Rsa* rsa, PemKeyType* key_type) {
             char password[MAX_PASSWORD_SIZE];
             if (!input->passphrase) {
                 if (!read_password(buf((u8*)password, MAX_PASSWORD_SIZE), false)) {
-                    dprintf(STDERR_FILENO, "%s: error reading password\n", progname);
                     return false;
                 }
 
@@ -965,8 +964,7 @@ rsa(RsaOptions* options) {
         } else if (options->use_des) {
             char password[MAX_PASSWORD_SIZE];
             if (!options->output_passphrase) {
-                if (!read_password(buf((u8*)password, MAX_PASSWORD_SIZE), false)) {
-                    dprintf(STDERR_FILENO, "%s: error reading password\n", progname);
+                if (!read_password(buf((u8*)password, MAX_PASSWORD_SIZE), true)) {
                     goto rsa_err;
                 }
 
