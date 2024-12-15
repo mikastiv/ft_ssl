@@ -97,8 +97,6 @@ rsa_generate(Random* rng) {
 
 static const char* public_key_begin = "-----BEGIN PUBLIC KEY-----\n";
 static const char* public_key_end = "\n-----END PUBLIC KEY-----\n";
-static const char* public_key_begin_rsa = "-----BEGIN RSA PUBLIC KEY-----\n";
-static const char* public_key_end_rsa = "\n-----END RSA PUBLIC KEY-----\n";
 static const char* private_key_begin = "-----BEGIN PRIVATE KEY-----\n";
 static const char* private_key_end = "\n-----END PRIVATE KEY-----\n";
 static const char* private_key_begin_rsa = "-----BEGIN RSA PRIVATE KEY-----\n";
@@ -141,8 +139,8 @@ output_private_key(Rsa64 rsa, int fd) {
     AsnSeq ctx = create_private_key(rsa);
     Buffer encoded = base64_encode(buf(ctx.buffer, ctx.len));
 
-    Buffer begin = str(private_key_begin_rsa);
-    Buffer end = str(private_key_end_rsa);
+    Buffer begin = str(private_key_begin);
+    Buffer end = str(private_key_end);
     (void)write(fd, begin.ptr, begin.len);
     (void)write(fd, encoded.ptr, encoded.len);
     (void)write(fd, end.ptr, end.len);
@@ -169,8 +167,8 @@ output_public_key(Rsa64 rsa, int fd) {
 
     Buffer encoded = base64_encode(buf(ctx.buffer, ctx.len));
 
-    Buffer begin = str(public_key_begin_rsa);
-    Buffer end = str(public_key_end_rsa);
+    Buffer begin = str(public_key_begin);
+    Buffer end = str(public_key_end);
     (void)write(fd, begin.ptr, begin.len);
     (void)write(fd, encoded.ptr, encoded.len);
     (void)write(fd, end.ptr, end.len);
@@ -332,11 +330,6 @@ read_public_key(Buffer input, PemKeyType* out) {
     Buffer base64_key = read_pem_key(input, str(public_key_begin), str(public_key_end));
 
     if (!base64_key.ptr) {
-        *out = PemRsaPublic;
-        base64_key = read_pem_key(input, str(public_key_begin_rsa), str(public_key_end_rsa));
-    }
-
-    if (!base64_key.ptr) {
         *out = PemNone;
     }
 
@@ -393,6 +386,55 @@ decode_private_key(Buffer input, Rsa* rsa) {
 
     AsnEntry modulus = { 0 };
     if (!asn_next_entry_and_is_tag(&parser, asn_next_entry_offset(key_version), AsnInteger, &modulus)) return false;
+
+    AsnEntry e = { 0 };
+    if (!asn_next_entry_and_is_tag(&parser, asn_next_entry_offset(modulus), AsnInteger, &e)) return false;
+
+    AsnEntry d = { 0 };
+    if (!asn_next_entry_and_is_tag(&parser, asn_next_entry_offset(e), AsnInteger, &d)) return false;
+
+    AsnEntry p = { 0 };
+    if (!asn_next_entry_and_is_tag(&parser, asn_next_entry_offset(d), AsnInteger, &p)) return false;
+
+    AsnEntry q = { 0 };
+    if (!asn_next_entry_and_is_tag(&parser, asn_next_entry_offset(p), AsnInteger, &q)) return false;
+
+    AsnEntry exp1 = { 0 };
+    if (!asn_next_entry_and_is_tag(&parser, asn_next_entry_offset(q), AsnInteger, &exp1)) return false;
+
+    AsnEntry exp2 = { 0 };
+    if (!asn_next_entry_and_is_tag(&parser, asn_next_entry_offset(exp1), AsnInteger, &exp2)) return false;
+
+    AsnEntry coef = { 0 };
+    if (!asn_next_entry_and_is_tag(&parser, asn_next_entry_offset(exp2), AsnInteger, &coef)) return false;
+
+    *rsa = (Rsa){
+        .modulus = modulus.data,
+        .pub_exponent = e.data,
+        .priv_exponent = d.data,
+        .prime1 = p.data,
+        .prime2 = q.data,
+        .exp1 = exp1.data,
+        .exp2 = exp2.data,
+        .coefficient = coef.data,
+        .private_key = true,
+    };
+
+    return true;
+}
+
+static bool
+decode_private_rsa_key(Buffer input, Rsa* rsa) {
+    AsnParser parser = { .data = input, .valid = true };
+
+    AsnEntry main_seq = { 0 };
+    if (!asn_next_entry_and_is_tag(&parser, 0, AsnSequence, &main_seq)) return false;
+
+    AsnEntry version = { 0 };
+    if (!asn_next_entry_and_is_tag(&parser, asn_seq_first_entry(main_seq), AsnInteger, &version)) return false;
+
+    AsnEntry modulus = { 0 };
+    if (!asn_next_entry_and_is_tag(&parser, asn_next_entry_offset(version), AsnInteger, &modulus)) return false;
 
     AsnEntry e = { 0 };
     if (!asn_next_entry_and_is_tag(&parser, asn_next_entry_offset(modulus), AsnInteger, &e)) return false;
@@ -784,9 +826,14 @@ parse_rsa(RsaParseInput* input, Rsa* rsa, PemKeyType* key_type) {
                 return false;
             }
         } break;
-        case PemPrivate:
-        case PemRsaPrivate: {
+        case PemPrivate: {
             if (!decode_private_key(decoded, rsa)) {
+                print_rsa_error(input);
+                return false;
+            }
+        } break;
+        case PemRsaPrivate: {
+            if (!decode_private_rsa_key(decoded, rsa)) {
                 print_rsa_error(input);
                 return false;
             }
