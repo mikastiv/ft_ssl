@@ -102,6 +102,7 @@ print_help(Command cmd) {
             print_flag("passin <filename>", "input file pass phrase source");
             print_flag("passout <filename>", "output file pass phrase source");
             print_flag("des", "use DES cipher");
+            print_flag("des3", "use DES3 cipher");
             print_flag("text", "print the key in text");
             print_flag("noout", "don't print key out");
             print_flag("modulus", "print the RSA key modulus");
@@ -304,6 +305,12 @@ parse_options(Command cmd, void* out_options) {
                      .flag = "des",
                      .type = OptionType_Bool,
                      .value = &options->use_des,
+                     },
+                    {
+                     .name = "use DES3",
+                     .flag = "des3",
+                     .type = OptionType_Bool,
+                     .value = &options->use_des3,
                      },
                     {
                      .name = "print key text",

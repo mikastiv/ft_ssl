@@ -57,6 +57,7 @@ typedef struct {
     bool public_key_in;
     bool public_key_out;
     bool use_des;
+    bool use_des3;
     bool print_key_text;
     bool no_print_key;
     bool print_modulus;

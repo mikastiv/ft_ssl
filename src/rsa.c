@@ -916,6 +916,11 @@ bool
 rsa(RsaOptions* options) {
     bool result = false;
 
+    if (options->use_des && options->use_des3) {
+        dprintf(STDERR_FILENO, "%s: -des and -des3 flags set, using -des3\n", progname);
+        options->use_des = false;
+    }
+
     int in_fd = get_infile_fd(options->input_file);
     if (in_fd < 0) {
         print_error();
@@ -1008,7 +1013,7 @@ rsa(RsaOptions* options) {
 
         if (options->public_key_out || key_type == PemPublic || key_type == PemRsaPublic) {
             output_public_key(rsa64, out_fd);
-        } else if (options->use_des) {
+        } else if (options->use_des || options->use_des3) {
             char password[MAX_PASSWORD_SIZE];
             if (!options->output_passphrase) {
                 if (!read_password(buf((u8*)password, MAX_PASSWORD_SIZE), true)) {
@@ -1030,7 +1035,7 @@ rsa(RsaOptions* options) {
                 out_fd,
                 options->output_passphrase,
                 buf(salt, PBKDF2_SALT_SIZE),
-                EncryptionDesEde3
+                options->use_des ? EncryptionDes : EncryptionDesEde3
             );
         } else {
             output_private_key(rsa64, out_fd);
