@@ -965,19 +965,19 @@ rsa(RsaOptions* options) {
     if (options->print_key_text) {
         bool success = true;
         if (options->public_key_in) {
-            dprintf(out_fd, "Public-Key: (64 bit)\n");
-            success &= print_bigint(out_fd, "Modulus", rsa.modulus, true);
-            success &= print_bigint(out_fd, "Exponent", rsa.pub_exponent, true);
+            dprintf(STDERR_FILENO, "Public-Key: (64 bit)\n");
+            success &= print_bigint(STDERR_FILENO, "Modulus", rsa.modulus, true);
+            success &= print_bigint(STDERR_FILENO, "Exponent", rsa.pub_exponent, true);
         } else {
-            dprintf(out_fd, "Private-Key: (64 bit, 2 primes)\n");
-            success &= print_bigint(out_fd, "modulus", rsa.modulus, true);
-            success &= print_bigint(out_fd, "publicExponent", rsa.pub_exponent, true);
-            success &= print_bigint(out_fd, "privateExponent", rsa.priv_exponent, true);
-            success &= print_bigint(out_fd, "prime1", rsa.prime1, true);
-            success &= print_bigint(out_fd, "prime2", rsa.prime2, true);
-            success &= print_bigint(out_fd, "exponent1", rsa.exp1, true);
-            success &= print_bigint(out_fd, "exponent2", rsa.exp2, true);
-            success &= print_bigint(out_fd, "coefficient", rsa.coefficient, true);
+            dprintf(STDERR_FILENO, "Private-Key: (64 bit, 2 primes)\n");
+            success &= print_bigint(STDERR_FILENO, "modulus", rsa.modulus, true);
+            success &= print_bigint(STDERR_FILENO, "publicExponent", rsa.pub_exponent, true);
+            success &= print_bigint(STDERR_FILENO, "privateExponent", rsa.priv_exponent, true);
+            success &= print_bigint(STDERR_FILENO, "prime1", rsa.prime1, true);
+            success &= print_bigint(STDERR_FILENO, "prime2", rsa.prime2, true);
+            success &= print_bigint(STDERR_FILENO, "exponent1", rsa.exp1, true);
+            success &= print_bigint(STDERR_FILENO, "exponent2", rsa.exp2, true);
+            success &= print_bigint(STDERR_FILENO, "coefficient", rsa.coefficient, true);
         }
 
         if (!success) {
@@ -987,7 +987,7 @@ rsa(RsaOptions* options) {
     }
 
     if (options->print_modulus) {
-        bool success = print_bigint(out_fd, "Modulus", rsa.modulus, false);
+        bool success = print_bigint(STDERR_FILENO, "Modulus", rsa.modulus, false);
         if (!success) {
             dprintf(STDERR_FILENO, "%s: numbers greater than 64bits are not supported\n", progname);
             goto rsa_err;
@@ -1002,9 +1002,9 @@ rsa(RsaOptions* options) {
         bool priv_exp_ok = inverse_mod(rsa64.pub_exponent, phi) == rsa64.priv_exponent;
 
         if (modulus_ok && priv_exp_ok) {
-            dprintf(out_fd, "RSA key ok\n");
+            dprintf(STDERR_FILENO, "RSA key ok\n");
         } else {
-            dprintf(out_fd, "RSA key not ok\n");
+            dprintf(STDERR_FILENO, "RSA key not ok\n");
         }
     }
 
